@@ -11,6 +11,7 @@ toolbox
 RUN rpm-ostree install \
 podman \
 podman-docker \
+podman-compose \
 distrobox \
 duperemove \
 cockpit-system \
