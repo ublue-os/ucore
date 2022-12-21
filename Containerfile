@@ -18,10 +18,10 @@ cockpit-system \
 cockpit-ostree \
 cockpit-podman \
 cockpit-networkmanager \
-cockpit-storaged
+cockpit-storaged \
+xdg-dbus-proxy \
+xdg-user-dirs
 
 # Finalize
-RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf && \
-    systemctl enable rpm-ostreed-automatic.timer && \
-    rpm-ostree cleanup -m && \
+RUN rpm-ostree cleanup -m && \
     ostree container commit
