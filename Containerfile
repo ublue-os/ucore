@@ -9,16 +9,17 @@ toolbox
 
 # Install needed packages
 RUN rpm-ostree install \
-podman \
-podman-docker \
-podman-compose \
-distrobox \
-duperemove \
 cockpit-system \
 cockpit-ostree \
 cockpit-podman \
 cockpit-networkmanager \
 cockpit-storaged \
+distrobox \
+duperemove \
+podman \
+podman-docker \
+podman-compose \
+wireguard-tools \
 xdg-dbus-proxy \
 xdg-user-dirs
 
