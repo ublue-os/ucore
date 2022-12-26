@@ -16,6 +16,7 @@ cockpit-networkmanager \
 cockpit-storaged \
 distrobox \
 duperemove \
+firewalld \
 podman \
 podman-docker \
 podman-compose \
