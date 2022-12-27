@@ -35,6 +35,8 @@ rpm-ostree override replace rpm-ostree-2022.18-2.fc37.x86_64.rpm rpm-ostree-libs
 
 # Finalize
 RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf && \
+    sed -i 's/#DefaultTimeoutStopSec.*/DefaultTimeoutStopSec=15s/' /etc/systemd/user.conf && \
+    sed -i 's/#DefaultTimeoutStopSec.*/DefaultTimeoutStopSec=15s/' /etc/systemd/system.conf && \
     systemctl enable rpm-ostreed-automatic.timer && \
     rpm-ostree cleanup -m && \
     ostree container commit
