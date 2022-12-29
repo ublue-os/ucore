@@ -28,11 +28,6 @@ wireguard-tools \
 xdg-dbus-proxy \
 xdg-user-dirs
 
-# Override replace testing version of rpm-ostree so systems aren't bricked when layering packages. This will need to be removed relatively soon
-RUN wget https://kojipkgs.fedoraproject.org//packages/rpm-ostree/2022.18/2.fc37/x86_64/rpm-ostree-2022.18-2.fc37.x86_64.rpm && \
-wget https://kojipkgs.fedoraproject.org//packages/rpm-ostree/2022.18/2.fc37/x86_64/rpm-ostree-libs-2022.18-2.fc37.x86_64.rpm && \
-rpm-ostree override replace rpm-ostree-2022.18-2.fc37.x86_64.rpm rpm-ostree-libs-2022.18-2.fc37.x86_64.rpm
-
 # Finalize
 RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf && \
     sed -i 's/#DefaultTimeoutStopSec.*/DefaultTimeoutStopSec=15s/' /etc/systemd/user.conf && \
