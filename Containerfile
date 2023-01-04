@@ -3,6 +3,7 @@ ARG FEDORA_MAJOR_VERSION=37
 FROM quay.io/fedora/fedora-coreos:stable
 
 COPY etc /etc
+RUN mkdir -p /var/lib/duperemove
 
 # Remove undesired packages
 RUN rpm-ostree override remove \
