@@ -8,6 +8,7 @@ A WIP common main image for all other Ucore images.
 
 This is an OCI image of [Fedora CoreOS](https://getfedora.org/coreos/) with quality of life improvments.
 
+### WARNING: not yet tested
 
 ## Features
 
