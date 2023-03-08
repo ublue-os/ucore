@@ -14,6 +14,7 @@ zincati
 RUN cd /etc/yum.repos.d/ \
     && curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo \
     && rpm-ostree install \
+        cockpit-ws \
         cockpit-system \
         cockpit-ostree \
         cockpit-podman \
