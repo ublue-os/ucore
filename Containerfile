@@ -11,23 +11,27 @@ toolbox \
 zincati
 
 # Install needed packages
-RUN rpm-ostree install \
-cockpit-system \
-cockpit-ostree \
-cockpit-podman \
-cockpit-networkmanager \
-cockpit-storaged \
-distrobox \
-docker-compose \
-duperemove \
-firewalld \
-podman \
-podman-docker \
-podman-compose \
-wget \
-wireguard-tools \
-xdg-dbus-proxy \
-xdg-user-dirs
+RUN cd /etc/yum.repos.d/ \
+    && curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo \
+    && rpm-ostree install \
+        cockpit-system \
+        cockpit-ostree \
+        cockpit-podman \
+        cockpit-networkmanager \
+        cockpit-storaged \
+        distrobox \
+        docker-compose \
+        duperemove \
+        firewalld \
+        podman \
+        podman-docker \
+        podman-compose \
+        tailscale \
+        wget \
+        wireguard-tools \
+        xdg-dbus-proxy \
+        xdg-user-dirs \
+    && rm tailscale.repo
 
 # Finalize
 RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf && \
