@@ -14,12 +14,14 @@ zincati
 RUN cd /etc/yum.repos.d/ \
     && curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo \
     && rpm-ostree install \
-        cockpit-ws \
-        cockpit-system \
-        cockpit-ostree \
-        cockpit-podman \
+        cockpit \
         cockpit-networkmanager \
+        cockpit-ostree \
+        cockpit-pcp \
+        cockpit-podman \
         cockpit-storaged \
+        cockpit-system \
+        cockpit-ws \
         distrobox \
         docker-compose \
         duperemove \
