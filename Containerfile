@@ -7,7 +7,6 @@ RUN mkdir -p /var/lib/duperemove
 
 # Remove undesired packages
 RUN rpm-ostree override remove \
-moby-engine \
 toolbox \
 zincati
 
@@ -19,6 +18,7 @@ cockpit-podman \
 cockpit-networkmanager \
 cockpit-storaged \
 distrobox \
+docker-compose \
 duperemove \
 firewalld \
 podman \
