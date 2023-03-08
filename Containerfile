@@ -1,6 +1,6 @@
-ARG FEDORA_MAJOR_VERSION=37
+ARG COREOS_VERSION=${COREOS_VERSION:-stable}
 
-FROM quay.io/fedora/fedora-coreos:stable
+FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
 
 COPY etc /etc
 RUN mkdir -p /var/lib/duperemove

@@ -1,25 +1,39 @@
-# Serverblue
+# ucore-main
 
-[![build-serverblue](https://github.com/kylegospo/serverblue/actions/workflows/build.yml/badge.svg)](https://github.com/kylegospo/serverblue/actions/workflows/build.yml)
+[![build-ucore](https://github.com/bsherman/ucore-main/actions/workflows/build.yml/badge.svg)](https://github.com/bsherman/ucore-main/actions/workflows/build.yml)
 
-Serverblue is an OCI based off of [Fedora CoreOS](https://getfedora.org/coreos/) that is tuned for use as a home & small server operating system.
+A WIP common main image for all other Ucore images.
 
-### The maintainers of the Serverblue project are not liable for any damage that may occur during use of the operating system.
+## What is this?
+
+This is an OCI base image of [Fedora CoreOS](https://getfedora.org/coreos/) with quality of life improvments.
+
+
+## Features
+
+- Start with Fedora CoreOS image
+- add some packages:
+  - cockpit
+  - distrobox
+  - docker-compose & podman-compose
+  - duperemove
+  - tailscale and wireguard-tools
+- remove some packages:
+  - tookbox
+  - zincati
+- Sets automatic staging of updates for system
+- 60 second service stop timeout for reasonably fast shutdowns
+
 
 ## Usage
 
-Warning: This is an experimental feature and should not be used in production, try it in a VM for a while, you have been warned!
+To rebase an Fedora CoreOS machine to the latest release (stable):
 
-    sudo rpm-ostree rebase --experimental --bypass-driver ostree-unverified-registry:ghcr.io/kylegospo/serverblue:latest
-    
-We build date tags as well, so if you want to rebase to a particular day's release:
-  
-    sudo rpm-ostree rebase --experimental --bypass-driver ostree-unverified-registry:ghcr.io/kylegospo/serverblue:20221217 
+    sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/bsherman/ucore-main:stable
 
-The `latest` tag will automatically point to the latest build. 
   
 ## Verification
 
 These images are signed with sisgstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by downloading the `cosign.pub` key from this repo and running the following command:
 
-    cosign verify --key cosign.pub ghcr.io/kylegospo/serverblue
+    cosign verify --key cosign.pub ghcr.io/bsherman/ucore-main

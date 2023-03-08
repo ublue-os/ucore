@@ -1,15 +1,18 @@
-name: build-serverblue
+name: build-ucore
 on:
   pull_request:
     branches:
       - main
   schedule:
-    - cron: '20 20 * * *'  # 8:20pm everyday
+    - cron: '50 20 * * *' # 8:50pm UTC everyday (35 minutes after ublue-kmods builds)
   push:
     branches:
       - main
+    paths-ignore:
+      - '**/README.md'
+  workflow_dispatch:
+
 env:
-    IMAGE_NAME: serverblue
     IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
@@ -23,11 +26,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        major_version: [37]
+        image_name:
+          - ucore-main
+        coreos_version:
+          - stable
         include:
-          - major_version: 37
-            is_latest: true
-            is_stable: true
+          - coreos_version: stable
+            is_latest_version: true
+            is_stable_version: true
+        # - coreos_version: testing
+        #   is_latest_version: true
+        #   is_stable_version: false
     steps: 
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -37,24 +46,66 @@ jobs:
         id: generate-tags
         shell: bash
         run: |
-          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          alias_tags=()
-          # Only perform the follow code when the action is spawned from a Pull Request
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            alias_tags+=("pr-${{ github.event.number }}")
-          else
-            # The following is run when the timer is triggered or a merge/push to main
-            echo "date=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
-            alias_tags+=("${{ matrix.major_version }}")
-            if [[ "${{ matrix.is_latest }}" == "true" ]]; then
-              alias_tags+=("latest")
-            fi
-            if [[ "${{ matrix.is_stable }}" == "true" ]]; then
-              alias_tags+=("stable")
-            fi
+          # Generate a timestamp for creating an image version history
+          TIMESTAMP="$(date +%Y%m%d)"
+          VARIANT="${{ matrix.coreos_version }}"
+
+          COMMIT_TAGS=()
+          BUILD_TAGS=()
+
+          # Have tags for tracking builds during pull request
+          SHA_SHORT="$(git rev-parse --short HEAD)"
+          COMMIT_TAGS+=("pr-${{ github.event.number }}-${VARIANT}")
+          COMMIT_TAGS+=("${SHA_SHORT}-${VARIANT}")
+
+          if [[ "${{ matrix.is_latest_version }}" == "true" ]] && \
+             [[ "${{ matrix.is_stable_version }}" == "true" ]]; then
+              COMMIT_TAGS+=("pr-${{ github.event.number }}")
+              COMMIT_TAGS+=("${SHA_SHORT}")
           fi
+
+          BUILD_TAGS=("${VARIANT}")
+
+          # Append matching timestamp tags to keep a version history
+          for TAG in "${BUILD_TAGS[@]}"; do
+              BUILD_TAGS+=("${TAG}-${TIMESTAMP}")
+          done
+
+          if [[ "${{ matrix.is_latest_version }}" == "true" ]] && \
+             [[ "${{ matrix.is_stable_version }}" == "true" ]]; then
+              BUILD_TAGS+=("${TIMESTAMP}")
+              BUILD_TAGS+=("latest")
+          fi
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              echo "Generated the following commit tags: "
+              for TAG in "${COMMIT_TAGS[@]}"; do
+                  echo "${TAG}"
+              done
+
+              alias_tags=("${COMMIT_TAGS[@]}")
+          else
+              alias_tags=("${BUILD_TAGS[@]}")
+          fi
+
+          echo "Generated the following build tags: "
+          for TAG in "${BUILD_TAGS[@]}"; do
+              echo "${TAG}"
+          done
+
           echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
 
+      # Build metadata
+      - name: Image Metadata
+        uses: docker/metadata-action@v4
+        id: meta
+        with:
+          images: |
+            ${{ matrix.image_name }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.description=Customized Fedora CoreOS with distrobox, automatic updates, both moby and podman, and some goodies
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ matrix.image_name }}/main/README.md
       # Build image using Buildah action
       - name: Build Image
         id: build_image
@@ -62,14 +113,14 @@ jobs:
         with:
           containerfiles: |
             ./Containerfile
-          image: ${{ env.IMAGE_NAME }}
+          # Syntax: https://docs.github.com/en/actions/learn-github-actions/expressions#format
+          image: ${{ matrix.image_name }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
-            ${{ steps.generate-tags.outputs.date }}
-            ${{ steps.generate-tags.outputs.sha_short }}
           build-args: |
-            FEDORA_MAJOR_VERSION=${{ matrix.major_version }}
-          oci: true
+            COREOS_VERSION=${{ matrix.coreos_version }}
+          labels: ${{ steps.meta.outputs.labels }}
+          oci: false
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
@@ -98,16 +149,14 @@ jobs:
       # Sign container
       - uses: sigstore/cosign-installer@main
 
-      - name: Write cosign keys to disk
+      # Only needed when running `cosign sign` using a key
+      - name: Write signing key to disk
         run: |
           echo "${{ env.COSIGN_PRIVATE_KEY }}" > cosign.key
-          echo "${{ env.COSIGN_PUBLIC_KEY }}" > cosign.pub
-          # DEBUG: get character count of keys
+          # DEBUG: get character count of key
           wc -c cosign.key
-          wc -c cosign.pub
         env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -118,18 +167,9 @@ jobs:
 
       - name: Sign container image
         run: |
-          cosign sign --key cosign.key -a git_sha=${{ github.sha }} -a git_tag=${{ github.ref }} ${{ steps.registry_case.outputs.lowercase }}/${{ env.IMAGE_NAME }}@${TAGS}
+          cosign sign --yes --key cosign.key ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
           TAGS: ${{ steps.push.outputs.digest }}
-          COSIGN_EXPERIMENTAL: false
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-
-      - name: Verify signed image
-        run: |
-          cosign verify --key cosign.pub ${{ steps.registry_case.outputs.lowercase }}/${{ env.IMAGE_NAME }}@${TAGS}
-        env:
-          TAGS: ${{ steps.push.outputs.digest }}
-          COSIGN_EXPERIMENTAL: false
 
       - name: Echo outputs
         run: |
