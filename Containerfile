@@ -24,7 +24,6 @@ RUN cd /etc/yum.repos.d/ \
         duperemove \
         firewalld \
         podman \
-        podman-docker \
         podman-compose \
         tailscale \
         wget \
