@@ -14,14 +14,11 @@ zincati
 RUN cd /etc/yum.repos.d/ \
     && curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo \
     && rpm-ostree install \
-        cockpit \
         cockpit-networkmanager \
         cockpit-ostree \
-        cockpit-pcp \
         cockpit-podman \
         cockpit-storaged \
         cockpit-system \
-        cockpit-ws \
         distrobox \
         docker-compose \
         duperemove \
@@ -40,6 +37,5 @@ RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-os
     sed -i 's/#DefaultTimeoutStopSec.*/DefaultTimeoutStopSec=60s/' /etc/systemd/user.conf && \
     sed -i 's/#DefaultTimeoutStopSec.*/DefaultTimeoutStopSec=60s/' /etc/systemd/system.conf && \
     systemctl enable rpm-ostreed-automatic.timer && \
-    rm -fr /var/lib /var/log && \
     rpm-ostree cleanup -m && \
     ostree container commit
