@@ -6,7 +6,7 @@ A WIP common main image for all other Ucore images.
 
 ## What is this?
 
-This is an OCI base image of [Fedora CoreOS](https://getfedora.org/coreos/) with quality of life improvments.
+This is an OCI image of [Fedora CoreOS](https://getfedora.org/coreos/) with quality of life improvments.
 
 
 ## Features
@@ -19,10 +19,15 @@ This is an OCI base image of [Fedora CoreOS](https://getfedora.org/coreos/) with
   - duperemove
   - tailscale and wireguard-tools
 - remove some packages:
-  - tookbox
+  - toolbox
   - zincati
 - Sets automatic staging of updates for system
 - 60 second service stop timeout for reasonably fast shutdowns
+
+This image should be suitable for use on bare metal or in a virtual machines where you wish to run containerized workloads. It uses sign
+ificantly less disk space than [ucore-hci](https://github.com/bsherman/ucore-hci), but check that out if you need to host virtual machines or run ZFS.
+
+One can also layer packages directly on a machine running this or use this image as a base for a further customized OCI.
 
 
 ## Usage
