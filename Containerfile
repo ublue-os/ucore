@@ -15,7 +15,6 @@ RUN cd /etc/yum.repos.d/ \
     && curl -LO https://pkgs.tailscale.com/stable/fedora/tailscale.repo \
     && rpm-ostree install \
         cockpit-networkmanager \
-        cockpit-ostree \
         cockpit-podman \
         cockpit-storaged \
         cockpit-system \
