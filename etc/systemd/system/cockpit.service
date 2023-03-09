@@ -1,0 +1,13 @@
+[Unit]
+Description=quay.io/cockpit/ws:latest podman container
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/bin/podman rm -f cockpit-ws
+ExecStart=/usr/bin/podman container runlabel --name cockpit-ws RUN quay.io/cockpit/ws:latest
+ExecStop=/usr/bin/podman rm -f cockpit-ws
+RemainAfterExit=yes
+KillMode=none
+
+[Install]
+WantedBy=multi-user.target

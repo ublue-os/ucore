@@ -30,6 +30,10 @@ ificantly less disk space than [ucore-hci](https://github.com/bsherman/ucore-hci
 
 One can also layer packages directly on a machine running this or use this image as a base for a further customized OCI.
 
+Note: cockpit-ws runs as a podman container, not a direct systemd service. This image pre-configures it to run, but it can be disabled:
+
+    sudo systemctl disable --now cockpit.service
+
 
 ## Usage
 
