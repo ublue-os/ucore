@@ -26,6 +26,7 @@ RUN cd /etc/yum.repos.d/ \
         podman \
         podman-compose \
         tailscale \
+        vim \
         wget \
         wireguard-tools \
         xdg-dbus-proxy \
