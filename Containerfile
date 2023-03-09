@@ -16,6 +16,7 @@ RUN cd /etc/yum.repos.d/ \
     && rpm-ostree install \
         cockpit-networkmanager \
         cockpit-podman \
+        cockpit-selinux \
         cockpit-storaged \
         cockpit-system \
         distrobox \
