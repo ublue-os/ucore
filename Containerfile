@@ -39,5 +39,6 @@ RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-os
     sed -i 's/#DefaultTimeoutStopSec.*/DefaultTimeoutStopSec=60s/' /etc/systemd/system.conf && \
     systemctl enable cockpit.service && \
     systemctl enable rpm-ostreed-automatic.timer && \
+    rm /etc/ssh/sshd_config.d/40-disable-passwords.conf && \
     rpm-ostree cleanup -m && \
     ostree container commit
