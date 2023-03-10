@@ -40,5 +40,6 @@ RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-os
     systemctl enable cockpit.service && \
     systemctl enable rpm-ostreed-automatic.timer && \
     rm /etc/ssh/sshd_config.d/40-disable-passwords.conf && \
+    cp -a /etc/firewalld/firewalld-server.conf /etc/firewalld/firewalld.conf && \
     rpm-ostree cleanup -m && \
     ostree container commit
