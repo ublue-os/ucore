@@ -41,6 +41,7 @@ RUN sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-os
     systemctl enable ensure-var-log-audit-dir.service && \
     systemctl enable rpm-ostreed-automatic.timer && \
     rm /etc/ssh/sshd_config.d/40-disable-passwords.conf && \
+    ln -s  ../usr/share/zoneinfo/UTC /etc/localtime && \
     cp -a /etc/firewalld/firewalld-server.conf /etc/firewalld/firewalld.conf && \
     rpm-ostree cleanup -m && \
     ostree container commit
