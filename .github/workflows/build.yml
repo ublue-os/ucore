@@ -4,12 +4,12 @@ on:
     branches:
       - main
   schedule:
-    - cron: '50 20 * * *' # 8:50pm UTC everyday (35 minutes after ucore-kmods builds)
+    - cron: '15 20 * * *' # 8:15pm UTC everyday
   push:
     branches:
       - main
     paths-ignore:
-      - '**/README.md'
+      - '**/*.md'
   workflow_dispatch:
 
 env:
@@ -27,16 +27,17 @@ jobs:
       fail-fast: false
       matrix:
         image_name:
-          - ucore-main
+          - ucore
         coreos_version:
           - stable
+          - testing
         include:
           - coreos_version: stable
             is_latest_version: true
             is_stable_version: true
-        # - coreos_version: testing
-        #   is_latest_version: true
-        #   is_stable_version: false
+          - coreos_version: testing
+            is_latest_version: false
+            is_stable_version: false
     steps: 
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -104,7 +105,7 @@ jobs:
             ${{ matrix.image_name }}
           labels: |
             org.opencontainers.image.title=${{ matrix.image_name }}
-            org.opencontainers.image.description=Customized Fedora CoreOS with distrobox, automatic updates, both moby and podman, and some goodies
+            org.opencontainers.image.description=An OCI base image of Fedora CoreOS with batteries included
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ matrix.image_name }}/main/README.md
       # Build image using Buildah action
       - name: Build Image
