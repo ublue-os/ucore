@@ -4,7 +4,7 @@
 
 ## What is this?
 
-You should be familiar with [Fedora CoreOS](https://getfedora.org/coreos/), as this is an OCI image of CoreOS with "batteries included". More specifically, it's an opinionated, custom CoreOS image built daily with some commonly installed tools, pre-installed. The idea is to make a lightweight server image including most used services or the building blocks to host them.
+You should be familiar with [Fedora CoreOS](https://getfedora.org/coreos/), as this is an OCI image of CoreOS with "batteries included". More specifically, it's an opinionated, custom CoreOS image, built daily with some commonly used tools added in. The idea is to make a lightweight server image including most used services or the building blocks to host them.
 
 WARNING: This image has **not** been heavily tested, though the underlying components have. Please take a look at the included modifications and help test if this project interests you.
 
@@ -28,9 +28,11 @@ One can layer packages directly on a machine running UCore or use this image as 
 
 Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is available as a podman container. This image has pre-configured cockpit to run on system boot, but it can be disabled:
 
-    sudo systemctl disable --now cockpit.service
+```bash
+sudo systemctl disable --now cockpit.service
+```
 
-This image should be suitable for use on bare metal or in a virtual machines where you wish to run containerized workloads.
+This image should be suitable for use on bare metal or on virtual machines where you wish to run containerized workloads.
 
 ## Tips and Tricks
 
@@ -48,24 +50,26 @@ It's a good idea to become familar with the [Fedora CoreOS Documentation](https:
 
 ### Prerequsites
 
-This image is not currently avaialable for direct install. The user must follow the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). Note there are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
+This image is not currently avaialable for direct install. The user must follow the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
 
 All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/). This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
-
 
 ### Install and Rebase
 
 To rebase an Fedora CoreOS machine to the latest UCore (stable):
 
 1. Install CoreOS via [desired installation method](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)
-1. After you reboot you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allos you to rollback if required.
-1. SSH to the freshly installed CoreOS system and rebase the OS:
+1. After you reboot you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allows you to rollback if required.
+1. SSH to the freshly installed CoreOS system and rebase the OS, then reboot:
 
-    sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
+```bash
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
+```
 
-  
 ## Verification
 
 These images are signed with sisgstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by downloading the `cosign.pub` key from this repo and running the following command:
 
-    cosign verify --key cosign.pub ghcr.io/ublue-os/ucore
+```bash
+cosign verify --key cosign.pub ghcr.io/ublue-os/ucore
+```
