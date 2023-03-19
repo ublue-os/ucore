@@ -1,4 +1,4 @@
-# ucore
+# uCore
 
 [![build-ucore](https://github.com/ublue-os/ucore/actions/workflows/build.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build.yml)
 
@@ -24,7 +24,7 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 - Sets 60 second service stop timeout for reasonably fast shutdowns
 - Enables password based SSH auth (required for locally running cockpit web interface)
 
-One can layer packages directly on a machine running UCore or use this image as a base for further customized OCI builds.
+One can layer packages directly on a machine running uCore or use this image as a base for further customized OCI builds.
 
 Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is available as a podman container. This image has pre-configured cockpit to run on system boot, but it can be disabled:
 
@@ -56,7 +56,7 @@ All CoreOS installation methods require the user to [produce an Ignition file](h
 
 ### Install and Rebase
 
-To rebase an Fedora CoreOS machine to the latest UCore (stable):
+To rebase an Fedora CoreOS machine to the latest uCore (stable):
 
 1. Install CoreOS via [desired installation method](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)
 1. After you reboot you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allows you to rollback if required.
