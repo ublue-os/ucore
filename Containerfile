@@ -11,6 +11,7 @@ ADD post-install.sh /tmp/post-install.sh
 ADD packages.json /tmp/packages.json
 
 COPY etc /etc
+COPY usr /usr
 
 RUN /tmp/build.sh
 RUN /tmp/post-install.sh
