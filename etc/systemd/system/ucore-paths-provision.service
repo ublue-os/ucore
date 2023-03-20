@@ -1,13 +1,12 @@
 [Unit]
-Description=Ensure /var/log/audit is present
+Description=Ensure required paths are present on boot
 DefaultDependencies=no
 After=local-fs.target
 Before=auditd.service
 
 [Service]
 Type=oneshot
-ExecStartPre=mkdir -p -m 0700 /var/log/audit
-ExecStart=restorecon -v /var/log/audit
+ExecStart=/usr/sbin/ucore-paths-provision.sh
 RemainAfterExit=yes
 
 [Install]
