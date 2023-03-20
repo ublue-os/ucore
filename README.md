@@ -58,17 +58,30 @@ This image is not currently avaialable for direct install. The user must follow 
 
 All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/). This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
 
-### Install and Rebase
+### Install and Manually Rebase
+
+You can rebase any Fedora CoreOS x86_64 installation to uCore.  Installing CoreOS itself can be done through [a number of provisioning methods](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/).
 
 To rebase an Fedora CoreOS machine to the latest uCore (stable):
 
-1. Install CoreOS via [desired installation method](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)
-1. After you reboot you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allows you to rollback if required.
-1. SSH to the freshly installed CoreOS system and rebase the OS, then reboot:
+1. Execute the desired `rpm-ostree rebase` command...
+1. Reboot, as instructed.
+1. After rebooting, you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allows you to rollback if required.
 
 ```bash
+# Fedora CoreOS stable stream
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
+# Fedora CoreOS testing stream, instead use the following
+#sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:testing
 ```
+
+### Install with Auto-Rebase
+
+Your path to a running uCore can be shortend by using [examples/ucore-autorebase.butane](blob/main/examples/ucore-autorebase.butane) as the starting point for your CoreOS ignition file.
+
+1. As usual, you'll need to [follow the docs to setup a password](https://coreos.github.io/butane/examples/#using-password-authentication). Substitute your password hash for `YOUR_GOOD_PASSWORD_HASH_HERE` in the `ucore-autorebase.butane` file, and add your ssh pub key while you are at it.
+1. Generate an ignition file from your new `ucore-autorebase.butane` [using the butane utility](https://coreos.github.io/butane/getting-started/).
+1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable`, rebooting and leaving your install ready to use.
 
 ## Verification
 
