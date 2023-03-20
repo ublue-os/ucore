@@ -26,13 +26,9 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 
 One can layer packages directly on a machine running uCore or use this image as a base for further customized OCI builds.
 
-Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is available as a podman container. This image has pre-configured cockpit to run on system boot, but it can be disabled:
-
-```bash
-sudo systemctl disable --now cockpit.service
-```
-
 This image should be suitable for use on bare metal or on virtual machines where you wish to run containerized workloads.
+
+Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is available as a podman container.
 
 ## Tips and Tricks
 
@@ -40,7 +36,15 @@ These images are immutable, you can't, and really shouldn't, install packages li
 
 CoreOS expects the user to run services using [podman](https://podman.io). `moby-engine`, the free Docker implementation, is installed for those who desire docker instead of podman.
 
-NOTE: CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.
+To maintain this image's suitability as a minimal container host, most add-on services are not auto-enabled.
+
+To activate any of the pre-installed `cockpit`, `docker`, or `tailscale` services:
+
+```bash
+sudo systemctl enable --now SERVICENAME.service
+```
+
+NOTE: CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activate of docker daemon, given podman is the default.
 
 Users may use [distrobox](https://github.com/89luca89/distrobox) to run images of mutable distributions where applications can be installed with traditional package managers. This may be useful for installing interactive utilities such has `htop`, `nmap`, etc. As stated above, however, *services* should run as containers.
 
