@@ -1,5 +1,5 @@
 [Unit]
-Description=Ensure required paths are present on boot
+Description=uCore provision required paths on boot
 DefaultDependencies=no
 After=local-fs.target
 Before=auditd.service

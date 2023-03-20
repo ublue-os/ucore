@@ -1,0 +1,42 @@
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - YOUR_SSH_PUB_KEY_HERE
+      password_hash: YOUR_GOOD_PASSWORD_HASH_HERE
+storage:
+  directories:
+    - path: /etc/ucore-autorebase
+      mode: 0754
+  files:
+    - path: /etc/ucore-autorebase/ucore-autorebase.sh
+      contents:
+        inline: |
+          #!/usr/bin/bash
+          echo "Rebasing to uCore OCI in 5 seconds"
+          sleep 5
+          rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable \
+            && touch /etc/ucore-autorebase/.complete \
+            && systemctl disable ucore-autorebase.service \
+            && systemctl reboot
+      mode: 0754
+systemd:
+  units:
+    - name: ucore-autorebase.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=uCore autorebase to OCI and reboot
+        ConditionPathExists=!/etc/ucore-autorebase/.complete
+        ConditionFileIsExecutable=/etc/ucore-autorebase/ucore-autorebase.sh
+        After=network-online.target
+        Wants=network-online.target
+        [Service]
+        Type=oneshot
+        StandardOutput=journal+console
+        RemainAfterExit=yes
+        ExecStart=/etc/ucore-autorebase/ucore-autorebase.sh
+        [Install]
+        WantedBy=multi-user.target
