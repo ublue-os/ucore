@@ -1,0 +1,31 @@
+{
+    "all": {
+        "include": {
+            "all": [
+                "cockpit-networkmanager",
+                "cockpit-podman",
+                "cockpit-selinux",
+                "cockpit-storaged",
+                "cockpit-system",
+                "distrobox",
+                "docker-compose",
+                "duperemove",
+                "firewalld",
+                "podman",
+                "podman-compose",
+                "tailscale",
+                "vim",
+                "wget",
+                "wireguard-tools",
+                "xdg-dbus-proxy",
+                "xdg-user-dirs"
+            ]
+        },
+        "exclude": {
+            "all": [
+                "toolbox",
+                "zincati"
+            ]
+        }
+    }
+}
