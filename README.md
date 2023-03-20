@@ -77,7 +77,7 @@ sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
 
 ### Install with Auto-Rebase
 
-Your path to a running uCore can be shortend by using [examples/ucore-autorebase.butane](blob/main/examples/ucore-autorebase.butane) as the starting point for your CoreOS ignition file.
+Your path to a running uCore can be shortend by using [examples/ucore-autorebase.butane](examples/ucore-autorebase.butane) as the starting point for your CoreOS ignition file.
 
 1. As usual, you'll need to [follow the docs to setup a password](https://coreos.github.io/butane/examples/#using-password-authentication). Substitute your password hash for `YOUR_GOOD_PASSWORD_HASH_HERE` in the `ucore-autorebase.butane` file, and add your ssh pub key while you are at it.
 1. Generate an ignition file from your new `ucore-autorebase.butane` [using the butane utility](https://coreos.github.io/butane/getting-started/).
