@@ -38,7 +38,7 @@ CoreOS expects the user to run services using [podman](https://podman.io). `moby
 
 To maintain this image's suitability as a minimal container host, most add-on services are not auto-enabled.
 
-To activate any of the pre-installed `cockpit`, `docker`, or `tailscale` services:
+To activate any of the pre-installed `cockpit`, `docker`, or `tailscaled` services:
 
 ```bash
 sudo systemctl enable --now SERVICENAME.service
