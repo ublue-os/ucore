@@ -1,4 +1,4 @@
-ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG COREOS_VERSION="${COREOS_VERSION}"
 ARG ZFS_VERSION="${ZFS_VERSION}"
 
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION} as kernel-query
@@ -8,13 +8,7 @@ RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' > /kernel-versi
 
 # Using https://openzfs.github.io/openzfs-docs/Developer%20Resources/Custom%20Packages.html
 FROM registry.fedoraproject.org/fedora:latest as builder
-ARG ZFS_VERSION
-
-ADD certs /tmp/certs
-
-RUN install -Dm644 /tmp/certs/public_key.der   /etc/pki/akmods/certs/public_key.der
-RUN install -Dm644 /tmp/certs/private_key.priv /etc/pki/akmods/private/private_key.priv
-RUN install -Dm644 /tmp/certs/private_key.priv /lib/modules/$(cat /kernel-version.txt)/build/certs/signing_key.pem
+ARG ZFS_VERSION="${ZFS_VERSION}"
 
 COPY --from=kernel-query /kernel-version.txt /kernel-version.txt
 
