@@ -18,9 +18,27 @@ env:
     IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  push-ghcr:
-    name: Build and push image
+  zfs_versions:
+    runs-on: ubuntu-latest
+    outputs:
+      latest: ${{ steps.latest.outputs.version }}
+      previous: ${{ steps.previous.outputs.version }}
+    steps:
+      # Use cURL to fetch the given URL, saving the response to `data.json`
+      - name: Fetch zfs versions
+        # Uses project_id from: https://release-monitoring.org/project/11706/
+        run: curl "https://release-monitoring.org/api/v2/versions/?project_id=11706" -o data.json
+      - name: Get latest zfs version
+        id: latest
+        run: echo "version=$(jq -r '.stable_versions[0]' data.json)" >> $GITHUB_OUTPUT
+      - name: Get previous zfs version
+        id: previous
+        run: echo "version=$(jq -r '.stable_versions[1]' data.json)" >> $GITHUB_OUTPUT
+
+  build_zfs:
+    name: Build & push ZFS RPM images
     runs-on: ubuntu-22.04
+    needs: zfs_versions
     permissions:
       contents: read
       packages: write
@@ -29,17 +47,12 @@ jobs:
       fail-fast: false
       matrix:
         image_name:
-          - ucore
+          - ucore-zfs-rpm
         coreos_version:
           - stable
           - testing
-        include:
-          - coreos_version: stable
-            is_latest_version: true
-            is_stable_version: true
-          - coreos_version: testing
-            is_latest_version: false
-            is_stable_version: false
+        zfs_version:
+          - ${{ needs.zfs_versions.outputs.latest }}
     steps: 
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -52,6 +65,7 @@ jobs:
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
           COREOS_VERSION="${{ matrix.coreos_version }}"
+
           COMMIT_TAGS=()
           BUILD_TAGS=()
 
@@ -60,33 +74,163 @@ jobs:
           COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION}")
           COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
 
-          if [[ "${{ matrix.is_latest_version }}" == "true" ]] && \
-             [[ "${{ matrix.is_stable_version }}" == "true" ]]; then
-              COMMIT_TAGS+=("pr-${{ github.event.number }}")
-              COMMIT_TAGS+=("${SHA_SHORT}")
-          fi
-
           BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
-
-          if [[ "${{ matrix.is_latest_version }}" == "true" ]] && \
-             [[ "${{ matrix.is_stable_version }}" == "true" ]]; then
-              BUILD_TAGS+=("${TIMESTAMP}")
-              BUILD_TAGS+=("latest")
-          fi
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               echo "Generated the following commit tags: "
               for TAG in "${COMMIT_TAGS[@]}"; do
                   echo "${TAG}"
               done
+
               alias_tags=("${COMMIT_TAGS[@]}")
           else
               alias_tags=("${BUILD_TAGS[@]}")
           fi
+
           echo "Generated the following build tags: "
           for TAG in "${BUILD_TAGS[@]}"; do
               echo "${TAG}"
           done
+
+          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
+
+      # Build metadata
+      - name: Image Metadata
+        uses: docker/metadata-action@v4
+        id: meta
+        with:
+          images: |
+            ${{ matrix.image_name }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.description=A layer with ZFS RPMs for CoreOS
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
+
+      # Build image using Buildah action
+      - name: Build Image
+        id: build_image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          containerfiles: |
+            ./zfs/Containerfile
+          context: ./zfs
+          image: ${{ matrix.image_name }}
+          tags: |
+            ${{ steps.generate-tags.outputs.alias_tags }}
+          build-args: |
+            COREOS_VERSION=${{ matrix.coreos_version }}
+            ZFS_VERSION=${{ matrix.zfs_version }}
+          labels: ${{ steps.meta.outputs.labels }}
+          oci: false
+
+      # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
+      # https://github.com/macbre/push-to-ghcr/issues/12
+      - name: Lowercase Registry
+        id: registry_case
+        uses: ASzc/change-string-case-action@v5
+        with:
+          string: ${{ env.IMAGE_REGISTRY }}
+
+      # Push the image to GHCR (Image Registry)
+      - name: Push To GHCR
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        #if: github.event_name != 'pull_request'
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+        with:
+          image: ${{ steps.build_image.outputs.image }}
+          tags: ${{ steps.build_image.outputs.tags }}
+          registry: ${{ steps.registry_case.outputs.lowercase }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          extra-args: |
+            --disable-content-trust
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Sign container
+      - uses: sigstore/cosign-installer@v3.0.1
+        if: github.event_name != 'pull_request'
+
+      - name: Sign container image
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ env.COSIGN_PRIVATE_KEY }}" > cosign.key
+          wc -c cosign.key
+          cosign sign -y --key cosign.key ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
+        env:
+          TAGS: ${{ steps.push.outputs.digest }}
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+
+      - name: Echo outputs
+        #if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ toJSON(steps.push.outputs) }}"
+
+  build_main:
+    name: Build & push ucore main images
+    runs-on: ubuntu-22.04
+    needs: build_zfs
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image_name:
+          - ucore
+        coreos_version:
+          - stable
+          - testing
+    steps:
+      # Checkout push-to-registry action GitHub repository
+      - name: Checkout Push to Registry action
+        uses: actions/checkout@v3
+
+      - name: Generate tags
+        id: generate-tags
+        shell: bash
+        run: |
+          # Generate a timestamp for creating an image version history
+          TIMESTAMP="$(date +%Y%m%d)"
+          COREOS_VERSION="${{ matrix.coreos_version }}"
+
+          COMMIT_TAGS=()
+          BUILD_TAGS=()
+
+          # Have tags for tracking builds during pull request
+          SHA_SHORT="$(git rev-parse --short HEAD)"
+          COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION}")
+          COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
+
+          BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              echo "Generated the following commit tags: "
+              for TAG in "${COMMIT_TAGS[@]}"; do
+                  echo "${TAG}"
+              done
+
+              alias_tags=("${COMMIT_TAGS[@]}")
+          else
+              alias_tags=("${BUILD_TAGS[@]}")
+          fi
+
+          echo "Generated the following build tags: "
+          for TAG in "${BUILD_TAGS[@]}"; do
+              echo "${TAG}"
+          done
+
           echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
 
       # Build metadata
@@ -167,7 +311,7 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
 
       - name: Echo outputs
-        if: github.event_name != 'pull_request'
+        #if: github.event_name != 'pull_request'
         run: |
           echo "${{ toJSON(steps.push.outputs) }}"
 
