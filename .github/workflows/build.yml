@@ -7,7 +7,7 @@ on:
       - '**.md'
       - '**.txt'
   schedule:
-    - cron: '15 20 * * *' # 8:15pm UTC everyday
+    - cron: '20 23 * * *' # 11:20PM UTC everyday (approx 1 hour after coreos images publish)
   push:
     branches:
       - main
@@ -108,7 +108,8 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           containerfiles: |
-            ./Containerfile
+            ./main/Containerfile
+          context: ./main
           image: ${{ matrix.image_name }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
