@@ -37,4 +37,7 @@ fi
 
 rm -f /etc/yum.repos.d/tailscale.repo
 
+# install locally prepared RPMs (ZFS, etc)
+rpm-ostree install /tmp/rpms/*.rpm
+
 rpm-ostree cleanup -m

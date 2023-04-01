@@ -10,6 +10,7 @@ ADD build.sh /tmp/build.sh
 ADD post-install.sh /tmp/post-install.sh
 ADD packages.json /tmp/packages.json
 
+COPY --from=ghcr.io/ublue-os/ucore-zfs-rpm:${COREOS_VERSION} / /tmp/rpms
 COPY etc /etc
 COPY usr /usr
 
