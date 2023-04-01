@@ -17,8 +17,9 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - [cockpit](https://cockpit-project.org)
   - [distrobox](https://github.com/89luca89/distrobox)
   - [duperemove](https://github.com/markfasheh/duperemove)
-  - moby-engine, docker-compose and podman-compose
+  - moby-engine(docker), docker-compose and podman-compose
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
+  - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
 - Enables staging of automatic system updates via rpm-ostreed
 - Disables Zincati auto upgrade/reboot serivce
 - Sets 60 second service stop timeout for reasonably fast shutdowns
@@ -32,9 +33,13 @@ Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos
 
 ## Tips and Tricks
 
+### Immutability and Podman
+
 These images are immutable, you can't, and really shouldn't, install packages like in a mutable "normal" distribution.
 
 CoreOS expects the user to run services using [podman](https://podman.io). `moby-engine`, the free Docker implementation, is installed for those who desire docker instead of podman.
+
+### Default Services
 
 To maintain this image's suitability as a minimal container host, most add-on services are not auto-enabled.
 
@@ -44,11 +49,31 @@ To activate any of the pre-installed `cockpit`, `docker`, or `tailscaled` servic
 sudo systemctl enable --now SERVICENAME.service
 ```
 
+### Docker/Moby and Podman
+
 NOTE: CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activate of docker daemon, given podman is the default.
+
+### Distrobox
 
 Users may use [distrobox](https://github.com/89luca89/distrobox) to run images of mutable distributions where applications can be installed with traditional package managers. This may be useful for installing interactive utilities such has `htop`, `nmap`, etc. As stated above, however, *services* should run as containers.
 
+### CoreOS and ostree Docs
+
 It's a good idea to become familar with the [Fedora CoreOS Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/) as well as the [CoreOS rpm-ostree docs](https://coreos.github.io/rpm-ostree/). Note especially, this image is only possible due to [ostree native containers](https://coreos.github.io/rpm-ostree/container/).
+
+### ZFS
+
+The ZFS kernel module and tools are pre-installed, but like other services, ZFS is not pre-configured to load on default.
+
+Load it with the command `modprobe zfs` and use `zfs` and `zpool` commands as desired.
+
+Per the [OpenZFS Fedora documentation](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html):
+
+> By default ZFS kernel modules are loaded upon detecting a pool. To always load the modules at boot:
+
+```
+echo zfs > /etc/modules-load.d/zfs.conf
+```
 
 ## How to Install
 

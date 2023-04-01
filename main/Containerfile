@@ -1,18 +1,22 @@
-ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
 
-ARG IMAGE_NAME
-ARG COREOS_VERSION
+ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
+ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 
 ADD build.sh /tmp/build.sh
 ADD post-install.sh /tmp/post-install.sh
 ADD packages.json /tmp/packages.json
 
+ARG ZFS_PR_PREFIX="${ZFS_PR_PREFIX}"
+
+COPY --from=ghcr.io/ublue-os/ucore-zfs-rpm:${ZFS_PR_PREFIX}${COREOS_VERSION} / /tmp/rpms
 COPY etc /etc
 COPY usr /usr
 
+# install locally prepared RPMs (ZFS, etc)
+RUN rpm-ostree install /tmp/rpms/*.rpm
 RUN /tmp/build.sh
 RUN /tmp/post-install.sh
 RUN rm -rf /tmp/* /var/*
