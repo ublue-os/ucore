@@ -19,6 +19,7 @@ env:
 
 jobs:
   zfs_versions:
+    name: Get ZFS versions
     runs-on: ubuntu-latest
     outputs:
       latest: ${{ steps.latest.outputs.version }}
@@ -36,7 +37,7 @@ jobs:
         run: echo "version=$(jq -r '.stable_versions[1]' data.json)" >> $GITHUB_OUTPUT
 
   build_zfs:
-    name: Build & push ZFS RPM images
+    name: Build ZFS
     runs-on: ubuntu-22.04
     needs: zfs_versions
     permissions:
@@ -177,7 +178,7 @@ jobs:
           echo "${{ toJSON(steps.push.outputs) }}"
 
   build_main:
-    name: Build & push ucore main images
+    name: Build uCore
     runs-on: ubuntu-22.04
     needs: build_zfs
     permissions:

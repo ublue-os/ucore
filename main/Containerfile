@@ -14,6 +14,8 @@ COPY --from=ghcr.io/ublue-os/ucore-zfs-rpm:${COREOS_VERSION} / /tmp/rpms
 COPY etc /etc
 COPY usr /usr
 
+# install locally prepared RPMs (ZFS, etc)
+RUN rpm-ostree install /tmp/rpms/*.rpm
 RUN /tmp/build.sh
 RUN /tmp/post-install.sh
 RUN rm -rf /tmp/* /var/*
