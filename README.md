@@ -13,14 +13,14 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 - Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
 - Removes these stock packages:
   - toolbox
-  - zincati
 - Adds the following:
   - [cockpit](https://cockpit-project.org)
   - [distrobox](https://github.com/89luca89/distrobox)
   - [duperemove](https://github.com/markfasheh/duperemove)
   - moby-engine, docker-compose and podman-compose
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
-- Sets automatic staging of updates for system
+- Enables staging of automatic system updates via rpm-ostreed
+- Disables Zincati auto upgrade/reboot serivce
 - Sets 60 second service stop timeout for reasonably fast shutdowns
 - Enables password based SSH auth (required for locally running cockpit web interface)
 
