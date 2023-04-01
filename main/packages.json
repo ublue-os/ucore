@@ -23,8 +23,7 @@
         },
         "exclude": {
             "all": [
-                "toolbox",
-                "zincati"
+                "toolbox"
             ]
         }
     }
