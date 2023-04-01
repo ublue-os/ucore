@@ -40,6 +40,8 @@ jobs:
     name: Build ZFS
     runs-on: ubuntu-22.04
     needs: zfs_versions
+    outputs:
+      zfs_pr_prefix: ${{ steps.generate-tags.outputs.zfs_pr_prefix }}
     permissions:
       contents: read
       packages: write
