@@ -10,26 +10,35 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 
 ## Features
 
-- Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
-- Removes these stock packages:
+`ucore` images:
+
+- Start with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
+- Remove stock packages:
   - toolbox
-- Adds the following:
+- Add the following:
   - [cockpit](https://cockpit-project.org)
   - [distrobox](https://github.com/89luca89/distrobox)
   - [duperemove](https://github.com/markfasheh/duperemove)
   - moby-engine(docker), docker-compose and podman-compose
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
-- Enables staging of automatic system updates via rpm-ostreed
-- Disables Zincati auto upgrade/reboot serivce
-- Sets 60 second service stop timeout for reasonably fast shutdowns
-- Enables password based SSH auth (required for locally running cockpit web interface)
+- Enable staging of automatic system updates via rpm-ostreed
+- Disable Zincati auto upgrade/reboot serivce
+- Set a 60 second service stop timeout for reasonably fast shutdowns
+- Enable password based SSH auth (required for locally running cockpit web interface)
+- Suitable for use on bare metal or virtual machines to run containerized workloads
 
-One can layer packages directly on a machine running uCore or use this image as a base for further customized OCI builds.
+`ucore-hci` images:
 
-This image should be suitable for use on bare metal or on virtual machines where you wish to run containerized workloads.
+- Start with `ucore` to give you everything above, PLUS:
+- Add the following:
+  - libvirt-daemon-kvm: KVM hypervisor management
+  - virt-install: command-line utility for installing virtual machines
+  - libvirt-client: `virsh` command-line utility for managing virtual machines
+  - cockpit-machines: Cockpit GUI for managing virtual machines
+- Suitable for use on bare metal to run as a hypervisor in addition to running containerized workloads
 
-Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is available as a podman container.
+Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
 ## Tips and Tricks
 
@@ -43,7 +52,7 @@ CoreOS expects the user to run services using [podman](https://podman.io). `moby
 
 To maintain this image's suitability as a minimal container host, most add-on services are not auto-enabled.
 
-To activate any of the pre-installed `cockpit`, `docker`, or `tailscaled` services:
+To activate any of the pre-installed `cockpit`, `docker`, `libvirtd`, `tailscaled` services, etc:
 
 ```bash
 sudo systemctl enable --now SERVICENAME.service
@@ -89,15 +98,32 @@ You can rebase any Fedora CoreOS x86_64 installation to uCore.  Installing CoreO
 
 To rebase an Fedora CoreOS machine to the latest uCore (stable):
 
-1. Execute the desired `rpm-ostree rebase` command...
+1. Execute the desired `rpm-ostree rebase` command... (below)
 1. Reboot, as instructed.
 1. After rebooting, you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allows you to rollback if required.
 
+`ucore` stable stream
+
 ```bash
-# Fedora CoreOS stable stream
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
-# Fedora CoreOS testing stream, instead use the following
-#sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:testing
+```
+
+`ucore-hci` stable stream
+
+```bash
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore-hci:stable
+```
+
+`ucore` testing stream
+
+```bash
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:testing
+```
+
+`ucore-hci` testing stream
+
+```bash
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore-hci:testing
 ```
 
 ### Install with Auto-Rebase

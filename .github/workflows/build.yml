@@ -18,6 +18,23 @@ env:
     IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
+  build_info:
+    name: Get Build Info
+    runs-on: ubuntu-latest
+    outputs:
+      pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
+    steps:
+      - name: Set PR Prefix
+        id: pr_prefix
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              PR_PREFIX="pr-${{ github.event.number }}-"
+          else
+              PR_PREFIX=""
+          fi
+          echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
+
   zfs_versions:
     name: Get ZFS versions
     runs-on: ubuntu-latest
@@ -40,8 +57,6 @@ jobs:
     name: Build ZFS
     runs-on: ubuntu-22.04
     needs: zfs_versions
-    outputs:
-      zfs_pr_prefix: ${{ steps.generate-tags.outputs.zfs_pr_prefix }}
     permissions:
       contents: read
       packages: write
@@ -86,12 +101,9 @@ jobs:
               done
 
               alias_tags=("${COMMIT_TAGS[@]}")
-              ZFS_PR_PREFIX="pr-${{ github.event.number }}-"
           else
               alias_tags=("${BUILD_TAGS[@]}")
-              ZFS_PR_PREFIX=""
           fi
-          echo "zfs_pr_prefix=${ZFS_PR_PREFIX}" >> $GITHUB_OUTPUT
 
           echo "Generated the following build tags: "
           for TAG in "${BUILD_TAGS[@]}"; do
@@ -185,7 +197,7 @@ jobs:
   build_main:
     name: Build uCore
     runs-on: ubuntu-22.04
-    needs: build_zfs
+    needs: [ build_info, build_zfs ]
     permissions:
       contents: read
       packages: write
@@ -198,8 +210,8 @@ jobs:
         coreos_version:
           - stable
           - testing
-        zfs_pr_prefix:
-          - ${{ needs.build_zfs.outputs.zfs_pr_prefix }}
+        pr_prefix:
+          - ${{ needs.build_info.outputs.pr_prefix }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -250,7 +262,7 @@ jobs:
             ${{ matrix.image_name }}
           labels: |
             org.opencontainers.image.title=${{ matrix.image_name }}
-            org.opencontainers.image.description=An OCI base image of Fedora CoreOS with batteries included
+            org.opencontainers.image.description=An OCI image of Fedora CoreOS with batteries included
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
 
@@ -267,7 +279,149 @@ jobs:
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
-            ZFS_PR_PREFIX=${{ matrix.zfs_pr_prefix }}
+            PR_PREFIX=${{ matrix.pr_prefix }}
+          labels: ${{ steps.meta.outputs.labels }}
+          oci: false
+
+      # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
+      # https://github.com/macbre/push-to-ghcr/issues/12
+      - name: Lowercase Registry
+        id: registry_case
+        uses: ASzc/change-string-case-action@v5
+        with:
+          string: ${{ env.IMAGE_REGISTRY }}
+
+      # Push the image to GHCR (Image Registry)
+      - name: Push To GHCR
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        #if: github.event_name != 'pull_request'
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+        with:
+          image: ${{ steps.build_image.outputs.image }}
+          tags: ${{ steps.build_image.outputs.tags }}
+          registry: ${{ steps.registry_case.outputs.lowercase }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          extra-args: |
+            --disable-content-trust
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Sign container
+      - uses: sigstore/cosign-installer@v3.0.1
+        if: github.event_name != 'pull_request'
+
+      - name: Sign container image
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ env.COSIGN_PRIVATE_KEY }}" > cosign.key
+          wc -c cosign.key
+          cosign sign -y --key cosign.key ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
+        env:
+          TAGS: ${{ steps.push.outputs.digest }}
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+
+      - name: Echo outputs
+        #if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ toJSON(steps.push.outputs) }}"
+
+  build_hci:
+    name: Build HCI
+    runs-on: ubuntu-22.04
+    needs: [ build_info, build_main ]
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image_name:
+          - ucore
+        coreos_version:
+          - stable
+          - testing
+        pr_prefix:
+          - ${{ needs.build_info.outputs.pr_prefix }}
+    steps:
+      # Checkout push-to-registry action GitHub repository
+      - name: Checkout Push to Registry action
+        uses: actions/checkout@v3
+
+      - name: Generate tags
+        id: generate-tags
+        shell: bash
+        run: |
+          # Generate a timestamp for creating an image version history
+          TIMESTAMP="$(date +%Y%m%d)"
+          COREOS_VERSION="${{ matrix.coreos_version }}"
+
+          COMMIT_TAGS=()
+          BUILD_TAGS=()
+
+          # Have tags for tracking builds during pull request
+          SHA_SHORT="$(git rev-parse --short HEAD)"
+          COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION}")
+          COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
+
+          BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              echo "Generated the following commit tags: "
+              for TAG in "${COMMIT_TAGS[@]}"; do
+                  echo "${TAG}"
+              done
+
+              alias_tags=("${COMMIT_TAGS[@]}")
+          else
+              alias_tags=("${BUILD_TAGS[@]}")
+          fi
+
+          echo "Generated the following build tags: "
+          for TAG in "${BUILD_TAGS[@]}"; do
+              echo "${TAG}"
+          done
+
+          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
+
+      # Build metadata
+      - name: Image Metadata
+        uses: docker/metadata-action@v4
+        id: meta
+        with:
+          images: |
+            ${{ format('{0}-hci', matrix.image_name) }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.description=A hyper-converged infrastructure Fedora CoreOS OCI with batteries included
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
+            io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
+
+      # Build image using Buildah action
+      - name: Build Image
+        id: build_image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          containerfiles: |
+            ./hci/Containerfile
+          context: ./hci
+          image: ${{ format('{0}-hci', matrix.image_name) }}
+          tags: |
+            ${{ steps.generate-tags.outputs.alias_tags }}
+          build-args: |
+            COREOS_VERSION=${{ matrix.coreos_version }}
+            PR_PREFIX=${{ matrix.pr_prefix }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 

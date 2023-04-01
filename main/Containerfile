@@ -9,9 +9,9 @@ ADD build.sh /tmp/build.sh
 ADD post-install.sh /tmp/post-install.sh
 ADD packages.json /tmp/packages.json
 
-ARG ZFS_PR_PREFIX="${ZFS_PR_PREFIX}"
+ARG PR_PREFIX="${PR_PREFIX}"
 
-COPY --from=ghcr.io/ublue-os/ucore-zfs-rpm:${ZFS_PR_PREFIX}${COREOS_VERSION} / /tmp/rpms
+COPY --from=ghcr.io/ublue-os/ucore-zfs-rpm:${PR_PREFIX}${COREOS_VERSION} / /tmp/rpms
 COPY etc /etc
 COPY usr /usr
 
