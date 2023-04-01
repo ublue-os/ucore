@@ -84,9 +84,12 @@ jobs:
               done
 
               alias_tags=("${COMMIT_TAGS[@]}")
+              ZFS_PR_PREFIX="pr-${{ github.event.number }}-"
           else
               alias_tags=("${BUILD_TAGS[@]}")
+              ZFS_PR_PREFIX=""
           fi
+          echo "zfs_pr_prefix=${ZFS_PR_PREFIX}" >> $GITHUB_OUTPUT
 
           echo "Generated the following build tags: "
           for TAG in "${BUILD_TAGS[@]}"; do
@@ -193,6 +196,8 @@ jobs:
         coreos_version:
           - stable
           - testing
+        zfs_pr_prefix:
+          - ${{ needs.build_zfs.outputs.zfs_pr_prefix }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -260,6 +265,7 @@ jobs:
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
+            ZFS_PR_PREFIX=${{ matrix.zfs_pr_prefix }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 
