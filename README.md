@@ -1,11 +1,5 @@
 # uCore
 
-## WARNING: STOP USING ME
-
-Builds will NO LONGER be generated as all development efforts for uCore have moved to:
-
-https://github.com/ublue-os/ucore
-
 [![build-ucore](https://github.com/ublue-os/ucore/actions/workflows/build.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build.yml)
 
 ## What is this?
