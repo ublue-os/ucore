@@ -23,7 +23,7 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
 - Enable staging of automatic system updates via rpm-ostreed
-- Disable Zincati auto upgrade/reboot serivce
+- Disable Zincati auto upgrade/reboot service
 - Set a 60 second service stop timeout for reasonably fast shutdowns
 - Enable password based SSH auth (required for locally running cockpit web interface)
 - Suitable for use on bare metal or virtual machines to run containerized workloads
@@ -60,7 +60,7 @@ sudo systemctl enable --now SERVICENAME.service
 
 ### Docker/Moby and Podman
 
-NOTE: CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activate of docker daemon, given podman is the default.
+NOTE: CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activation of the docker daemon, given podman is the default.
 
 ### Distrobox
 
@@ -88,7 +88,7 @@ echo zfs > /etc/modules-load.d/zfs.conf
 
 ### Prerequsites
 
-This image is not currently avaialable for direct install. The user must follow the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
+This image is not currently available for direct install. The user must follow the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
 
 All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/). This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
 
@@ -136,7 +136,7 @@ Your path to a running uCore can be shortend by using [examples/ucore-autorebase
 
 ## Verification
 
-These images are signed with sisgstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by downloading the `cosign.pub` key from this repo and running the following command:
+These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by downloading the `cosign.pub` key from this repo and running the following command:
 
 ```bash
 cosign verify --key cosign.pub ghcr.io/ublue-os/ucore
