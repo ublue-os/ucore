@@ -340,6 +340,7 @@ jobs:
   build_hci:
     name: Build HCI
     runs-on: ubuntu-22.04
+    if: ${{ always() }}
     needs: [ build_info, build_main ]
     permissions:
       contents: read
