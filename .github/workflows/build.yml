@@ -197,6 +197,7 @@ jobs:
   build_main:
     name: Build uCore
     runs-on: ubuntu-22.04
+    if: ${{ always() }}
     needs: [ build_info, build_zfs ]
     permissions:
       contents: read
