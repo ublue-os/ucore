@@ -22,9 +22,9 @@ RUN dnf install -y jq dkms gcc make autoconf automake libtool rpm-build libtirpc
     python3 python3-devel python3-setuptools python3-cffi libffi-devel git ncompress libcurl-devel
 
 WORKDIR /
-RUN curl -L -O https://github.com/openzfs/zfs/releases/download/zfs-${ZFS_VERSION}/zfs-${ZFS_VERSION}.tar.gz \
-    && tar xzf zfs-${ZFS_VERSION}.tar.gz \
-    && mv zfs-${ZFS_VERSION} /tmp/zfs
+RUN curl -L -O https://github.com/openzfs/zfs/releases/download/${ZFS_VERSION}/${ZFS_VERSION}.tar.gz \
+    && tar xzf ${ZFS_VERSION}.tar.gz \
+    && mv ${ZFS_VERSION} /tmp/zfs
 
 WORKDIR /tmp/zfs
 # build
