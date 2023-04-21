@@ -8,7 +8,6 @@
                 "cockpit-storaged",
                 "cockpit-system",
                 "distrobox",
-                "docker-compose",
                 "duperemove",
                 "firewalld",
                 "podman",
