@@ -4,25 +4,19 @@ ARG PR_PREFIX="${PR_PREFIX}"
 
 FROM ghcr.io/ublue-os/${IMAGE_NAME}:${PR_PREFIX}${COREOS_VERSION}
 
+ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
+
+
+ADD build.sh /tmp/build.sh
+ADD packages.json /tmp/packages.json
+
 RUN mkdir -p /var/lib/alternatives \
-    && rpm-ostree install \
-        cockpit-machines \
-        libvirt-client \
-        virt-install \
+    && /tmp/build.sh \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \
     && rpm-ostree cleanup -m \
     && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives
-
-RUN mkdir -p /var/lib/alternatives \
-    && rpm-ostree install \
-        libvirt-daemon-kvm \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && rm -fr /tmp/* /var/* \
-    && rpm-ostree cleanup -m \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives
-
-RUN mkdir -p /tmp /var/tmp \
+    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
+    && mkdir -p /tmp /var/tmp \
     && chmod -R 1777 /tmp /var/tmp

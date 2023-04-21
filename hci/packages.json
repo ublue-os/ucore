@@ -1,0 +1,18 @@
+{
+    "all": {
+        "include": {
+            "all": [
+                "cockpit-machines",
+                "libvirt-client",
+                "libvirt-daemon-kvm",
+                "nfs-utils",
+                "virt-install"
+            ]
+        },
+        "exclude": {
+            "all": [
+                "nfs-utils-coreos"
+            ]
+        }
+    }
+}
