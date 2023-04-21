@@ -13,6 +13,7 @@
                 "podman",
                 "podman-compose",
                 "tailscale",
+                "tmux",
                 "vim",
                 "wget",
                 "wireguard-tools",
