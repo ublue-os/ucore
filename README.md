@@ -21,6 +21,7 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - [duperemove](https://github.com/markfasheh/duperemove)
   - moby-engine(docker), docker-compose and podman-compose
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
+  - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
 - Enable staging of automatic system updates via rpm-ostreed
 - Disable Zincati auto upgrade/reboot service
