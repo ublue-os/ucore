@@ -52,7 +52,7 @@ CoreOS expects the user to run services using [podman](https://podman.io). `moby
 
 To maintain this image's suitability as a minimal container host, most add-on services are not auto-enabled.
 
-To activate pre-installed services (`cockpit`, `docker`, `tailscaled` services, etc):
+To activate pre-installed services (`cockpit`, `docker`, `tailscaled`, etc):
 
 ```bash
 sudo systemctl enable --now SERVICENAME.service
@@ -84,6 +84,27 @@ Per the [OpenZFS Fedora documentation](https://openzfs.github.io/openzfs-docs/Ge
 
 ```
 echo zfs > /etc/modules-load.d/zfs.conf
+```
+
+#### ZFS and immutable root filesystem
+
+The default mountpoint for any newly created zpool `tank` is `/tank`. This is a problem in CoreOS as the root filesystem (`/`) is immutable, which means a directory cannot be created as a mountpoint for the zpool. An example of the problem looks like this:
+
+```
+# zpool create tank /dev/sdb
+cannot mount '/tank': failed to create mountpoint: Operation not permitted
+```
+
+To avoid this problem, always create new zpools with a specified mountpoint:
+
+```
+# zpool create -m /var/tank tank /dev/sdb
+```
+
+If you do forget to specify the mountpoint, or you need to change the mountpoint on an existing zpool:
+
+```
+# zfs set mountpoint=/var/tank tank
 ```
 
 ## How to Install
