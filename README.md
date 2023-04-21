@@ -52,11 +52,13 @@ CoreOS expects the user to run services using [podman](https://podman.io). `moby
 
 To maintain this image's suitability as a minimal container host, most add-on services are not auto-enabled.
 
-To activate any of the pre-installed `cockpit`, `docker`, `libvirtd`, `tailscaled` services, etc:
+To activate pre-installed services (`cockpit`, `docker`, `tailscaled` services, etc):
 
 ```bash
 sudo systemctl enable --now SERVICENAME.service
 ```
+
+Note: `libvirtd` is enabled by default, but only starts when triggerd by it's socket (eg, using `virsh` or other clients).
 
 ### Docker/Moby and Podman
 
