@@ -22,3 +22,5 @@ RUN /tmp/post-install.sh
 RUN rm -rf /tmp/* /var/*
 RUN ostree container commit
 RUN mkdir -p /var/tmp && chmod -R 1777 /var/tmp
+
+COPY --from=docker.io/docker/compose-bin:latest /docker-compose /usr/bin/docker-compose
