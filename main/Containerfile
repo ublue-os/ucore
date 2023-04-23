@@ -2,8 +2,8 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
 
-ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 
 ADD build.sh /tmp/build.sh
 ADD post-install.sh /tmp/post-install.sh
@@ -14,6 +14,16 @@ ARG PR_PREFIX="${PR_PREFIX}"
 COPY --from=ghcr.io/ublue-os/ucore-zfs-rpm:${PR_PREFIX}${COREOS_VERSION} / /tmp/rpms
 COPY etc /etc
 COPY usr /usr
+
+# enable testing repos if not enabled on testing stream
+RUN if [[ "testing" == "${COREOS_VERSION}" ]]; then \
+for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing{,-modular}.repo); do \
+  if [[ "$(grep enabled=1 ${REPO} > /dev/null; echo $?)" == "1" ]]; then \
+    echo "enabling $REPO" &&\
+    sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' ${REPO}; \
+  fi; \
+done; \
+fi
 
 # install locally prepared RPMs (ZFS, etc)
 RUN rpm-ostree install /tmp/rpms/*.rpm
