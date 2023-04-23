@@ -23,9 +23,10 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
 - Enable staging of automatic system updates via rpm-ostreed
 - Disable Zincati auto upgrade/reboot service
-- Set a 60 second service stop timeout for reasonably fast shutdowns
 - Enable password based SSH auth (required for locally running cockpit web interface)
 - Suitable for use on bare metal or virtual machines to run containerized workloads
+
+Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
 `ucore-hci` images:
 
@@ -37,7 +38,7 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - cockpit-machines: Cockpit GUI for managing virtual machines
 - Suitable for use on bare metal to run as a hypervisor in addition to running containerized workloads
 
-Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
+Note: Fedora now uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
 
 ## Tips and Tricks
 
