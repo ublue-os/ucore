@@ -2,6 +2,7 @@ ARG COREOS_VERSION="${COREOS_VERSION}"
 
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION} as builder
 
+ARG COREOS_VERSION="${COREOS_VERSION}"
 ARG ZFS_VERSION="${ZFS_VERSION}"
 
 WORKDIR /tmp
@@ -11,6 +12,16 @@ RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' > /kernel-versi
 
 # work around to allow alternatives to configure in RPM post-install scripts
 RUN mkdir -p /var/lib/alternatives
+
+# enable testing repos if not enabled on testing stream
+RUN if [[ "testing" == "${COREOS_VERSION}" ]]; then \
+for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing{,-modular}.repo); do \
+  if [[ "$(grep enabled=1 ${REPO} > /dev/null; echo $?)" == "1" ]]; then \
+    echo "enabling $REPO" &&\
+    sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' ${REPO}; \
+  fi; \
+done; \
+fi
 
 RUN rpm-ostree install -y jq dkms gcc make autoconf automake libtool rpm-build libtirpc-devel libblkid-devel \
     libuuid-devel libudev-devel openssl-devel zlib-devel libaio-devel libattr-devel elfutils-libelf-devel \
