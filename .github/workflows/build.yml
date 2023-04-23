@@ -196,7 +196,7 @@ jobs:
   build_main:
     name: Build uCore
     runs-on: ubuntu-22.04
-    if: ${{ always() }}
+    if: always() && !cancelled()
     needs: [ build_info, build_zfs ]
     permissions:
       contents: read
@@ -339,7 +339,7 @@ jobs:
   build_hci:
     name: Build HCI
     runs-on: ubuntu-22.04
-    if: ${{ always() }}
+    if: always() && !cancelled()
     needs: [ build_info, build_main ]
     permissions:
       contents: read
