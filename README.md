@@ -13,8 +13,6 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 `ucore` images:
 
 - Start with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
-- Remove stock packages:
-  - toolbox
 - Add the following:
   - [cockpit](https://cockpit-project.org)
   - [distrobox](https://github.com/89luca89/distrobox)
