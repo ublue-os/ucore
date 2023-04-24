@@ -90,7 +90,7 @@ jobs:
           echo "${{ toJSON(steps.previous.outputs) }}"
 
   zfs_rpms_required:
-    name: Check if zfs build is required
+    name: Is zfs build required
     runs-on: ubuntu-latest
     needs: [build_info, coreos_versions, zfs_versions]
     outputs:
