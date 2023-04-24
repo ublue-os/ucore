@@ -156,6 +156,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        build:
+          - true
         image_name:
           - ucore-zfs-rpm
         coreos_version:
