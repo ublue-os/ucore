@@ -111,10 +111,10 @@ jobs:
           skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
           if [ -n "$(cat inspect.json)" ]; then
             set -x
-            OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+            OLD_LINUX=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
-            if [[ "$LINUX" == "$OLD_LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
+            if [ "$OLD_LINUX" = "$LINUX" ] && [ "$OLD_VERSION" = "$VERSION" ] && [ "$OLD_ZFS" = "$ZFS" ]; then
               BUILD_IT=false
             fi
             set +x
@@ -133,10 +133,10 @@ jobs:
           skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
           if [ -n "$(cat inspect.json)" ]; then
             set -x
-            OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+            OLD_LINUX=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
-            if [[ "$LINUX" == "$OLD_LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
+            if [ "$OLD_LINUX" = "$LINUX" ] && [ "$OLD_VERSION" = "$VERSION" ] && [ "$OLD_ZFS" = "$ZFS" ]; then
               BUILD_IT=false
             fi
             set +x
