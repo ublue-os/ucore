@@ -137,8 +137,7 @@ jobs:
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
             if [ "$OLD_LINUX" = "$LINUX" ] && [ "$OLD_VERSION" = "$VERSION" ] && [ "$OLD_ZFS" = "$ZFS" ]; then
-              #BUILD_IT=false
-              BUILD_IT=true
+              BUILD_IT=false
             fi
             set +x
           fi
