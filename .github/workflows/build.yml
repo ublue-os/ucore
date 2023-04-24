@@ -174,13 +174,13 @@ jobs:
       matrix:
         build_config:
           - coreos_version: stable
-            build: ${{ toJSON(needs.zfs_rpms_required.build_stable) }}
+            build: ${{ toJSON(needs.zfs_rpms_required.outputs.build_stable) }}
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
             image_name: ucore-zfs-rpm
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
           - coreos_version: testing
-            build: ${{ needs.zfs_rpms_required.build_testing }}
+            build: ${{ needs.zfs_rpms_required.outputs.build_testing }}
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_name: ucore-zfs-rpm
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
