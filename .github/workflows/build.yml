@@ -170,17 +170,19 @@ jobs:
   build_zfs:
     name: Build ZFS
     needs: [coreos_versions, zfs_versions, zfs_rpms_required]
+    env:
+      zfs: ${{ toJSON(needs.zfs_rpms_required.outputs) }}
     strategy:
       matrix:
         build_config:
           - coreos_version: stable
-            build: ${{ needs.zfs_rpms_required.outputs.build_stable }}
+            build: ${{ env.zfs["build_stable"] }}
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
             image_name: ucore-zfs-rpm
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
           - coreos_version: testing
-            build: ${{ needs.zfs_rpms_required.outputs.build_testing }}
+            build: ${{ env.zfs["build_testing"] }}
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_name: ucore-zfs-rpm
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
