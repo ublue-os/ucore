@@ -34,6 +34,9 @@ jobs:
               PR_PREFIX=""
           fi
           echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(jobs.build_info.outputs) }}"
 
   coreos_versions:
     name: Get CoreOS versions
@@ -60,6 +63,9 @@ jobs:
           echo "linux=$linux" >> $GITHUB_OUTPUT
           version=$(jq -r '.["Labels"]["version"]' inspect.json)
           echo "version=$version" >> $GITHUB_OUTPUT
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(jobs.coreos_versions.outputs) }}"
 
   zfs_versions:
     name: Get ZFS versions
@@ -77,8 +83,11 @@ jobs:
       - name: Get previous zfs version
         id: previous
         run: echo "version=$(jq -r '.[1].name' data.json|cut -f2 -d-)" >> $GITHUB_OUTPUT
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(jobs.zfs_versions.outputs) }}"
 
-  need_build_zfs:
+  zfs_rpms_required:
     name: Check if zfs build is required
     runs-on: ubuntu-latest
     needs: [build_info, coreos_versions, zfs_versions]
@@ -107,6 +116,7 @@ jobs:
             fi
           fi
           echo "build_it=$BUILD_IT" >> $GITHUB_OUTPUT
+          exit 0
       - name: Check testing ucore-zfs-rpm images
         id: testing
         continue-on-error: true
@@ -126,11 +136,16 @@ jobs:
               BUILD_IT=false
             fi
           fi
+          echo "build_it=$BUILD_IT" >> $GITHUB_OUTPUT
+          exit 0
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(jobs.zfs_rpms_required.outputs) }}"
 
   build_zfs:
     name: Build ZFS
     runs-on: ubuntu-22.04
-    needs: [coreos_versions, zfs_versions, need_build_zfs]
+    needs: [coreos_versions, zfs_versions, zfs_rpms_required]
     permissions:
       contents: read
       packages: write
@@ -149,11 +164,11 @@ jobs:
           - coreos_version: stable
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
-            build: ${{ needs.need_build_zfs.build_stable }}
+            build: ${{ needs.zfs_rpms_required.build_stable }}
           - coreos_version: testing
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
-            build: ${{ needs.need_build_zfs.build_testing }}
+            build: ${{ needs.zfs_rpms_required.build_testing }}
         exclude:
           - build: false
     steps: 
