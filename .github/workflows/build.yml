@@ -34,6 +34,9 @@ jobs:
               PR_PREFIX=""
           fi
           echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(steps.pr_prefix.outputs) }}"
 
   coreos_versions:
     name: Get CoreOS versions
@@ -60,6 +63,10 @@ jobs:
           echo "linux=$linux" >> $GITHUB_OUTPUT
           version=$(jq -r '.["Labels"]["version"]' inspect.json)
           echo "version=$version" >> $GITHUB_OUTPUT
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(steps.stable.outputs) }}"
+          echo "${{ toJSON(steps.testing.outputs) }}"
 
   zfs_versions:
     name: Get ZFS versions
@@ -77,157 +84,96 @@ jobs:
       - name: Get previous zfs version
         id: previous
         run: echo "version=$(jq -r '.[1].name' data.json|cut -f2 -d-)" >> $GITHUB_OUTPUT
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(steps.latest.outputs) }}"
+          echo "${{ toJSON(steps.previous.outputs) }}"
+
+  zfs_rpms_required:
+    name: Is zfs build required
+    runs-on: ubuntu-latest
+    needs: [build_info, coreos_versions, zfs_versions]
+    outputs:
+      build_stable: ${{ steps.stable.outputs.build }}
+      build_testing: ${{ steps.testing.outputs.build }}
+    steps:
+      # check if existing ucore-zfs-rpm images match requested kernel/zfs/stream combination
+      - name: Check stable ucore-zfs-rpm images
+        id: stable
+        continue-on-error: true
+        run: |
+          BUILD_IT=true
+          TAG="${{ needs.build_info.outputs.pr_prefix }}stable"
+          LINUX=${{ needs.coreos_versions.outputs.stable_linux }}
+          VERSION=${{ needs.coreos_versions.outputs.stable_version }}
+          ZFS=${{ needs.zfs_versions.outputs.latest }}
+
+          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
+          if [ -n "$(cat inspect.json)" ]; then
+            set -x
+            OLD_LINUX=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+            OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
+            OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
+            if [ "$OLD_LINUX" = "$LINUX" ] && [ "$OLD_VERSION" = "$VERSION" ] && [ "$OLD_ZFS" = "$ZFS" ]; then
+              BUILD_IT=false
+            fi
+            set +x
+          fi
+          echo "build=$BUILD_IT" >> $GITHUB_OUTPUT
+      - name: Check testing ucore-zfs-rpm images
+        id: testing
+        continue-on-error: true
+        run: |
+          BUILD_IT=true
+          TAG="${{ needs.build_info.outputs.pr_prefix }}testing"
+          LINUX=${{ needs.coreos_versions.outputs.testing_linux }}
+          VERSION=${{ needs.coreos_versions.outputs.testing_version }}
+          ZFS=${{ needs.zfs_versions.outputs.latest }}
+
+          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
+          if [ -n "$(cat inspect.json)" ]; then
+            set -x
+            OLD_LINUX=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+            OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
+            OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
+            if [ "$OLD_LINUX" = "$LINUX" ] && [ "$OLD_VERSION" = "$VERSION" ] && [ "$OLD_ZFS" = "$ZFS" ]; then
+              BUILD_IT=false
+            fi
+            set +x
+          fi
+          echo "build=$BUILD_IT" >> $GITHUB_OUTPUT
+      - name: Echo outputs
+        run: |
+          echo "${{ toJSON(steps.stable.outputs) }}"
+          echo "${{ toJSON(steps.testing.outputs) }}"
 
   build_zfs:
     name: Build ZFS
-    runs-on: ubuntu-22.04
-    needs: [coreos_versions, zfs_versions]
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
+    needs: [coreos_versions, zfs_versions, zfs_rpms_required]
     strategy:
-      fail-fast: false
       matrix:
-        image_name:
-          - ucore-zfs-rpm
-        coreos_version:
-          - stable
-          - testing
-        zfs_version:
-          - ${{ needs.zfs_versions.outputs.latest }}
-        include:
+        build_config:
           - coreos_version: stable
+            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
+            image_name: ucore-zfs-rpm
+            build: ${{ needs.zfs_rpms_required.outputs.build_stable }}
           - coreos_version: testing
+            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
-    steps: 
-      # Checkout push-to-registry action GitHub repository
-      - name: Checkout Push to Registry action
-        uses: actions/checkout@v3
-
-      - name: Generate tags
-        id: generate-tags
-        shell: bash
-        run: |
-          # Generate a timestamp for creating an image version history
-          TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ matrix.coreos_version }}"
-
-          COMMIT_TAGS=()
-          BUILD_TAGS=()
-
-          # Have tags for tracking builds during pull request
-          SHA_SHORT="${GITHUB_SHA::7}"
-          COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION}")
-          COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
-
-          BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
-
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              echo "Generated the following commit tags: "
-              for TAG in "${COMMIT_TAGS[@]}"; do
-                  echo "${TAG}"
-              done
-
-              alias_tags=("${COMMIT_TAGS[@]}")
-          else
-              alias_tags=("${BUILD_TAGS[@]}")
-          fi
-
-          echo "Generated the following build tags: "
-          for TAG in "${BUILD_TAGS[@]}"; do
-              echo "${TAG}"
-          done
-
-          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
-
-      # Build metadata
-      - name: Image Metadata
-        uses: docker/metadata-action@v4
-        id: meta
-        with:
-          images: |
-            ${{ matrix.image_name }}
-          labels: |
-            fedora-coreos.stream=${{ matrix.coreos_version }}
-            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
-            org.opencontainers.image.description=A layer with ZFS RPMs for CoreOS
-            org.opencontainers.image.title=${{ matrix.image_name }}
-            org.opencontainers.image.version=${{ matrix.image_version }}
-            ostree.linux=${{ matrix.image_linux }}
-            version=${{ matrix.image_version }}
-            zfs.version=${{ matrix.zfs_version }}
-
-      # Build image using Buildah action
-      - name: Build Image
-        id: build_image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          containerfiles: |
-            ./zfs/Containerfile
-          context: ./zfs
-          image: ${{ matrix.image_name }}
-          tags: |
-            ${{ steps.generate-tags.outputs.alias_tags }}
-          build-args: |
-            COREOS_VERSION=${{ matrix.coreos_version }}
-            ZFS_VERSION=${{ matrix.zfs_version }}
-          labels: ${{ steps.meta.outputs.labels }}
-          oci: false
-
-      # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
-      # https://github.com/macbre/push-to-ghcr/issues/12
-      - name: Lowercase Registry
-        id: registry_case
-        uses: ASzc/change-string-case-action@v5
-        with:
-          string: ${{ env.IMAGE_REGISTRY }}
-
-      # Push the image to GHCR (Image Registry)
-      - name: Push To GHCR
-        uses: redhat-actions/push-to-registry@v2
-        id: push
-        #if: github.event_name != 'pull_request'
-        env:
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_PASSWORD: ${{ github.token }}
-        with:
-          image: ${{ steps.build_image.outputs.image }}
-          tags: ${{ steps.build_image.outputs.tags }}
-          registry: ${{ steps.registry_case.outputs.lowercase }}
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
-          extra-args: |
-            --disable-content-trust
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        if: github.event_name != 'pull_request'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Sign container
-      - uses: sigstore/cosign-installer@v3.0.2
-        if: github.event_name != 'pull_request'
-
-      - name: Sign container image
-        if: github.event_name != 'pull_request'
-        run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
-        env:
-          TAGS: ${{ steps.push.outputs.digest }}
-          COSIGN_EXPERIMENTAL: false
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-
-      - name: Echo outputs
-        #if: github.event_name != 'pull_request'
-        run: |
-          echo "${{ toJSON(steps.push.outputs) }}"
+            image_name: ucore-zfs-rpm
+            build: ${{ needs.zfs_rpms_required.outputs.build_testing }}
+    uses: ./.github/workflows/reusable-zfs-build.yml
+    with:
+      if_build: ${{ matrix.build_config.build }}
+      coreos_version: ${{ matrix.build_config.coreos_version }}
+      image_linux: ${{ matrix.build_config.image_linux }}
+      image_name: ${{ matrix.build_config.image_name }}
+      image_version: ${{ matrix.build_config.image_version }}
+      zfs_version: ${{ matrix.build_config.zfs_version }}
+    secrets: inherit
 
   build_main:
     name: Build uCore
