@@ -36,7 +36,7 @@ jobs:
           echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ toJSON(jobs.build_info.outputs) }}"
+          echo "${{ toJSON(steps.pr_prefix.outputs) }}"
 
   coreos_versions:
     name: Get CoreOS versions
@@ -65,7 +65,8 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ toJSON(jobs.coreos_versions.outputs) }}"
+          echo "${{ toJSON(steps.stable.outputs) }}"
+          echo "${{ toJSON(steps.testing.outputs) }}"
 
   zfs_versions:
     name: Get ZFS versions
@@ -85,7 +86,8 @@ jobs:
         run: echo "version=$(jq -r '.[1].name' data.json|cut -f2 -d-)" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ toJSON(jobs.zfs_versions.outputs) }}"
+          echo "${{ toJSON(steps.latest.outputs) }}"
+          echo "${{ toJSON(steps.previous.outputs) }}"
 
   zfs_rpms_required:
     name: Check if zfs build is required
@@ -140,7 +142,8 @@ jobs:
           exit 0
       - name: Echo outputs
         run: |
-          echo "${{ toJSON(jobs.zfs_rpms_required.outputs) }}"
+          echo "${{ toJSON(steps.stable.outputs) }}"
+          echo "${{ toJSON(steps.testing.outputs) }}"
 
   build_zfs:
     name: Build ZFS
