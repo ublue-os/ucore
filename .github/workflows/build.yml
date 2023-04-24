@@ -152,6 +152,7 @@ jobs:
           images: |
             ${{ matrix.image_name }}
           labels: |
+            fedora-coreos.stream=${{ matrix.coreos_version }}
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=A layer with ZFS RPMs for CoreOS
             org.opencontainers.image.title=${{ matrix.image_name }}
@@ -456,7 +457,7 @@ jobs:
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=A hyper-converged infrastructure Fedora CoreOS OCI with batteries included
-            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.title=${{ format('{0}-hci', matrix.image_name) }}
             org.opencontainers.image.version=${{ matrix.image_version }}
             zfs.version=${{ matrix.zfs_version }}
 
