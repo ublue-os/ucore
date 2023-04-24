@@ -108,8 +108,8 @@ jobs:
           VERSION=${{ needs.coreos_versions.outputs.stable_version }}
           ZFS=${{ needs.zfs_versions.outputs.latest }}
 
-          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json
-          if [ 0 -eq $? ]; then
+          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
+          if [ -n "$(cat inspect.json)" ]; then
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
@@ -129,8 +129,8 @@ jobs:
           VERSION=${{ needs.coreos_versions.outputs.testing_version }}
           ZFS=${{ needs.zfs_versions.outputs.latest }}
 
-          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json
-          if [ 0 -eq $? ]; then
+          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
+          if [ -n "$(cat inspect.json)" ]; then
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
