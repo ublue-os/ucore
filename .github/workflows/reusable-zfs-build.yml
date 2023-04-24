@@ -25,7 +25,7 @@ on:
 jobs:
   build_zfs:
     if: ${{ inputs.if_build == 'true' }}
-    name: Build ZFS
+    name: Build ZFS RPMs
     runs-on: ubuntu-22.04
     permissions:
       contents: read

@@ -148,43 +148,24 @@ jobs:
           echo "${{ toJSON(steps.stable.outputs) }}"
           echo "${{ toJSON(steps.testing.outputs) }}"
 
-  test_build_zfs:
-    name: test build zfs
-    runs-on: ubuntu-22.04
-    if: always() && !cancelled()
-    needs: [zfs_rpms_required]
-    env:
-      build_stable: ${{ needs.zfs_rpms_required.outputs.build_stable }}
-      build_testing: ${{ needs.zfs_rpms_required.outputs.build_testing }}
-      outjson: ${{ toJSON(needs.zfs_rpms_required.outputs) }}
-    steps:
-      - name: outputs from zfs_rpms_required
-        shell: bash
-        run: |
-          echo "build_stable='${{ env.build_stable }}'"
-          echo "build_testing='${{ env.build_testing }}'"
-          echo "${{ env.outjson }}"
-         # echo "build_stable='${needs.zfs_rpms_required.build_stable}'"
-         # echo "build_testing='${{ needs.zfs_rpms_required.build_testing }}'"
-
   build_zfs:
-    name: Build ZFS
+    name: Build ZFS RPMs
     needs: [coreos_versions, zfs_versions, zfs_rpms_required]
     strategy:
       matrix:
         build_config:
           - coreos_version: stable
-            build: ${{ needs.zfs_rpms_required.outputs.build_stable }}
+            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
-            image_name: ucore-zfs-rpm
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
-            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
-          - coreos_version: testing
-            build: ${{ needs.zfs_rpms_required.outputs.build_testing }}
-            image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_name: ucore-zfs-rpm
-            image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+            build: ${{ needs.zfs_rpms_required.outputs.build_stable }}
+          - coreos_version: testing
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
+            image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
+            image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+            image_name: ucore-zfs-rpm
+            build: ${{ needs.zfs_rpms_required.outputs.build_testing }}
     uses: ./.github/workflows/reusable-zfs-build.yml
     with:
       if_build: ${{ matrix.build_config.build }}
