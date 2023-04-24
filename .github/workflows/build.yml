@@ -173,7 +173,10 @@ jobs:
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
             build: ${{ needs.zfs_rpms_required.build_testing }}
         exclude:
-          - build: false
+          - coreos_version: stable
+            build: false
+          - coreos_version: testing
+            build: false
     steps: 
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
