@@ -156,29 +156,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build:
-          - true
-        image_name:
-          - ucore-zfs-rpm
         coreos_version:
           - stable
           - testing
+        image_name:
+          - ucore-zfs-rpm
         zfs_version:
           - ${{ needs.zfs_versions.outputs.latest }}
         include:
           - coreos_version: stable
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
-            build: ${{ needs.zfs_rpms_required.build_stable }}
           - coreos_version: testing
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
-            build: ${{ needs.zfs_rpms_required.build_testing }}
         exclude:
-          - coreos_version: stable
-            build: false
-          - coreos_version: testing
-            build: false
+          - coreos_version: ${{ needs.zfs_rpms_required.build_stable == 'true' && 'noexclude' || 'stable' }}
+            image_name: ucore-zfs-rpm
+            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
+          - coreos_version: ${{ needs.zfs_rpms_required.build_testing == 'true' && 'noexclude' || 'testing' }}
+            image_name: ucore-zfs-rpm
+            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
     steps: 
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
