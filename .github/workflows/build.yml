@@ -153,11 +153,16 @@ jobs:
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
     needs: [zfs_rpms_required]
+    env:
+      build_stable: ${{ needs.zfs_rpms_required.outputs.build_stable }}
+      build_testing: ${{ needs.zfs_rpms_required.outputs.build_testing }}
     steps:
       - name: outputs from zfs_rpms_required
         shell: bash
         run: |
-          echo "build_stable='${{ needs.zfs_rpms_required.build_stable }}'"
+          echo "build_stable='${env.build_stable}'"
+          echo "build_testing='${env.build_testing}'"
+          echo "build_stable='${needs.zfs_rpms_required.build_stable}'"
           echo "build_testing='${{ needs.zfs_rpms_required.build_testing }}'"
 
   build_zfs:
