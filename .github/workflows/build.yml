@@ -170,26 +170,24 @@ jobs:
   build_zfs:
     name: Build ZFS
     needs: [coreos_versions, zfs_versions, zfs_rpms_required]
-    env:
-      zfs: ${{ toJSON(needs.zfs_rpms_required.outputs) }}
     strategy:
       matrix:
         build_config:
           - coreos_version: stable
-            build: ${{ env.zfs["build_stable"] }}
+            build: ${{ toJSON(needs.zfs_rpms_required.build_stable) }}
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
             image_name: ucore-zfs-rpm
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
           - coreos_version: testing
-            build: ${{ env.zfs["build_testing"] }}
+            build: ${{ needs.zfs_rpms_required.build_testing }}
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_name: ucore-zfs-rpm
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
     uses: ./.github/workflows/reusable-zfs-build.yml
     with:
-      if: ${{ matrix.build_config.build }}
+      if_build: ${{ matrix.build_config.build }}
       coreos_version: ${{ matrix.build_config.coreos_version }}
       image_linux: ${{ matrix.build_config.image_linux }}
       image_name: ${{ matrix.build_config.image_name }}

@@ -1,7 +1,7 @@
 on:
   workflow_call:
     inputs:
-      if:
+      if_build:
         description: 'Whether to run this job'
         required: false
         default: true
@@ -24,7 +24,7 @@ on:
 
 jobs:
   build_zfs:
-    if: ${{ inputs.if }}
+    if: ${{ inputs.if_build }}
     name: Build ZFS
     runs-on: ubuntu-22.04
     permissions:
