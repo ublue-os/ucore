@@ -169,8 +169,8 @@ jobs:
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
         exclude:
-          - coreos_version: ${{ needs.zfs_rpms_required.build_stable == 'true' && 'noexclude_s' || 'stable' }}
-          - coreos_version: ${{ needs.zfs_rpms_required.build_testing == 'true' && 'noexclude_t' || 'testing' }}
+          - coreos_version: ${{ (needs.zfs_rpms_required.build_stable) && 'stable' || 'nostable' }}
+          - coreos_version: ${{ (needs.zfs_rpms_required.build_testing) && 'stable' || 'notesting' }}
     env:
       IMAGE_NAME: ucore-zfs-rpm
       ZFS_VERSION: ${{ needs.zfs_versions.outputs.latest }}
