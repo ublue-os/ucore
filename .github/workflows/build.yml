@@ -108,6 +108,7 @@ jobs:
           VERSION=${{ needs.coreos_versions.outputs.stable_version }}
           ZFS=${{ needs.zfs_versions.outputs.latest }}
 
+          set -x
           skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
           if [ -n "$(cat inspect.json)" ]; then
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
@@ -129,6 +130,7 @@ jobs:
           VERSION=${{ needs.coreos_versions.outputs.testing_version }}
           ZFS=${{ needs.zfs_versions.outputs.latest }}
 
+          set -x
           skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
           if [ -n "$(cat inspect.json)" ]; then
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
@@ -159,10 +161,6 @@ jobs:
         coreos_version:
           - stable
           - testing
-        image_name:
-          - ucore-zfs-rpm
-        zfs_version:
-          - ${{ needs.zfs_versions.outputs.latest }}
         include:
           - coreos_version: stable
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
@@ -171,12 +169,11 @@ jobs:
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
         exclude:
-          - coreos_version: ${{ needs.zfs_rpms_required.build_stable == 'true' && 'noexclude' || 'stable' }}
-            image_name: ucore-zfs-rpm
-            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
-          - coreos_version: ${{ needs.zfs_rpms_required.build_testing == 'true' && 'noexclude' || 'testing' }}
-            image_name: ucore-zfs-rpm
-            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
+          - coreos_version: ${{ needs.zfs_rpms_required.build_stable == 'true' && 'noexclude_s' || 'stable' }}
+          - coreos_version: ${{ needs.zfs_rpms_required.build_testing == 'true' && 'noexclude_t' || 'testing' }}
+    env:
+      IMAGE_NAME: ucore-zfs-rpm
+      ZFS_VERSION: ${{ needs.zfs_versions.outputs.latest }}
     steps: 
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -224,16 +221,16 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ matrix.image_name }}
+            ${{ env.IMAGE_NAME }}
           labels: |
             fedora-coreos.stream=${{ matrix.coreos_version }}
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=A layer with ZFS RPMs for CoreOS
-            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ matrix.image_version }}
             ostree.linux=${{ matrix.image_linux }}
             version=${{ matrix.image_version }}
-            zfs.version=${{ matrix.zfs_version }}
+            zfs.version=${{ env.ZFS_VERSION }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -243,12 +240,12 @@ jobs:
           containerfiles: |
             ./zfs/Containerfile
           context: ./zfs
-          image: ${{ matrix.image_name }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
-            ZFS_VERSION=${{ matrix.zfs_version }}
+            ZFS_VERSION=${{ env.ZFS_VERSION }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 
