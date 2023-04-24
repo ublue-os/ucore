@@ -114,7 +114,7 @@ jobs:
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
-            if [[ "$OLD_LINUX" == "$LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
+            if [[ "$LINUX" == "$OLD_LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
               BUILD_IT=false
             fi
             set +x
@@ -136,7 +136,7 @@ jobs:
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
-            if [[ "$OLD_LINUX" == "$LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
+            if [[ "$LINUX" == "$OLD_LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
               BUILD_IT=false
             fi
             set +x
