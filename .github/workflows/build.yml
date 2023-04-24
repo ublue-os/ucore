@@ -94,8 +94,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_info, coreos_versions, zfs_versions]
     outputs:
-      build_stable: ${{ steps.stable.outputs.build_it }}
-      build_testing: ${{ steps.testing.outputs.build_it }}
+      build_stable: ${{ steps.stable.outputs.build }}
+      build_testing: ${{ steps.testing.outputs.build }}
     steps:
       # check if existing ucore-zfs-rpm images match requested kernel/zfs/stream combination
       - name: Check stable ucore-zfs-rpm images
@@ -108,18 +108,18 @@ jobs:
           VERSION=${{ needs.coreos_versions.outputs.stable_version }}
           ZFS=${{ needs.zfs_versions.outputs.latest }}
 
-          set -x
           skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
           if [ -n "$(cat inspect.json)" ]; then
+            set -x
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
             if [[ "$OLD_LINUX" == "$LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
               BUILD_IT=false
             fi
+            set +x
           fi
-          echo "build_it=$BUILD_IT" >> $GITHUB_OUTPUT
-          exit 0
+          echo "build=$BUILD_IT" >> $GITHUB_OUTPUT
       - name: Check testing ucore-zfs-rpm images
         id: testing
         continue-on-error: true
@@ -130,18 +130,18 @@ jobs:
           VERSION=${{ needs.coreos_versions.outputs.testing_version }}
           ZFS=${{ needs.zfs_versions.outputs.latest }}
 
-          set -x
           skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
           if [ -n "$(cat inspect.json)" ]; then
+            set -x
             OLD_LINUX==$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
             OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
             OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
             if [[ "$OLD_LINUX" == "$LINUX" && "$OLD_VERSION" == "$VERSION" && "$OLD_ZFS" == "$ZFS" ]]; then
               BUILD_IT=false
             fi
+            set +x
           fi
-          echo "build_it=$BUILD_IT" >> $GITHUB_OUTPUT
-          exit 0
+          echo "build=$BUILD_IT" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
           echo "${{ toJSON(steps.stable.outputs) }}"
@@ -312,20 +312,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_name:
-          - ucore
         coreos_version:
           - stable
           - testing
-        pr_prefix:
-          - ${{ needs.build_info.outputs.pr_prefix }}
-        zfs_version:
-          - ${{ needs.zfs_versions.outputs.latest }}
         include:
           - coreos_version: stable
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
           - coreos_version: testing
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+    env:
+      IMAGE_NAME: ucore
+      PR_PREFIX: ${{ needs.build_info.outputs.pr_prefix }}
+      ZFS_VERSION: ${{ needs.zfs_versions.outputs.latest }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -373,14 +371,14 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ matrix.image_name }}
+            ${{ env.IMAGE_NAME }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=An OCI image of Fedora CoreOS with batteries included
-            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ matrix.image_version }}
-            zfs.version=${{ matrix.zfs_version }}
+            zfs.version=${{ env.ZFS_VERSION }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -390,12 +388,12 @@ jobs:
           containerfiles: |
             ./main/Containerfile
           context: ./main
-          image: ${{ matrix.image_name }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
-            PR_PREFIX=${{ matrix.pr_prefix }}
+            PR_PREFIX=${{ env.PR_PREFIX }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 
@@ -462,20 +460,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_name:
-          - ucore
         coreos_version:
           - stable
           - testing
-        pr_prefix:
-          - ${{ needs.build_info.outputs.pr_prefix }}
-        zfs_version:
-          - ${{ needs.zfs_versions.outputs.latest }}
         include:
           - coreos_version: stable
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
           - coreos_version: testing
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+    env:
+      IMAGE_NAME: ucore
+      PR_PREFIX: ${{ needs.build_info.outputs.pr_prefix }}
+      ZFS_VERSION: ${{ needs.zfs_versions.outputs.latest }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -523,14 +519,14 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ format('{0}-hci', matrix.image_name) }}
+            ${{ format('{0}-hci', env.IMAGE_NAME) }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=A hyper-converged infrastructure Fedora CoreOS OCI with batteries included
-            org.opencontainers.image.title=${{ format('{0}-hci', matrix.image_name) }}
+            org.opencontainers.image.title=${{ format('{0}-hci', env.IMAGE_NAME) }}
             org.opencontainers.image.version=${{ matrix.image_version }}
-            zfs.version=${{ matrix.zfs_version }}
+            zfs.version=${{ env.ZFS_VERSION }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -540,12 +536,12 @@ jobs:
           containerfiles: |
             ./hci/Containerfile
           context: ./hci
-          image: ${{ format('{0}-hci', matrix.image_name) }}
+          image: ${{ format('{0}-hci', env.IMAGE_NAME) }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
-            PR_PREFIX=${{ matrix.pr_prefix }}
+            PR_PREFIX=${{ env.PR_PREFIX }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 
