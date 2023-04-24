@@ -4,8 +4,8 @@ on:
       if_build:
         description: 'Whether to run this job'
         required: false
-        default: true
-        type: boolean
+        default: 'true'
+        type: string
       coreos_version:
         required: true
         type: string
@@ -24,14 +24,14 @@ on:
 
 jobs:
   build_zfs:
-    if: ${{ inputs.if_build }}
+    if: ${{ inputs.if_build == 'true' }}
     name: Build ZFS
     runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write
       id-token: write
-    steps: 
+    steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v3
