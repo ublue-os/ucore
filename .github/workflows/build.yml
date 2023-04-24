@@ -148,7 +148,7 @@ jobs:
           echo "${{ toJSON(steps.testing.outputs) }}"
 
   build_zfs:
-    name: Build ZFS RPMs
+    name: Build ZFS
     needs: [coreos_versions, zfs_versions, zfs_rpms_required]
     strategy:
       matrix:
