@@ -185,12 +185,12 @@ jobs:
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
     uses: ./.github/workflows/reusable-zfs-build.yml
     with:
-      if: ${{ matrix.build-config.build }}
-      coreos_version: ${{ matrix.build-config.coreos_version }}
-      image_linux: ${{ matrix.build-config.image_linux }}
-      image_name: ${{ matrix.build-config.image_name }}
-      image_version: ${{ matrix.build-config.image_version }}
-      zfs_version: ${{ matrix.build-config.zfs_version }}
+      if: ${{ matrix.build_config.build }}
+      coreos_version: ${{ matrix.build_config.coreos_version }}
+      image_linux: ${{ matrix.build_config.image_linux }}
+      image_name: ${{ matrix.build_config.image_name }}
+      image_version: ${{ matrix.build_config.image_version }}
+      zfs_version: ${{ matrix.build_config.zfs_version }}
     secrets: inherit
 
   build_main:
