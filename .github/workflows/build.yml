@@ -160,10 +160,10 @@ jobs:
       - name: outputs from zfs_rpms_required
         shell: bash
         run: |
-          echo "build_stable='${env.build_stable}'"
-          echo "build_testing='${env.build_testing}'"
-          echo "build_stable='${needs.zfs_rpms_required.build_stable}'"
-          echo "build_testing='${{ needs.zfs_rpms_required.build_testing }}'"
+          echo "build_stable='${{ env.build_stable }}'"
+          echo "build_testing='${{ env.build_testing }}'"
+         # echo "build_stable='${needs.zfs_rpms_required.build_stable}'"
+         # echo "build_testing='${{ needs.zfs_rpms_required.build_testing }}'"
 
   build_zfs:
     name: Build ZFS
