@@ -156,13 +156,13 @@ jobs:
           - coreos_version: stable
             build: ${{ needs.zfs_rpms_required.build_stable }}
             image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
-            image_name: ucore-zfs-rpm
+            image_name: "ucore-zfs-rpm"
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
           - coreos_version: testing
             build: ${{ needs.zfs_rpms_required.build_testing }}
             image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
-            image_name: ucore-zfs-rpm
+            image_name: "ucore-zfs-rpm"
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
             zfs_version: ${{ needs.zfs_versions.outputs.latest }}
     uses: ./.github/workflows/reusable-zfs-build.yml
