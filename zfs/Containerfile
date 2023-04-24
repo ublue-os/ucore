@@ -28,11 +28,11 @@ RUN rpm-ostree install -y jq dkms gcc make autoconf automake libtool rpm-build l
     kernel-$(cat /kernel-version.txt) kernel-modules-$(cat /kernel-version.txt) kernel-devel-$(cat /kernel-version.txt) \
     python3 python3-devel python3-setuptools python3-cffi libffi-devel git ncompress libcurl-devel
 
-RUN echo "getting ${ZFS_VERSION}.tar.gz" && \
-    curl -L -O https://github.com/openzfs/zfs/releases/download/${ZFS_VERSION}/${ZFS_VERSION}.tar.gz \
-    && tar xzf ${ZFS_VERSION}.tar.gz
+RUN echo "getting zfs-${ZFS_VERSION}.tar.gz" && \
+    curl -L -O https://github.com/openzfs/zfs/releases/download/zfs-${ZFS_VERSION}/zfs-${ZFS_VERSION}.tar.gz \
+    && tar xzf zfs-${ZFS_VERSION}.tar.gz
 
-WORKDIR /tmp/${ZFS_VERSION}
+WORKDIR /tmp/zfs-${ZFS_VERSION}
 
 # build
 RUN ./configure \
