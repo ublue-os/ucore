@@ -19,6 +19,7 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - [duperemove](https://github.com/markfasheh/duperemove)
   - moby-engine(docker), docker-compose and podman-compose
   - [mergerfs](https://github.com/trapexit/mergerfs)
+  - sanoid/syncoid dependencies - see below for details
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
@@ -72,6 +73,12 @@ Users may use [distrobox](https://github.com/89luca89/distrobox) to run images o
 ### CoreOS and ostree Docs
 
 It's a good idea to become familar with the [Fedora CoreOS Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/) as well as the [CoreOS rpm-ostree docs](https://coreos.github.io/rpm-ostree/). Note especially, this image is only possible due to [ostree native containers](https://coreos.github.io/rpm-ostree/container/).
+
+### Sanoid/Syncoid
+
+sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
+
+`ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
 
 ### ZFS
 
