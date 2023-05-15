@@ -1,0 +1,34 @@
+[Unit]
+Description=Cockpit Container
+After=network-online.target
+Wants=network-online.target
+SourcePath=/etc/containers/systemd/cockpit.container
+RequiresMountsFor=%t/containers
+RequiresMountsFor=/
+
+[X-Container]
+Image=quay.io/cockpit/ws:latest
+ContainerName=cockpit-ws
+Environment=NAME=cockpit-ws
+
+#flag for autoupdates
+Label=io.containers.autoupdate=registry
+
+Volume=/:/host
+PodmanArgs=--pid host --privileged
+Exec=/container/label-run
+
+[Service]
+Restart=always
+Environment=PODMAN_SYSTEMD_UNIT=%n
+KillMode=mixed
+ExecStopPost=-/usr/bin/podman rm -f -i --cidfile=%t/%N.cid
+ExecStopPost=-rm -f %t/%N.cid
+Delegate=yes
+Type=notify
+NotifyAccess=all
+SyslogIdentifier=%N
+ExecStart=/usr/bin/podman run --name=cockpit-ws --cidfile=%t/%N.cid --replace --rm --log-driver passthrough --cgroups=split --sdnotify=conmon -d ->
+
+[Install]
+WantedBy=default.target
