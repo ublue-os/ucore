@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Container]
 Image=quay.io/cockpit/ws:latest
-ContainerName=ws
-Environment=NAME=ws
+ContainerName=cockpit-ws
+Environment=NAME=cockpit-ws
 
 #flag for autoupdates
 Label=io.containers.autoupdate=registry
