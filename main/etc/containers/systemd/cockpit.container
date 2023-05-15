@@ -1,0 +1,22 @@
+[Unit]
+Description=Cockpit Container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=quay.io/cockpit/ws:latest
+ContainerName=ws
+Environment=NAME=ws
+
+#flag for autoupdates
+Label=io.containers.autoupdate=registry
+
+Volume=/:/host
+PodmanArgs=--pid host --privileged
+Exec=/container/label-run
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
