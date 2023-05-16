@@ -2,7 +2,6 @@
 Description=Cockpit Container
 After=network-online.target
 Wants=network-online.target
-SourcePath=/etc/containers/systemd/cockpit.container
 RequiresMountsFor=%t/containers
 RequiresMountsFor=/
 
@@ -28,7 +27,7 @@ Delegate=yes
 Type=notify
 NotifyAccess=all
 SyslogIdentifier=%N
-ExecStart=/usr/bin/podman run --name=cockpit-ws --cidfile=%t/%N.cid --replace --rm --log-driver passthrough --cgroups=split --sdnotify=conmon -d ->
+ExecStart=/usr/bin/podman run --name=ws --cidfile=%t/%N.cid --replace --rm --cgroups=split --sdnotify=conmon -d -v /:/host --env NAME=ws --label io.containers.autoupdate=registry --pid host --privileged quay.io/cockpit/ws:latest /container/label-run
 
 [Install]
 WantedBy=default.target
