@@ -1,15 +1,33 @@
 [Unit]
-Description=quay.io/cockpit/ws:latest podman container
+Description=Cockpit Container
 After=network-online.target
 Wants=network-online.target
+RequiresMountsFor=%t/containers
+RequiresMountsFor=/
+
+[X-Container]
+Image=quay.io/cockpit/ws:latest
+ContainerName=cockpit-ws
+Environment=NAME=cockpit-ws
+
+#flag for autoupdates
+Label=io.containers.autoupdate=registry
+
+Volume=/:/host
+PodmanArgs=--pid host --privileged
+Exec=/container/label-run
 
 [Service]
-Type=oneshot
-ExecStartPre=-/usr/bin/podman rm -f cockpit-ws
-ExecStart=/usr/bin/podman container runlabel --name cockpit-ws RUN quay.io/cockpit/ws:latest
-ExecStop=/usr/bin/podman rm -f cockpit-ws
-RemainAfterExit=yes
-KillMode=none
+Restart=always
+Environment=PODMAN_SYSTEMD_UNIT=%n
+KillMode=mixed
+ExecStopPost=-/usr/bin/podman rm -f -i --cidfile=%t/%N.cid
+ExecStopPost=-rm -f %t/%N.cid
+Delegate=yes
+Type=notify
+NotifyAccess=all
+SyslogIdentifier=%N
+ExecStart=/usr/bin/podman run --name=ws --cidfile=%t/%N.cid --replace --rm --cgroups=split --sdnotify=conmon -d -v /:/host --env NAME=ws --label io.containers.autoupdate=registry --pid host --privileged quay.io/cockpit/ws:latest /container/label-run
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
