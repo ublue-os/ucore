@@ -17,6 +17,7 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - [cockpit](https://cockpit-project.org)
   - [distrobox](https://github.com/89luca89/distrobox)
   - [duperemove](https://github.com/markfasheh/duperemove)
+  - guest VM agents (`qemu-guest-agent` and `open-vm-tools`)
   - moby-engine(docker), docker-compose and podman-compose
   - [mergerfs](https://github.com/trapexit/mergerfs)
   - sanoid/syncoid dependencies - see below for details
