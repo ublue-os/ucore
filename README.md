@@ -25,7 +25,8 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
 - Enable staging of automatic system updates via rpm-ostreed
-- Disable Zincati auto upgrade/reboot service
+- Disable Zincati auto upgrade/reboot service 
+  - *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
 - Enable password based SSH auth (required for locally running cockpit web interface)
 - Suitable for use on bare metal or virtual machines to run containerized workloads
 
