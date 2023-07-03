@@ -80,10 +80,10 @@ jobs:
         run: curl "https://api.github.com/repos/openzfs/zfs/releases" -o data.json
       - name: Get latest zfs version
         id: latest
-        run: echo "version=$(jq -r '.[0].name' data.json|cut -f2 -d-)" >> $GITHUB_OUTPUT
+        run: echo "version=$(jq -r '[ .[] | select(.prerelease==false and .draft==false) ][0].name' data.json|cut -f2- -d-)" >> $GITHUB_OUTPUT
       - name: Get previous zfs version
         id: previous
-        run: echo "version=$(jq -r '.[1].name' data.json|cut -f2 -d-)" >> $GITHUB_OUTPUT
+        run: echo "version=$(jq -r '[ .[] | select(.prerelease==false and .draft==false) ][1].name' data.json|cut -f2- -d-)" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
           echo "${{ toJSON(steps.latest.outputs) }}"
