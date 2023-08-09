@@ -68,118 +68,11 @@ jobs:
           echo "${{ toJSON(steps.stable.outputs) }}"
           echo "${{ toJSON(steps.testing.outputs) }}"
 
-  zfs_versions:
-    name: Get ZFS versions
-    runs-on: ubuntu-latest
-    outputs:
-      latest: ${{ steps.latest.outputs.version }}
-      previous: ${{ steps.previous.outputs.version }}
-    steps:
-      # Use cURL to fetch the given URL, saving the response to `data.json`
-      - name: Fetch zfs versions
-        run: curl "https://api.github.com/repos/openzfs/zfs/releases" -o data.json
-      - name: Get latest zfs version
-        id: latest
-        run: echo "version=$(jq -r '[ .[] | select(.prerelease==false and .draft==false) ][0].name' data.json|cut -f2- -d-)" >> $GITHUB_OUTPUT
-      - name: Get previous zfs version
-        id: previous
-        run: echo "version=$(jq -r '[ .[] | select(.prerelease==false and .draft==false) ][1].name' data.json|cut -f2- -d-)" >> $GITHUB_OUTPUT
-      - name: Echo outputs
-        run: |
-          echo "${{ toJSON(steps.latest.outputs) }}"
-          echo "${{ toJSON(steps.previous.outputs) }}"
-
-  zfs_rpms_required:
-    name: Is zfs build required
-    runs-on: ubuntu-latest
-    needs: [build_info, coreos_versions, zfs_versions]
-    outputs:
-      build_stable: ${{ steps.stable.outputs.build }}
-      build_testing: ${{ steps.testing.outputs.build }}
-    steps:
-      # check if existing ucore-zfs-rpm images match requested kernel/zfs/stream combination
-      - name: Check stable ucore-zfs-rpm images
-        id: stable
-        continue-on-error: true
-        run: |
-          BUILD_IT=true
-          TAG="${{ needs.build_info.outputs.pr_prefix }}stable"
-          LINUX=${{ needs.coreos_versions.outputs.stable_linux }}
-          VERSION=${{ needs.coreos_versions.outputs.stable_version }}
-          ZFS=${{ needs.zfs_versions.outputs.latest }}
-
-          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
-          if [ -n "$(cat inspect.json)" ]; then
-            set -x
-            OLD_LINUX=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-            OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
-            OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
-            if [ "$OLD_LINUX" = "$LINUX" ] && [ "$OLD_VERSION" = "$VERSION" ] && [ "$OLD_ZFS" = "$ZFS" ]; then
-              BUILD_IT=false
-            fi
-            set +x
-          fi
-          echo "build=$BUILD_IT" >> $GITHUB_OUTPUT
-      - name: Check testing ucore-zfs-rpm images
-        id: testing
-        continue-on-error: true
-        run: |
-          BUILD_IT=true
-          TAG="${{ needs.build_info.outputs.pr_prefix }}testing"
-          LINUX=${{ needs.coreos_versions.outputs.testing_linux }}
-          VERSION=${{ needs.coreos_versions.outputs.testing_version }}
-          ZFS=${{ needs.zfs_versions.outputs.latest }}
-
-          skopeo inspect docker://ghcr.io/ublue-os/ucore-zfs-rpm:$TAG > inspect.json || echo "ucore-zfs-rpm:$TAG does not exist"
-          if [ -n "$(cat inspect.json)" ]; then
-            set -x
-            OLD_LINUX=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-            OLD_VERSION=$(jq -r '.["Labels"]["version"]' inspect.json)
-            OLD_ZFS=$(jq -r '.["Labels"]["zfs.version"]' inspect.json)
-            if [ "$OLD_LINUX" = "$LINUX" ] && [ "$OLD_VERSION" = "$VERSION" ] && [ "$OLD_ZFS" = "$ZFS" ]; then
-              BUILD_IT=false
-            fi
-            set +x
-          fi
-          echo "build=$BUILD_IT" >> $GITHUB_OUTPUT
-      - name: Echo outputs
-        run: |
-          echo "${{ toJSON(steps.stable.outputs) }}"
-          echo "${{ toJSON(steps.testing.outputs) }}"
-
-  build_zfs:
-    name: Build ZFS
-    needs: [coreos_versions, zfs_versions, zfs_rpms_required]
-    strategy:
-      matrix:
-        build_config:
-          - coreos_version: stable
-            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
-            image_linux: ${{ needs.coreos_versions.outputs.stable_linux }}
-            image_version: ${{ needs.coreos_versions.outputs.stable_version }}
-            image_name: ucore-zfs-rpm
-            build: ${{ needs.zfs_rpms_required.outputs.build_stable }}
-          - coreos_version: testing
-            zfs_version: ${{ needs.zfs_versions.outputs.latest }}
-            image_linux: ${{ needs.coreos_versions.outputs.testing_linux }}
-            image_version: ${{ needs.coreos_versions.outputs.testing_version }}
-            image_name: ucore-zfs-rpm
-            build: ${{ needs.zfs_rpms_required.outputs.build_testing }}
-    uses: ./.github/workflows/reusable-zfs-build.yml
-    with:
-      if_build: ${{ matrix.build_config.build }}
-      coreos_version: ${{ matrix.build_config.coreos_version }}
-      image_linux: ${{ matrix.build_config.image_linux }}
-      image_name: ${{ matrix.build_config.image_name }}
-      image_version: ${{ matrix.build_config.image_version }}
-      zfs_version: ${{ matrix.build_config.zfs_version }}
-    secrets: inherit
-
   build_main:
     name: Build uCore
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [ build_info, build_zfs, coreos_versions, zfs_versions]
+    needs: [ build_info, coreos_versions]
     permissions:
       contents: read
       packages: write
@@ -194,8 +87,6 @@ jobs:
           - testing
         pr_prefix:
           - ${{ needs.build_info.outputs.pr_prefix }}
-        zfs_version:
-          - ${{ needs.zfs_versions.outputs.latest }}
         include:
           - coreos_version: stable
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
@@ -255,7 +146,6 @@ jobs:
             org.opencontainers.image.description=An OCI image of Fedora CoreOS with batteries included
             org.opencontainers.image.title=${{ matrix.image_name }}
             org.opencontainers.image.version=${{ matrix.image_version }}
-            zfs.version=${{ matrix.zfs_version }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -329,7 +219,7 @@ jobs:
     name: Build HCI
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [ build_info, build_main, coreos_versions, zfs_versions]
+    needs: [ build_info, build_main, coreos_versions]
     permissions:
       contents: read
       packages: write
@@ -344,8 +234,6 @@ jobs:
           - testing
         pr_prefix:
           - ${{ needs.build_info.outputs.pr_prefix }}
-        zfs_version:
-          - ${{ needs.zfs_versions.outputs.latest }}
         include:
           - coreos_version: stable
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
@@ -405,7 +293,6 @@ jobs:
             org.opencontainers.image.description=A hyper-converged infrastructure Fedora CoreOS OCI with batteries included
             org.opencontainers.image.title=${{ format('{0}-hci', matrix.image_name) }}
             org.opencontainers.image.version=${{ matrix.image_version }}
-            zfs.version=${{ matrix.zfs_version }}
 
       # Build image using Buildah action
       - name: Build Image

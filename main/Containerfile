@@ -12,7 +12,7 @@ ADD packages.json /tmp/packages.json
 
 ARG PR_PREFIX="${PR_PREFIX}"
 
-COPY --from=ghcr.io/ublue-os/ucore-zfs-rpm:${PR_PREFIX}${COREOS_VERSION} / /tmp/rpms
+COPY --from=ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION} /rpms/ /tmp/rpms
 COPY etc /etc
 COPY usr /usr
 
@@ -27,7 +27,7 @@ done; \
 fi
 
 # install locally prepared RPMs (ZFS, etc)
-RUN rpm-ostree install /tmp/rpms/*.rpm
+RUN rpm-ostree install /tmp/rpms/kmods/zfs/*.rpm
 RUN /tmp/github-release-install.sh trapexit/mergerfs x86_64.rpm fc
 RUN /tmp/build.sh
 RUN /tmp/post-install.sh
