@@ -232,6 +232,9 @@ jobs:
         coreos_version:
           - stable
           - testing
+        add_zfs:
+          - false
+          - true
         pr_prefix:
           - ${{ needs.build_info.outputs.pr_prefix }}
         include:
@@ -251,6 +254,9 @@ jobs:
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
           COREOS_VERSION="${{ matrix.coreos_version }}"
+          if [[ "${{ matrix.add_zfs }}" == "true" ]]; then
+              COREOS_VERSION="${{ matrix.coreos_version }}-zfs"
+          fi
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -307,6 +313,7 @@ jobs:
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
+            ADD_ZFS=${{ matrix.add_zfs }}
             PR_PREFIX=${{ matrix.pr_prefix }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
@@ -379,6 +386,9 @@ jobs:
         coreos_version:
           - stable
           - testing
+        add_zfs:
+          - false
+          - true
         pr_prefix:
           - ${{ needs.build_info.outputs.pr_prefix }}
         include:
@@ -398,6 +408,9 @@ jobs:
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
           COREOS_VERSION="${{ matrix.coreos_version }}"
+          if [[ "${{ matrix.add_zfs }}" == "true" ]]; then
+              COREOS_VERSION="${{ matrix.coreos_version }}-zfs"
+          fi
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -455,6 +468,7 @@ jobs:
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
+            ZFS_TAG=${{ 'true' == matrix.add_zfs && '-zfs' }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 
