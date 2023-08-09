@@ -44,6 +44,10 @@ Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos
 
 Note: Fedora now uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
 
+`fedora-coreos-zfs` image:
+- A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image
+- Add only [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) from the [ucore-kmods image](https://github.com/ublue-os/ucore-kmods)
+
 ## Tips and Tricks
 
 ### Immutability and Podman
