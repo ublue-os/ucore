@@ -468,7 +468,7 @@ jobs:
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
-            ZFS_TAG=${{ 'true' == matrix.add_zfs && '-zfs' }}
+            ZFS_TAG=${{ 'true' == matrix.add_zfs && "-zfs" || "" }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 
