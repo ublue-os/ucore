@@ -8,12 +8,12 @@ You should be familiar with [Fedora CoreOS](https://getfedora.org/coreos/), as t
 
 WARNING: This image has **not** been heavily tested, though the underlying components have. Please take a look at the included modifications and help test if this project interests you.
 
-## Features
+## Images & Features
 
-`ucore` images:
+### `ucore`
 
-- Start with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
-- Add the following:
+- Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
+- Adds the following:
   - [cockpit](https://cockpit-project.org)
   - [distrobox](https://github.com/89luca89/distrobox)
   - [duperemove](https://github.com/markfasheh/duperemove)
@@ -23,19 +23,19 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
   - sanoid/syncoid dependencies - see below for details
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
-  - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
-- Enable staging of automatic system updates via rpm-ostreed
-- Disable Zincati auto upgrade/reboot service 
+  - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) (optional)
+- Enables staging of automatic system updates via rpm-ostreed
+- Disables Zincati auto upgrade/reboot service
   - *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
-- Enable password based SSH auth (required for locally running cockpit web interface)
+- Enables password based SSH auth (required for locally running cockpit web interface)
 - Suitable for use on bare metal or virtual machines to run containerized workloads
 
 Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
-`ucore-hci` images:
+### `ucore-hci`
 
-- Start with `ucore` to give you everything above, PLUS:
-- Add the following:
+- Starts with `ucore` to give you everything above, PLUS:
+- Adds the following:
   - libvirt-daemon-kvm: KVM hypervisor management
   - virt-install: command-line utility for installing virtual machines
   - libvirt-client: `virsh` command-line utility for managing virtual machines
@@ -44,9 +44,10 @@ Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos
 
 Note: Fedora now uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
 
-`fedora-coreos-zfs` image:
+### `fedora-coreos-zfs`
+
 - A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image
-- Add only [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) from the [ucore-kmods image](https://github.com/ublue-os/ucore-kmods)
+- Adds only [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) from the [ucore-kmods image](https://github.com/ublue-os/ucore-kmods)
 
 ## Tips and Tricks
 
@@ -135,33 +136,21 @@ You can rebase any Fedora CoreOS x86_64 installation to uCore.  Installing CoreO
 
 To rebase an Fedora CoreOS machine to the latest uCore (stable):
 
-1. Execute the desired `rpm-ostree rebase` command... (below)
+1. Execute the `rpm-ostree rebase` command (below) with desired `IMAGE` and `TAG`.
 1. Reboot, as instructed.
 1. After rebooting, you should [pin the working deployment](https://docs.fedoraproject.org/en-US/fedora-silverblue/faq/#_how_can_i_upgrade_my_system_to_the_next_major_version_for_instance_rawhide_or_an_upcoming_fedora_release_branch_while_keeping_my_current_deployment) which allows you to rollback if required.
 
-`ucore` stable stream
-
 ```bash
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:stable
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 ```
 
-`ucore-hci` stable stream
+| IMAGE | TAG |
+|-|-|
+| [`ucore`](#ucore) | `stable`, `testing`, `stable-zfs`, `testing-zfs` |
+| [`ucore-hci`](#ucore-hci) | `stable`, `testing`, `stable-zfs`, `testing-zfs` |
+| [`fedora-coreos-zfs`](#fedora-coreos-zfs) | `stable`, `testing` |
 
-```bash
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore-hci:stable
-```
 
-`ucore` testing stream
-
-```bash
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore:testing
-```
-
-`ucore-hci` testing stream
-
-```bash
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/ucore-hci:testing
-```
 
 ### Install with Auto-Rebase
 
@@ -169,7 +158,7 @@ Your path to a running uCore can be shortend by using [examples/ucore-autorebase
 
 1. As usual, you'll need to [follow the docs to setup a password](https://coreos.github.io/butane/examples/#using-password-authentication). Substitute your password hash for `YOUR_GOOD_PASSWORD_HASH_HERE` in the `ucore-autorebase.butane` file, and add your ssh pub key while you are at it.
 1. Generate an ignition file from your new `ucore-autorebase.butane` [using the butane utility](https://coreos.github.io/butane/getting-started/).
-1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable`, rebooting and leaving your install ready to use.
+1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable` (or other `IMAGE:TAG` combo), rebooting and leaving your install ready to use.
 
 ## Verification
 
