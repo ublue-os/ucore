@@ -4,7 +4,7 @@ FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
-ARG ADD_ZFS="${ADD_ZFS:-false}"
+ARG ZFS_TAG="${ZFS_TAG}"
 
 ADD github-release-install.sh /tmp/github-release-install.sh
 ADD build.sh /tmp/build.sh
@@ -25,7 +25,7 @@ for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing{,-modular}.repo); do \
 done; \
 fi
 
-RUN if [[ "true" == "${ADD_ZFS}" ]]; then \
+RUN if [[ "-zfs" == "${ZFS_TAG}" ]]; then \
     rpm-ostree install /tmp/rpms/kmods/zfs/*.rpm; \
 fi; \
     /tmp/github-release-install.sh trapexit/mergerfs x86_64.rpm fc && \
