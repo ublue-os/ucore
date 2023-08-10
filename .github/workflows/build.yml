@@ -153,8 +153,8 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           containerfiles: |
-            ./main/Containerfile
-          context: ./main
+            ./fedora-coreos-zfs/Containerfile
+          context: ./fedora-coreos-zfs
           image: ${{ matrix.image_name }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
