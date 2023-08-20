@@ -1,0 +1,25 @@
+ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
+ARG PR_PREFIX="${PR_PREFIX}"
+ARG ZFS_TAG="${ZFS_TAG}"
+
+FROM ghcr.io/ublue-os/${IMAGE_NAME}:${PR_PREFIX}${COREOS_VERSION}${ZFS_TAG}
+
+ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
+ARG NVIDIA_MAJOR_VERSION="${NVIDIA_MAJOR_VERSION:-535}"
+
+ADD build.sh /tmp/build.sh
+
+COPY --from=ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION} /rpms/kmods/nvidia/ublue*.rpm /tmp/rpms/
+COPY --from=ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION} /rpms/kmods/nvidia/${NVIDIA_MAJOR_VERSION} /tmp/rpms/
+
+RUN mkdir -p /var/lib/alternatives \
+    && /tmp/build.sh \
+    && mv /var/lib/alternatives /staged-alternatives \
+    && rm -fr /tmp/* /var/* \
+    && rpm-ostree cleanup -m \
+    && ostree container commit \
+    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
+    && mkdir -p /tmp /var/tmp \
+    && chmod -R 1777 /tmp /var/tmp
