@@ -95,7 +95,7 @@ jobs:
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Generate tags
         id: generate-tags
@@ -245,7 +245,7 @@ jobs:
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Generate tags
         id: generate-tags
@@ -396,7 +396,7 @@ jobs:
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Generate tags
         id: generate-tags
