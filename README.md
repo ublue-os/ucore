@@ -41,6 +41,7 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and virtualization in one p
 - Adds the following:
   - [cockpit-machines](https://github.com/cockpit-project/cockpit-machines): Cockpit GUI for managing virtual machines
   - [duperemove](https://github.com/markfasheh/duperemove)
+  - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
   - [libvirt-client](https://libvirt.org/): `virsh` command-line utility for managing virtual machines
   - [libvirt-daemon-kvm](https://libvirt.org/): libvirt KVM hypervisor management
   - [mergerfs](https://github.com/trapexit/mergerfs)
