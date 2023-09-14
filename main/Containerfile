@@ -6,7 +6,6 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 ARG ZFS_TAG="${ZFS_TAG}"
 
-ADD github-release-install.sh /tmp/github-release-install.sh
 ADD build.sh /tmp/build.sh
 ADD post-install.sh /tmp/post-install.sh
 ADD packages.json /tmp/packages.json

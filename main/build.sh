@@ -29,9 +29,16 @@ curl -L https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repo
 
 
 #### INSTALL
-## install ZFS if tagged
+## install ZFS (and sanoid deps) if tagged
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
-    rpm-ostree install /tmp/rpms/kmods/zfs/*.rpm
+    rpm-ostree install /tmp/rpms/kmods/zfs/*.rpm \
+      lzop \
+      mbuffer \
+      mhash \
+      perl-Capture-Tiny \
+      perl-Config-IniFiles \
+      perl-Getopt-Long \
+      pv
 fi
 
 ## install packages.json stuffs
@@ -63,7 +70,3 @@ else
     echo "No packages to install."
 
 fi
-
-
-## install packages direct from github
-/tmp/github-release-install.sh trapexit/mergerfs x86_64.rpm fc

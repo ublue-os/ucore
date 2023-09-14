@@ -8,7 +8,7 @@ FROM ghcr.io/ublue-os/${IMAGE_NAME}:${PR_PREFIX}${COREOS_VERSION}${ZFS_TAG}
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 
-
+ADD github-release-install.sh /tmp/github-release-install.sh
 ADD build.sh /tmp/build.sh
 ADD packages.json /tmp/packages.json
 

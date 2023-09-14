@@ -12,50 +12,55 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 
 ### `ucore`
 
+Suitable for running containerized workloads on either baremetal or virtual machines, this image tries to stay lightweight with not too many additions.
+
 - Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
 - Adds the following:
   - [cockpit](https://cockpit-project.org)
   - [distrobox](https://github.com/89luca89/distrobox)
-  - [duperemove](https://github.com/markfasheh/duperemove)
   - guest VM agents (`qemu-guest-agent` and `open-vm-tools`)
   - moby-engine(docker), docker-compose and podman-compose
-  - [mergerfs](https://github.com/trapexit/mergerfs)
-  - sanoid/syncoid dependencies - see below for details
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
-  - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) (optional)
+- Optional ZFS versions also add:
+  - sanoid/syncoid dependencies - see below for details
+  - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
 - Enables staging of automatic system updates via rpm-ostreed
+- Enables password based SSH auth (required for locally running cockpit web interface)
 - Disables Zincati auto upgrade/reboot service
   - *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
-- Enables password based SSH auth (required for locally running cockpit web interface)
-- Suitable for use on bare metal or virtual machines to run containerized workloads
 
 Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
 ### `ucore-hci`
 
-- Starts with `ucore` to give you everything above, PLUS:
+Hyper-Coverged Infrastructure(HCI) refers to storage and virtualization in one place... So this image is suitable for use as a hypervisor, storage server(NAS), as well as running containerized workloads). Accordingingly, it will be a bit larger due to extra hardware support, storage and virtualization packages.
+
+
+- Starts with `ucore` to give you everything above, plus:
 - Adds the following:
-  - libvirt-daemon-kvm: KVM hypervisor management
+  - [cockpit-machines](https://github.com/cockpit-project/cockpit-machines): Cockpit GUI for managing virtual machines
+  - [duperemove](https://github.com/markfasheh/duperemove)
+  - [libvirt-client](https://libvirt.org/): `virsh` command-line utility for managing virtual machines
+  - [libvirt-daemon-kvm](https://libvirt.org/): libvirt KVM hypervisor management
+  - [mergerfs](https://github.com/trapexit/mergerfs)
   - virt-install: command-line utility for installing virtual machines
-  - libvirt-client: `virsh` command-line utility for managing virtual machines
-  - cockpit-machines: Cockpit GUI for managing virtual machines
-- Suitable for use on bare metal to run as a hypervisor in addition to running containerized workloads
 
 Note: Fedora now uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
 
 ### `fedora-coreos-zfs`
 
 - A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image
-- Adds only [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) from the [ucore-kmods image](https://github.com/ublue-os/ucore-kmods)
+- Adds [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) from the [ucore-kmods image](https://github.com/ublue-os/ucore-kmods)
+- Does NOT add sanoid/syncoid dependencies as mentioned above in `ucore` features list
 
 ## Tips and Tricks
 
 ### Immutability and Podman
 
-These images are immutable, you can't, and really shouldn't, install packages like in a mutable "normal" distribution.
+These images are immutable and you probably shouldn't install packages like in a mutable "normal" distribution.
 
-CoreOS expects the user to run services using [podman](https://podman.io). `moby-engine`, the free Docker implementation, is installed for those who desire docker instead of podman.
+Fedora CoreOS expects the user to run services using [podman](https://podman.io). `moby-engine`, the free Docker implementation, is installed for those who desire docker instead of podman.
 
 ### Default Services
 
