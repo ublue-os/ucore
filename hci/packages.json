@@ -4,6 +4,9 @@
             "all": [
                 "cockpit-machines",
                 "duperemove",
+                "iwlegacy-firmware",
+                "iwlwifi-dvm-firmware",
+                "iwlwifi-mvm-firmware",
                 "libvirt-client",
                 "libvirt-daemon-kvm",
                 "nfs-utils",
