@@ -3,6 +3,7 @@
         "include": {
             "all": [
                 "cockpit-machines",
+                "duperemove",
                 "libvirt-client",
                 "libvirt-daemon-kvm",
                 "nfs-utils",

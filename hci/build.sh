@@ -32,3 +32,7 @@ else
     echo "No packages to install."
 
 fi
+
+
+## install packages direct from github
+/tmp/github-release-install.sh trapexit/mergerfs fc.x86_64
