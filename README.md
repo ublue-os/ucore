@@ -45,6 +45,7 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and virtualization in one p
   - [libvirt-client](https://libvirt.org/): `virsh` command-line utility for managing virtual machines
   - [libvirt-daemon-kvm](https://libvirt.org/): libvirt KVM hypervisor management
   - [mergerfs](https://github.com/trapexit/mergerfs)
+  - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
   - virt-install: command-line utility for installing virtual machines
 
 Note: Fedora now uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
