@@ -12,6 +12,8 @@ ADD github-release-install.sh /tmp/github-release-install.sh
 ADD build.sh /tmp/build.sh
 ADD packages.json /tmp/packages.json
 
+ADD files/usr /usr
+
 RUN mkdir -p /var/lib/alternatives \
     && /tmp/build.sh \
     && mv /var/lib/alternatives /staged-alternatives \
