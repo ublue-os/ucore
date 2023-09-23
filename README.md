@@ -45,6 +45,7 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and virtualization in one p
   - [libvirt-client](https://libvirt.org/): `virsh` command-line utility for managing virtual machines
   - [libvirt-daemon-kvm](https://libvirt.org/): libvirt KVM hypervisor management
   - [mergerfs](https://github.com/trapexit/mergerfs)
+  - [snapraid](https://www.snapraid.it/)
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
   - virt-install: command-line utility for installing virtual machines
 
