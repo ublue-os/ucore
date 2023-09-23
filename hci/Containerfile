@@ -15,6 +15,7 @@ ADD packages.json /tmp/packages.json
 ADD files/usr /usr
 
 RUN mkdir -p /var/lib/alternatives \
+    && wget https://copr.fedorainfracloud.org/coprs/ublue-os/ucore/repo/fedora-$(rpm -E %fedora)/ublue-os-ucore-fedora-$(rpm -E %fedora).repo -O /etc/yum.repos.d/_copr_ublue-os-ucore.repo \
     && /tmp/build.sh \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \
