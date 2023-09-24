@@ -3,6 +3,7 @@
         "include": {
             "all": [
                 "cockpit-networkmanager",
+                "cockpit-pcp",
                 "cockpit-podman",
                 "cockpit-selinux",
                 "cockpit-storaged",
@@ -10,6 +11,7 @@
                 "distrobox",
                 "firewalld",
                 "open-vm-tools",
+                "pcp-zeroconf",
                 "podman",
                 "podman-compose",
                 "qemu-guest-agent",

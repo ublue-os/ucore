@@ -20,6 +20,7 @@ Suitable for running containerized workloads on either baremetal or virtual mach
   - [distrobox](https://github.com/89luca89/distrobox)
   - guest VM agents (`qemu-guest-agent` and `open-vm-tools`)
   - moby-engine(docker), docker-compose and podman-compose
+  - [pcp](https://pcp.io) Performance Co-pilot monitoring
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
 - Optional ZFS versions also add:
