@@ -8,18 +8,15 @@ FROM ghcr.io/ublue-os/${IMAGE_NAME}:${PR_PREFIX}${COREOS_VERSION}${ZFS_TAG}
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 
-ADD github-release-install.sh /tmp/github-release-install.sh
-ADD build.sh /tmp/build.sh
-ADD packages.json /tmp/packages.json
+COPY *.sh /tmp/
+COPY packages.json /tmp/packages.json
 
-ADD files/usr /usr
+COPY usr /usr
 
 RUN mkdir -p /var/lib/alternatives \
-    && wget https://copr.fedorainfracloud.org/coprs/ublue-os/ucore/repo/fedora-$(rpm -E %fedora)/ublue-os-ucore-fedora-$(rpm -E %fedora).repo -O /etc/yum.repos.d/_copr_ublue-os-ucore.repo \
-    && /tmp/build.sh \
+    && /tmp/install.sh \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \
-    && rpm-ostree cleanup -m \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
     && mkdir -p /tmp /var/tmp \

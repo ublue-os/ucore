@@ -4,7 +4,6 @@ set -ouex pipefail
 
 RELEASE="$(rpm -E %fedora)"
 
-## install packages.json stuffs
 # build list of all packages requested for inclusion
 INCLUDED_PACKAGES=($(jq -r "[(.all.include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[]), \
                              (select(.\"$COREOS_VERSION\" != null).\"$COREOS_VERSION\".include | (.all, select(.\"$IMAGE_NAME\" != null).\"$IMAGE_NAME\")[])] \
@@ -57,7 +56,3 @@ if [[ "${#EXCLUDED_PACKAGES[@]}" -gt 0 ]]; then
     rpm-ostree override remove \
         ${EXCLUDED_PACKAGES[@]}
 fi
-
-
-## install packages direct from github
-/tmp/github-release-install.sh trapexit/mergerfs fc.x86_64

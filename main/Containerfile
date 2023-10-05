@@ -6,19 +6,20 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 ARG ZFS_TAG="${ZFS_TAG}"
 
-ADD build.sh /tmp/build.sh
-ADD post-install.sh /tmp/post-install.sh
-ADD packages.json /tmp/packages.json
+COPY *.sh /tmp/
+COPY packages.json /tmp/packages.json
 
-COPY --from=ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION} /rpms/ /tmp/rpms
-COPY etc /etc
+COPY --from=ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION} /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
 COPY usr /usr
 
-RUN /tmp/build.sh && \
-    /tmp/post-install.sh && \
-    rm -rf /tmp/* /var/* && \
-    ostree container commit && \
-    mkdir -p /var/tmp  && \
-    chmod -R 1777 /var/tmp
+RUN mkdir -p /var/lib/alternatives \
+    && /tmp/install.sh \
+    && /tmp/post-install.sh \
+    && mv /var/lib/alternatives /staged-alternatives \
+    && rm -fr /tmp/* /var/* \
+    && ostree container commit \
+    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
+    && mkdir -p /tmp /var/tmp \
+    && chmod -R 1777 /tmp /var/tmp
 
 COPY --from=docker.io/docker/compose-bin:latest /docker-compose /usr/bin/docker-compose
