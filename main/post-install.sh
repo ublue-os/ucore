@@ -2,6 +2,13 @@
 
 set -ouex pipefail
 
+## CONDITIONAL: post-install ZFS
+if [[ "-zfs" == "${ZFS_TAG}" ]]; then
+    echo "no post-install tasks for ZFS"
+fi
+
+
+## ALWAYS: regular post-install
 systemctl disable docker.socket
 systemctl disable zincati.service
 
