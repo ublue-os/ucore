@@ -232,6 +232,9 @@ jobs:
         coreos_version:
           - stable
           - testing
+        nvidia_tag:
+          - "-nvidia"
+          - ""
         zfs_tag:
           - "-zfs"
           - ""
@@ -253,7 +256,7 @@ jobs:
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.zfs_tag }}"
+          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -311,6 +314,7 @@ jobs:
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
+            NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
@@ -383,6 +387,9 @@ jobs:
         coreos_version:
           - stable
           - testing
+        nvidia_tag:
+          - "-nvidia"
+          - ""
         zfs_tag:
           - "-zfs"
           - ""
@@ -404,7 +411,7 @@ jobs:
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.zfs_tag }}"
+          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -462,6 +469,7 @@ jobs:
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
+            NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
