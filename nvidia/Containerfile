@@ -7,12 +7,11 @@ FROM ghcr.io/ublue-os/${IMAGE_NAME}:${PR_PREFIX}${COREOS_VERSION}${ZFS_TAG}
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
-ARG NVIDIA_MAJOR_VERSION="${NVIDIA_MAJOR_VERSION:-535}"
+ARG KMOD_SRC="${KMOD_SRC:-ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION}}"
 
 ADD build.sh /tmp/build.sh
 
-COPY --from=ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION} /rpms/kmods/nvidia/ublue*.rpm /tmp/rpms/
-COPY --from=ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION} /rpms/kmods/nvidia/${NVIDIA_MAJOR_VERSION} /tmp/rpms/
+COPY --from=${KMOD_SRC} /rpms/kmods/nvidia/ /tmp/rpms/
 
 RUN mkdir -p /var/lib/alternatives \
     && /tmp/build.sh \
