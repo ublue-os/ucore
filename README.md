@@ -28,7 +28,7 @@ Suitable for running containerized workloads on either baremetal or virtual mach
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allos using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - Optional [ZFS versions](#tag-matrix) also add:
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
-  - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
+  - [ZFS](https://github.com/openzfs/zfs)
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
 - Disables Zincati auto upgrade/reboot service
