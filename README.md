@@ -24,7 +24,7 @@ Suitable for running containerized workloads on either baremetal or virtual mach
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
 - Optional [nvidia versions](#tag-matrix) also add:
   - [nvidia driver](https://negativo17.org/nvidia-driver) - latest driver (currently version 535) built from negativo17's akmod package
-  - [nvidia-container-tookkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
+  - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allos using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - Optional [ZFS versions](#tag-matrix) also add:
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
