@@ -6,14 +6,10 @@ on:
     paths-ignore:
       - '**.md'
       - '**.txt'
+  merge_group:
   schedule:
     - cron: '45 23 * * *' # 11:45PM UTC everyday (approx 1.5 hours after coreos images publish)
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
+  workflow_dispatch:
 env:
     IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
