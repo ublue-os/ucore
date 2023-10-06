@@ -99,9 +99,15 @@ sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS
 
 `ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
 
+### NVIDIA
+
+If you installed an image with `-nvidia` in the tag, the nvidia kernel module, basic CUDA libraries, and the nvidia-container-toolkit are all are pre-installed.
+
+Note, this does NOT add desktop graphics services to your images, but it DOES enable your compatible nvidia GPU to be used for nvdec, nvenc, CUDA, etc. Since this is CoreOS and it's primarily intended for container workloads the [nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) should be well understood.
+
 ### ZFS
 
-The ZFS kernel module and tools are pre-installed, but like other services, ZFS is not pre-configured to load on default.
+If you installed an image with `-zfs` in the tag (or `fedora-coreos-zfs`), the ZFS kernel module and tools are pre-installed, but like other services, ZFS is not pre-configured to load on default.
 
 Load it with the command `modprobe zfs` and use `zfs` and `zpool` commands as desired.
 
