@@ -159,8 +159,10 @@ sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 #### Tag Matrix
 | IMAGE | TAG |
 |-|-|
-| [`ucore`](#ucore) | `stable`, `testing`, `stable-zfs`, `testing-zfs` |
-| [`ucore-hci`](#ucore-hci) | `stable`, `testing`, `stable-zfs`, `testing-zfs` |
+| [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
+| [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
+| [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
+| [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`fedora-coreos-zfs`](#fedora-coreos-zfs) | `stable`, `testing` |
 
 
