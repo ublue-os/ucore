@@ -34,6 +34,20 @@ if [[ "-zfs" == "${ZFS_TAG}" ]]; then
       pv
 fi
 
+## CONDITIONAL: install NVIDIA
+if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
+    # repo for nvidia rpms
+    curl -L https://negativo17.org/repos/fedora-nvidia.repo -o /etc/yum.repos.d/fedora-nvidia.repo
+
+    rpm-ostree install /tmp/rpms/nvidia/ublue-os-ucore-nvidia-*.rpm
+    sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' /etc/yum.repos.d/nvidia-container-toolkit.repo
+
+    rpm-ostree install \
+        /tmp/rpms/nvidia/kmod-nvidia-*.rpm \
+        nvidia-driver-cuda \
+        nvidia-container-toolkit
+fi
+
 ## ALWAYS: install regular packages
 
 # add tailscale repo

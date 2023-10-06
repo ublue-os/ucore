@@ -22,8 +22,12 @@ Suitable for running containerized workloads on either baremetal or virtual mach
   - moby-engine(docker), docker-compose and podman-compose
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
-- Optional ZFS versions also add:
-  - sanoid/syncoid dependencies - see below for details
+- Optional [nvidia versions](#tag-matrix) also add:
+  - [nvidia driver](https://negativo17.org/nvidia-driver) - latest driver (currently version 535) built from negativo17's akmod package
+  - [nvidia-container-tookkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
+  - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allos using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
+- Optional [ZFS versions](#tag-matrix) also add:
+  - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
   - [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html)
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
@@ -95,9 +99,23 @@ sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS
 
 `ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
 
+### NVIDIA
+
+If you installed an image with `-nvidia` in the tag, the nvidia kernel module, basic CUDA libraries, and the nvidia-container-toolkit are all are pre-installed.
+
+Note, this does NOT add desktop graphics services to your images, but it DOES enable your compatible nvidia GPU to be used for nvdec, nvenc, CUDA, etc. Since this is CoreOS and it's primarily intended for container workloads the [nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) should be well understood.
+
+Note the included driver is the [latest nvidia driver](https://github.com/negativo17/nvidia-driver/blob/master/nvidia-driver.spec) as bundled by [negativo17](https://negativo17.org/nvidia-driver/). This package was chosen over rpmfusion's due to it's granular packages which allow us to install just the minimal `nvidia-driver-cuda` packages.
+
+#### Other NVIDIA Drivers
+
+If you need an older (or different) driver, consider looking at the [container-toolkit-fcos driver](https://hub.docker.com/r/fifofonix/driver/). It provides pre-bundled container images with nvidia drivers for FCOS, allowing auto-build/loading of the nvidia driver IN podman, at boot, via a systemd service.
+
+If going this path, you likely won't want to use the `ucore` `-nvidia` image, but would use the suggested systemd service. The nvidia container toolkit will still be required but can by layered easily.
+
 ### ZFS
 
-The ZFS kernel module and tools are pre-installed, but like other services, ZFS is not pre-configured to load on default.
+If you installed an image with `-zfs` in the tag (or `fedora-coreos-zfs`), the ZFS kernel module and tools are pre-installed, but like other services, ZFS is not pre-configured to load on default.
 
 Load it with the command `modprobe zfs` and use `zfs` and `zpool` commands as desired.
 
@@ -152,10 +170,13 @@ To rebase an Fedora CoreOS machine to the latest uCore (stable):
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 ```
 
+#### Tag Matrix
 | IMAGE | TAG |
 |-|-|
-| [`ucore`](#ucore) | `stable`, `testing`, `stable-zfs`, `testing-zfs` |
-| [`ucore-hci`](#ucore-hci) | `stable`, `testing`, `stable-zfs`, `testing-zfs` |
+| [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
+| [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
+| [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
+| [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`fedora-coreos-zfs`](#fedora-coreos-zfs) | `stable`, `testing` |
 
 
