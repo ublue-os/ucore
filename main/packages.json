@@ -7,6 +7,7 @@
                 "cockpit-selinux",
                 "cockpit-storaged",
                 "cockpit-system",
+                "dbus-tools",
                 "distrobox",
                 "firewalld",
                 "open-vm-tools",
