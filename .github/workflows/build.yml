@@ -521,3 +521,11 @@ jobs:
         run: |
           echo "${{ toJSON(steps.push.outputs) }}"
 
+  check:
+    name: Check all builds successful
+    runs-on: ubuntu-latest
+    needs: [build_fcos_zfs, build_main, build_hci]
+    steps:
+      - name: Exit
+        shell: bash
+        run: exit 0
