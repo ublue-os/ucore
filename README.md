@@ -22,6 +22,7 @@ A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - [ZFS versions](#tag-matrix) add:
   - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
+
 *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
 
 ### `ucore`
@@ -51,7 +52,6 @@ Suitable for running containerized workloads on either baremetal or virtual mach
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
 - Disables Zincati auto upgrade/reboot service
-  - *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
 
 Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
