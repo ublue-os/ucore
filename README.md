@@ -12,6 +12,8 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 
 ### `fedora-coreos`
 
+**NOTE: formerly named `fedora-coreos-zfs`, that version of the image did not offer the nvidia option. Please update with `rpm-ostree rebase`.**
+
 A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image with choice of add-on kernel modules:
 
 - [nvidia versions](#tag-matrix) add:
@@ -21,8 +23,6 @@ A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?
 - [ZFS versions](#tag-matrix) add:
   - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
 *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
-
-_**NOTE: formerly named `fedora-coreos-zfs`, that version of the image did not offer the nvidia option. Please update with `rpm-ostree rebase`.**
 
 ### `ucore`
 
