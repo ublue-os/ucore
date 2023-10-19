@@ -10,6 +10,19 @@ WARNING: This image has **not** been heavily tested, though the underlying compo
 
 ## Images & Features
 
+### `fedora-coreos`
+
+A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image with choice of add-on kernel modules:
+
+- [nvidia versions](#tag-matrix) add:
+  - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently version 535) built from negativo17's akmod package
+  - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
+  - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
+- [ZFS versions](#tag-matrix) add:
+  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
+*NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
+
+
 ### `ucore`
 
 Suitable for running containerized workloads on either baremetal or virtual machines, this image tries to stay lightweight  but functional for multiple use cases, including that of a storage server (NAS).
@@ -27,13 +40,13 @@ Suitable for running containerized workloads on either baremetal or virtual mach
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
-- Optional [nvidia versions](#tag-matrix) also add:
+- Optional [nvidia versions](#tag-matrix) add:
   - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently version 535) built from negativo17's akmod package
   - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
-- Optional [ZFS versions](#tag-matrix) also add:
+- Optional [ZFS versions](#tag-matrix) add:
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
-  - [zfs driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
+  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
 - Disables Zincati auto upgrade/reboot service
@@ -54,12 +67,6 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and virtualization in one p
   - virt-install: command-line utility for installing virtual machines
 
 Note: Fedora now uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
-
-### `fedora-coreos-zfs`
-
-- A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image
-- Adds [ZFS](https://openzfs.github.io/openzfs-docs/Getting%20Started/Fedora/index.html) from the [ucore-kmods image](https://github.com/ublue-os/ucore-kmods)
-- Does NOT add sanoid/syncoid dependencies as mentioned above in `ucore` features list
 
 ## Tips and Tricks
 
