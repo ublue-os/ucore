@@ -59,11 +59,11 @@ jobs:
           echo "${{ toJSON(steps.stable.outputs) }}"
           echo "${{ toJSON(steps.testing.outputs) }}"
 
-  build_fcos_zfs:
-    name: Build CoreOS ZFS
+  build_fcos:
+    name: Build CoreOS
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [ build_info, coreos_versions]
+    needs: [build_info, coreos_versions]
     permissions:
       contents: read
       packages: write
@@ -72,10 +72,16 @@ jobs:
       fail-fast: false
       matrix:
         image_name:
-          - fedora-coreos-zfs
+          - fedora-coreos
         coreos_version:
           - stable
           - testing
+        nvidia_tag:
+          - "-nvidia"
+          - ""
+        zfs_tag:
+          - "-zfs"
+          - ""
         pr_prefix:
           - ${{ needs.build_info.outputs.pr_prefix }}
         include:
@@ -83,6 +89,13 @@ jobs:
             image_version: ${{ needs.coreos_versions.outputs.stable_version }}
           - coreos_version: testing
             image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+        exclude:
+          - coreos_version: stable
+            nvidia_tag: ""
+            zfs_tag: ""
+          - coreos_version: testing
+            nvidia_tag: ""
+            zfs_tag: ""
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -94,7 +107,7 @@ jobs:
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ matrix.coreos_version }}"
+          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -134,7 +147,7 @@ jobs:
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
-            org.opencontainers.image.description=An OCI image of Fedora CoreOS with ZFS pre-installed
+            org.opencontainers.image.description=An OCI image of Fedora CoreOS with NVIDIA and/or ZFS pre-installed
             org.opencontainers.image.title=${{ matrix.image_name }}
             org.opencontainers.image.version=${{ matrix.image_version }}
 
@@ -144,14 +157,16 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           containerfiles: |
-            ./fedora-coreos-zfs/Containerfile
-          context: ./fedora-coreos-zfs
+            ./fedora-coreos/Containerfile
+          context: ./fedora-coreos
           image: ${{ matrix.image_name }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ matrix.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
+            NVIDIA_TAG=${{ matrix.nvidia_tag }}
+            ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 
@@ -210,7 +225,7 @@ jobs:
     name: Build uCore
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [ build_info, coreos_versions]
+    needs: [build_info, coreos_versions]
     permissions:
       contents: read
       packages: write
@@ -365,7 +380,7 @@ jobs:
     name: Build HCI
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [ build_info, build_main, coreos_versions]
+    needs: [build_info, build_main, coreos_versions]
     permissions:
       contents: read
       packages: write
@@ -519,7 +534,7 @@ jobs:
   check:
     name: Check all builds successful
     runs-on: ubuntu-latest
-    needs: [build_fcos_zfs, build_main, build_hci]
+    needs: [build_fcos, build_main, build_hci]
     steps:
       - name: Exit
         shell: bash
