@@ -12,8 +12,6 @@ ARG IMAGE_NAME="${IMAGE_NAME:-ucore}"
 COPY *.sh /tmp/
 COPY packages.json /tmp/packages.json
 
-COPY usr /usr
-
 RUN mkdir -p /var/lib/alternatives \
     && /tmp/install.sh \
     && mv /var/lib/alternatives /staged-alternatives \

@@ -3,13 +3,8 @@
         "include": {
             "all": [
                 "cockpit-machines",
-                "duperemove",
-                "iwlegacy-firmware",
-                "iwlwifi-dvm-firmware",
-                "iwlwifi-mvm-firmware",
                 "libvirt-client",
                 "libvirt-daemon-kvm",
-                "snapraid",
                 "nfs-utils",
                 "virt-install"
             ]
