@@ -28,12 +28,12 @@ Suitable for running containerized workloads on either baremetal or virtual mach
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
 - Optional [nvidia versions](#tag-matrix) also add:
-  - [nvidia driver](https://negativo17.org/nvidia-driver) - latest driver (currently version 535) built from negativo17's akmod package
+  - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently version 535) built from negativo17's akmod package
   - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - Optional [ZFS versions](#tag-matrix) also add:
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
-  - [ZFS](https://github.com/openzfs/zfs)
+  - [zfs driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
 - Disables Zincati auto upgrade/reboot service
