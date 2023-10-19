@@ -22,6 +22,7 @@ A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?
   - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
 *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
 
+_**NOTE: formerly named `fedora-coreos-zfs`, that version of the image did not offer the nvidia option. Please update with `rpm-ostree rebase`.**
 
 ### `ucore`
 
@@ -187,11 +188,12 @@ sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 #### Tag Matrix
 | IMAGE | TAG |
 |-|-|
+| [`fedora-coreos`](#fedora-coreos) - *stable* | `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
+| [`fedora-coreos`](#fedora-coreos) - *testing* | `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
 | [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
 | [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
-| [`fedora-coreos-zfs`](#fedora-coreos-zfs) | `stable`, `testing` |
 
 
 
