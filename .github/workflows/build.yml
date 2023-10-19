@@ -1,11 +1,6 @@
 name: build-ucore
 on:
   pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
   merge_group:
   schedule:
     - cron: '45 23 * * *' # 11:45PM UTC everyday (approx 1.5 hours after coreos images publish)
@@ -521,3 +516,11 @@ jobs:
         run: |
           echo "${{ toJSON(steps.push.outputs) }}"
 
+  check:
+    name: Check all builds successful
+    runs-on: ubuntu-latest
+    needs: [build_fcos_zfs, build_main, build_hci]
+    steps:
+      - name: Exit
+        shell: bash
+        run: exit 0
