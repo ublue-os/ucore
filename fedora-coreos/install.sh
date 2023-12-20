@@ -3,6 +3,7 @@
 set -ouex pipefail
 
 RELEASE="$(rpm -E %fedora)"
+KERNEL="$(rpm -q kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
 
 #### PREPARE
 # enable testing repos if not enabled on testing stream
@@ -25,6 +26,8 @@ find /tmp/rpms/
 ## CONDITIONAL: install ZFS (and sanoid deps)
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     rpm-ostree install pv /tmp/rpms/zfs/*.rpm
+    # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
+    depmod -A ${KERNEL}
 fi
 
 ## CONDITIONAL: install NVIDIA
