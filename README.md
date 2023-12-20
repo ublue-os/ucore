@@ -21,7 +21,7 @@ A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?
   - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - [ZFS versions](#tag-matrix) add:
-  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
+  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series)
 
 *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
 
@@ -48,7 +48,7 @@ Suitable for running containerized workloads on either baremetal or virtual mach
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - Optional [ZFS versions](#tag-matrix) add:
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
-  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.1.x series)
+  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series)
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
 - Disables Zincati auto upgrade/reboot service
