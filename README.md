@@ -108,6 +108,7 @@ Users may use [distrobox](https://github.com/89luca89/distrobox) to run images o
 
 It's a good idea to become familar with the [Fedora CoreOS Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/) as well as the [CoreOS rpm-ostree docs](https://coreos.github.io/rpm-ostree/). Note especially, this image is only possible due to [ostree native containers](https://coreos.github.io/rpm-ostree/container/).
 
+
 ### Sanoid/Syncoid
 
 sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
@@ -162,6 +163,19 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 ```
 # zfs set mountpoint=/var/tank tank
 ```
+
+
+### SecureBoot
+
+For those wishing to use the `nvidia` image with a pre-build kmod AND run SecureBoot, the kmod will not be loaded by the kernel until the public signing key has been imported as a MOK (Machine-Owner Key).
+
+Do so like this:
+```bash
+sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der
+```
+
+The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the UEFI MOK import utility.
+
 
 ## How to Install
 

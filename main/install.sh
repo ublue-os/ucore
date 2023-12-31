@@ -23,6 +23,7 @@ sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
 
+rpm-ostree install /tmp/rpms/ublue-os-ucore-addons-*.rpm
 
 ## CONDITIONAL: install ZFS (and sanoid deps)
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
