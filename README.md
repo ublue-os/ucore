@@ -167,7 +167,7 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 
 ### SecureBoot
 
-For those wishing to use the `nvidia` image with a pre-build kmod AND run SecureBoot, the kmod will not be loaded by the kernel until the public signing key has been imported as a MOK (Machine-Owner Key).
+For those wishing to use `nvidia` or `zfs` images with pre-built kmods AND run SecureBoot, the kernel will not load those kmods until the public signing key has been imported as a MOK (Machine-Owner Key).
 
 Do so like this:
 ```bash
