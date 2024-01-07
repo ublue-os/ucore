@@ -6,7 +6,8 @@
                 "libvirt-client",
                 "libvirt-daemon-kvm",
                 "nfs-utils",
-                "virt-install"
+                "virt-install",
+                "wget"
             ]
         },
         "exclude": {

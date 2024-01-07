@@ -19,6 +19,9 @@ fi
 # always disable cisco-open264 repo
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 
+# include wget for startingpoint compatiblity
+rpm-ostree install wget
+
 #### INSTALL
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
