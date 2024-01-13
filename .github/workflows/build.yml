@@ -282,7 +282,7 @@ jobs:
 
               alias_tags=("${COMMIT_TAGS[@]}")
           else
-              if [[ "$[COREOS_VERSION]" == "stable" ]]; then
+              if [[ "${COREOS_VERSION}" == "stable" ]]; then
                   BUILD_TAGS+=("latest")
               fi
 
