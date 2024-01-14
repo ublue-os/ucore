@@ -9,7 +9,7 @@ on:
 jobs:
   build_ucore_testing:
     name: Build ucore:testing
-    uses: ./.github/workflows/build.yaml
+    uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
       coreos_version: testing
