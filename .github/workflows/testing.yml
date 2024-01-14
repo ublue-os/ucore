@@ -1,0 +1,15 @@
+name: build-ucore-testing
+on:
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: '55 23 * * *' # 11:45PM UTC everyday (approx 1.75 hours after coreos images publish)
+  workflow_dispatch:
+
+jobs:
+  build_ucore_testing:
+    name: Build ucore:testing
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+    with:
+      coreos_version: testing

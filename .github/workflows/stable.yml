@@ -1,0 +1,15 @@
+name: build-ucore-stable
+on:
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: '40 23 * * *' # 11:45PM UTC everyday (approx 1.5 hours after coreos images publish)
+  workflow_dispatch:
+
+jobs:
+  build_ucore_stable:
+    name: Build ucore:stable
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit
+    with:
+      coreos_version: stable
