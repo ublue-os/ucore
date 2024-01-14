@@ -10,8 +10,8 @@ env:
     IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  build_info:
-    name: Get Build Info
+  workflow_info:
+    name: Get Workflow Info
     runs-on: ubuntu-latest
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
@@ -30,14 +30,14 @@ jobs:
         run: |
           echo "${{ toJSON(steps.pr_prefix.outputs) }}"
 
-  coreos_versions:
-    name: Get CoreOS versions
+  stream_info:
+    name: Get Stream Info
     runs-on: ubuntu-latest
     outputs:
       linux: ${{ steps.fetch.outputs.linux }}
       version: ${{ steps.fetch.outputs.version }}
     steps:
-      - name: Fetch CoreOS stable versions
+      - name: Fetch CoreOS stream versions
         id: fetch
         run: |
           skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
@@ -50,10 +50,10 @@ jobs:
           echo "${{ toJSON(steps.fetch.outputs) }}"
 
   build_fcos:
-    name: Build CoreOS
+    name: fedora-coreos
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [build_info, coreos_versions]
+    needs: [workflow_info, stream_info]
     permissions:
       contents: read
       packages: write
@@ -69,8 +69,8 @@ jobs:
           - ""
         include:
           - image_name: fedora-coreos
-          - image_version: ${{ needs.coreos_versions.outputs.version }}
-          - pr_prefix: ${{ needs.build_info.outputs.pr_prefix }}
+          - image_version: ${{ needs.stream_info.outputs.version }}
+          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
         exclude:
           - nvidia_tag: ""
             zfs_tag: ""
@@ -199,11 +199,11 @@ jobs:
         run: |
           echo "${{ toJSON(steps.push.outputs) }}"
 
-  build_main:
-    name: Build uCore
+  build_ucore:
+    name: ucore
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [build_info, coreos_versions]
+    needs: [workflow_info, stream_info]
     permissions:
       contents: read
       packages: write
@@ -219,8 +219,8 @@ jobs:
           - ""
         include:
           - image_name: ucore
-          - image_version: ${{ needs.coreos_versions.outputs.version }}
-          - pr_prefix: ${{ needs.build_info.outputs.pr_prefix }}
+          - image_version: ${{ needs.stream_info.outputs.version }}
+          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -354,7 +354,7 @@ jobs:
     name: Build HCI
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [build_info, build_main, coreos_versions]
+    needs: [workflow_info, build_ucore, stream_info]
     permissions:
       contents: read
       packages: write
@@ -370,8 +370,8 @@ jobs:
           - ""
         include:
           - image_name: ucore
-          - image_version: ${{ needs.coreos_versions.outputs.version }}
-          - pr_prefix: ${{ needs.build_info.outputs.pr_prefix }}
+          - image_version: ${{ needs.stream_info.outputs.version }}
+          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -500,7 +500,7 @@ jobs:
   check:
     name: Check all successful
     runs-on: ubuntu-latest
-    needs: [build_fcos, build_main, build_hci]
+    needs: [build_fcos, build_ucore, build_hci]
     steps:
       - name: Exit
         shell: bash
