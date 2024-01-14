@@ -1,4 +1,4 @@
-name: build-ucore-stable
+name: stable
 on:
   pull_request:
   merge_group:
@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_ucore_stable:
-    name: Build ucore:stable
+  build:
+    name: Build
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
