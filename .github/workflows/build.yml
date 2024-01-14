@@ -351,7 +351,7 @@ jobs:
           echo "${{ toJSON(steps.push.outputs) }}"
 
   build_hci:
-    name: Build HCI
+    name: ucore-hci
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
     needs: [workflow_info, build_ucore, stream_info]
