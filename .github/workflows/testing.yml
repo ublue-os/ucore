@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-testing:
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
