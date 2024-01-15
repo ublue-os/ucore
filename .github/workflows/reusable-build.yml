@@ -211,9 +211,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_name:
-          - ucore
-          - ucore-hci
+        image_suffix:
+          - ""
+          - "-hci"
         nvidia_tag:
           - "-nvidia"
           - ""
@@ -221,11 +221,12 @@ jobs:
           - "-zfs"
           - ""
         include:
+          - image_base: ucore
           - image_version: ${{ needs.stream_info.outputs.version }}
           - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
-          - image_name: ucore
+          - image_suffix: ""
             extra_desc: "n"
-          - image_name: ucore-hci
+          - image_suffix: "-hci"
             extra_desc: " hyper-converged infrastructure"
 
     steps:
@@ -279,12 +280,12 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ matrix.image_name }}
+            ${{ matrix.image_base }}${{ matrix.image_suffix }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=A${{ matrix.extra_desc }} OCI image of Fedora CoreOS with batteries included
-            org.opencontainers.image.title=${{ matrix.image_name }}
+            org.opencontainers.image.title=${{ matrix.image_base }}${{ matrix.image_suffix }}
             org.opencontainers.image.version=${{ matrix.image_version }}
 
       # Build image using Buildah action
@@ -295,7 +296,7 @@ jobs:
           containerfiles: |
             ./ucore/Containerfile
           context: ./ucore
-          image: ${{ matrix.image_name }}
+          image: ${{ matrix.image_base }}${{ matrix.image_suffix }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
@@ -306,7 +307,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
           extra-args: |
-            --target=${{ matrix.image_name }}
+            --target=${{ matrix.image_base }}${{ matrix.image_suffix }}
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
