@@ -1,4 +1,4 @@
-name: build
+name: build-stable
 on:
   pull_request:
   merge_group:

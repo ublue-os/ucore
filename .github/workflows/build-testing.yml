@@ -1,4 +1,4 @@
-name: build
+name: build-testing
 on:
   pull_request:
   merge_group:
