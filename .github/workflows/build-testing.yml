@@ -1,4 +1,4 @@
-name: build-testing
+name: testing
 on:
   pull_request:
   merge_group:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  testing:
+  build-testing:
     uses: ./.github/workflows/reusable-build.yml
     secrets: inherit
     with:
