@@ -1,0 +1,14 @@
+name: testing
+on:
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: '55 23 * * *' # 11:45PM UTC everyday (approx 1.75 hours after coreos images publish)
+  workflow_dispatch:
+
+jobs:
+  build-testing:
+    uses: ./.github/workflows/reusable-build.yml
+    secrets: inherit
+    with:
+      coreos_version: testing

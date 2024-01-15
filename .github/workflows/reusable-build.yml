@@ -1,16 +1,17 @@
 name: build-ucore
 on:
-  pull_request:
-  merge_group:
-  schedule:
-    - cron: '45 23 * * *' # 11:45PM UTC everyday (approx 1.5 hours after coreos images publish)
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      coreos_version:
+        description: 'The CoreOS stream: stable or testing'
+        required: true
+        type: string
 env:
     IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  build_info:
-    name: Get Build Info
+  workflow_info:
+    name: Get Workflow Info
     runs-on: ubuntu-latest
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
@@ -29,41 +30,30 @@ jobs:
         run: |
           echo "${{ toJSON(steps.pr_prefix.outputs) }}"
 
-  coreos_versions:
-    name: Get CoreOS versions
+  stream_info:
+    name: Get Stream Info
     runs-on: ubuntu-latest
     outputs:
-      stable_linux: ${{ steps.stable.outputs.linux }}
-      stable_version: ${{ steps.stable.outputs.version }}
-      testing_linux: ${{ steps.testing.outputs.linux }}
-      testing_version: ${{ steps.testing.outputs.version }}
+      linux: ${{ steps.fetch.outputs.linux }}
+      version: ${{ steps.fetch.outputs.version }}
     steps:
-      - name: Fetch CoreOS stable versions
-        id: stable
+      - name: Fetch CoreOS stream versions
+        id: fetch
         run: |
-          skopeo inspect docker://quay.io/fedora/fedora-coreos:stable > inspect.json
-          linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          echo "linux=$linux" >> $GITHUB_OUTPUT
-          version=$(jq -r '.["Labels"]["version"]' inspect.json)
-          echo "version=$version" >> $GITHUB_OUTPUT
-      - name: Fetch CoreOS testing versions
-        id: testing
-        run: |
-          skopeo inspect docker://quay.io/fedora/fedora-coreos:testing > inspect.json
+          skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
           linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
           echo "linux=$linux" >> $GITHUB_OUTPUT
           version=$(jq -r '.["Labels"]["version"]' inspect.json)
           echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ toJSON(steps.stable.outputs) }}"
-          echo "${{ toJSON(steps.testing.outputs) }}"
+          echo "${{ toJSON(steps.fetch.outputs) }}"
 
   build_fcos:
-    name: Build CoreOS
+    name: fedora-coreos
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [build_info, coreos_versions]
+    needs: [workflow_info, stream_info]
     permissions:
       contents: read
       packages: write
@@ -71,30 +61,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_name:
-          - fedora-coreos
-        coreos_version:
-          - stable
-          - testing
         nvidia_tag:
           - "-nvidia"
           - ""
         zfs_tag:
           - "-zfs"
           - ""
-        pr_prefix:
-          - ${{ needs.build_info.outputs.pr_prefix }}
         include:
-          - coreos_version: stable
-            image_version: ${{ needs.coreos_versions.outputs.stable_version }}
-          - coreos_version: testing
-            image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+          - image_name: fedora-coreos
+          - image_version: ${{ needs.stream_info.outputs.version }}
+          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
         exclude:
-          - coreos_version: stable
-            nvidia_tag: ""
-            zfs_tag: ""
-          - coreos_version: testing
-            nvidia_tag: ""
+          - nvidia_tag: ""
             zfs_tag: ""
     steps:
       # Checkout push-to-registry action GitHub repository
@@ -107,7 +85,7 @@ jobs:
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
+          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -163,7 +141,7 @@ jobs:
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
-            COREOS_VERSION=${{ matrix.coreos_version }}
+            COREOS_VERSION=${{ inputs.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
@@ -221,11 +199,11 @@ jobs:
         run: |
           echo "${{ toJSON(steps.push.outputs) }}"
 
-  build_main:
-    name: Build uCore
+  build_ucore:
+    name: ucore
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [build_info, coreos_versions]
+    needs: [workflow_info, stream_info]
     permissions:
       contents: read
       packages: write
@@ -233,24 +211,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_name:
-          - ucore
-        coreos_version:
-          - stable
-          - testing
         nvidia_tag:
           - "-nvidia"
           - ""
         zfs_tag:
           - "-zfs"
           - ""
-        pr_prefix:
-          - ${{ needs.build_info.outputs.pr_prefix }}
         include:
-          - coreos_version: stable
-            image_version: ${{ needs.coreos_versions.outputs.stable_version }}
-          - coreos_version: testing
-            image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+          - image_name: ucore
+          - image_version: ${{ needs.stream_info.outputs.version }}
+          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -262,7 +232,7 @@ jobs:
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
+          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -322,7 +292,7 @@ jobs:
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
-            COREOS_VERSION=${{ matrix.coreos_version }}
+            COREOS_VERSION=${{ inputs.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
@@ -381,10 +351,10 @@ jobs:
           echo "${{ toJSON(steps.push.outputs) }}"
 
   build_hci:
-    name: Build HCI
+    name: ucore-hci
     runs-on: ubuntu-22.04
     if: always() && !cancelled()
-    needs: [build_info, build_main, coreos_versions]
+    needs: [workflow_info, build_ucore, stream_info]
     permissions:
       contents: read
       packages: write
@@ -392,24 +362,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_name:
-          - ucore
-        coreos_version:
-          - stable
-          - testing
         nvidia_tag:
           - "-nvidia"
           - ""
         zfs_tag:
           - "-zfs"
           - ""
-        pr_prefix:
-          - ${{ needs.build_info.outputs.pr_prefix }}
         include:
-          - coreos_version: stable
-            image_version: ${{ needs.coreos_versions.outputs.stable_version }}
-          - coreos_version: testing
-            image_version: ${{ needs.coreos_versions.outputs.testing_version }}
+          - image_name: ucore
+          - image_version: ${{ needs.stream_info.outputs.version }}
+          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -421,7 +383,7 @@ jobs:
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ matrix.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
+          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -477,7 +439,7 @@ jobs:
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
-            COREOS_VERSION=${{ matrix.coreos_version }}
+            COREOS_VERSION=${{ inputs.coreos_version }}
             PR_PREFIX=${{ matrix.pr_prefix }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
@@ -536,9 +498,9 @@ jobs:
           echo "${{ toJSON(steps.push.outputs) }}"
 
   check:
-    name: Check all builds successful
+    name: Check all successful
     runs-on: ubuntu-latest
-    needs: [build_fcos, build_main, build_hci]
+    needs: [build_fcos, build_ucore, build_hci]
     steps:
       - name: Exit
         shell: bash
