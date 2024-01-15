@@ -1,4 +1,4 @@
-name: stable
+name: build
 on:
   pull_request:
   merge_group:
@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-stable:
-    uses: ./.github/workflows/build.yml
+  stable:
+    uses: ./.github/workflows/reusable-build.yml
     secrets: inherit
     with:
       coreos_version: stable
