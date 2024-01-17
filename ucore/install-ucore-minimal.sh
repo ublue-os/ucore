@@ -60,6 +60,3 @@ curl -L https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repo
 
 # install packages.json stuffs
 /tmp/packages.sh
-
-# install packages direct from github
-/tmp/github-release-install.sh trapexit/mergerfs fc.x86_64
