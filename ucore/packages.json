@@ -7,7 +7,6 @@
                 "cockpit-podman",
                 "cockpit-selinux",
                 "cockpit-system",
-                "dbus-tools",
                 "distrobox",
                 "firewalld",
                 "open-vm-tools",
