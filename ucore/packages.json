@@ -7,7 +7,6 @@
                 "cockpit-selinux",
                 "cockpit-storaged",
                 "cockpit-system",
-                "dbus-tools",
                 "distrobox",
                 "duperemove",
                 "firewalld",
