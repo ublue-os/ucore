@@ -226,11 +226,11 @@ jobs:
           - image_version: ${{ needs.stream_info.outputs.version }}
           - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
           - image_suffix: "-minimal"
-            description: An OCI image of Fedora CoreOS with batteries included
+            description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
-            description: An OCI image of Fedora CoreOS with batteries and storage tools included
+            description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
           - image_suffix: "-hci"
-            description: A hyper-converged infrastructure OCI image of Fedora CoreOS with batteries included
+            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
 
     steps:
       # Checkout push-to-registry action GitHub repository

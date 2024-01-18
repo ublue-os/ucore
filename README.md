@@ -85,7 +85,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
 
 ### `ucore-hci`
 
-Hyper-Coverged Infrastructure(HCI) refers to storage and virtualization in one place... This image primarily adds the virtualization stack.
+Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place... This image primarily adds libvirt tools for virtualization.
 
 - Starts with a [`ucore`](#ucore) image providing everything above, plus:
 - Adds the following:
