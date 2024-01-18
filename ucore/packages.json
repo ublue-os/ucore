@@ -1,27 +1,30 @@
 {
     "all": {
         "include": {
-            "all": [
+            "all": [],
+            "ucore-minimal": [
                 "cockpit-networkmanager",
                 "cockpit-podman",
                 "cockpit-selinux",
-                "cockpit-storaged",
                 "cockpit-system",
-                "distrobox",
-                "duperemove",
                 "firewalld",
-                "iwlegacy-firmware",
-                "iwlwifi-dvm-firmware",
-                "iwlwifi-mvm-firmware",
                 "open-vm-tools",
                 "podman",
                 "podman-compose",
                 "qemu-guest-agent",
-                "snapraid",
                 "tailscale",
                 "tmux",
                 "wget",
-                "wireguard-tools",
+                "wireguard-tools"
+            ],
+            "ucore": [
+                "cockpit-storaged",
+                "distrobox",
+                "duperemove",
+                "iwlegacy-firmware",
+                "iwlwifi-dvm-firmware",
+                "iwlwifi-mvm-firmware",
+                "snapraid",
                 "xdg-dbus-proxy",
                 "xdg-user-dirs"
             ],
@@ -35,6 +38,8 @@
         },
         "exclude": {
             "all": [],
+            "ucore-minimal": [],
+            "ucore": [],
             "ucore-hci": [
                 "nfs-utils-coreos"
             ]

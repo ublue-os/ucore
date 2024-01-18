@@ -7,13 +7,30 @@
 
 You should be familiar with [Fedora CoreOS](https://getfedora.org/coreos/), as this is an OCI image of CoreOS with "batteries included". More specifically, it's an opinionated, custom CoreOS image, built daily with some commonly used tools added in. The idea is to make a lightweight server image including most used services or the building blocks to host them.
 
-WARNING: This image has **not** been heavily tested, though the underlying components have. Please take a look at the included modifications and help test if this project interests you.
+Please take a look at the included modifications and help us test uCore if the project interests you.
 
 ## Images & Features
 
+The uCore project builds four images, each with different tags for different features.
+
+The image names are:
+
+- [`fedora-coreos`](#fedora-coreos)
+- [`ucore-minimal`](#ucore-minimal)
+- [`ucore`](#ucore)
+- [`ucore-hci`](#ucore-hci)
+
+The [tag matrix](#tag-matrix) includes combinations of the following:
+
+- `stable` - for an image based on the Fedora CoreOS stable stream
+- `testing` - for an image based on the Fedora CoreOS testing stream
+- `nvidia` - for an image which includes nvidia driver and container runtime
+- `zfs` - for an image which includes zfs driver and tools
+
+
 ### `fedora-coreos`
 
-**NOTE: formerly named `fedora-coreos-zfs`, that version of the image did not offer the nvidia option. Please update with `rpm-ostree rebase`.**
+*NOTE: formerly named `fedora-coreos-zfs`, the previous version of the image did not offer the nvidia option. If on the previous image name, please update with `rpm-ostree rebase`.*
 
 A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image with choice of add-on kernel modules:
 
@@ -26,20 +43,16 @@ A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?
 
 *NOTE: currently, zincati fails to start on systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.*
 
-### `ucore`
+### `ucore-minimal`
 
-Suitable for running containerized workloads on either baremetal or virtual machines, this image tries to stay lightweight  but functional for multiple use cases, including that of a storage server (NAS).
+Suitable for running containerized workloads on either bare metal or virtual machines, this image tries to stay lightweight but functional.
 
 - Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
 - Adds the following:
-  - [cockpit](https://cockpit-project.org)
-  - [distrobox](https://github.com/89luca89/distrobox)
-  - [duperemove](https://github.com/markfasheh/duperemove)
-  - guest VM agents (`qemu-guest-agent` and `open-vm-tools`)
-  - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
-  - [mergerfs](https://github.com/trapexit/mergerfs)
-  - moby-engine(docker), docker-compose and podman-compose
-  - [snapraid](https://www.snapraid.it/)
+  - [cockpit](https://cockpit-project.org) (podman container and system management)
+  - [firewalld](https://firewalld.org/)
+  - guest VM agents (`qemu-guest-agent` and `open-vm-tools`))
+  - [docker-compose](https://github.com/docker/compose) and [podman-compose](https://github.com/containers/podman-compose) *docker(moby-engine) and podman are pre-installed in CoreOS*
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
@@ -50,18 +63,31 @@ Suitable for running containerized workloads on either baremetal or virtual mach
 - Optional [ZFS versions](#tag-matrix) add:
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
   - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series)
+- Disables Zincati auto upgrade/reboot service
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
-- Disables Zincati auto upgrade/reboot service
+- Provides public key allowing [SecureBoot](#secureboot) (for ucore signed `nvidia` or `zfs` drivers)
 
 Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
+### `ucore`
+
+This image builds on `ucore-minimal` but adds drivers, storage tools and utilities making it more useful on bare metal or as a storage server (NAS).
+
+- Starts with a [`ucore-minimal`](#ucore-minimal) image providing everything above, plus:
+- Adds the following:
+  - [cockpit-storaged](https://cockpit-project.org) (udisks2 based storage management)
+  - [distrobox](https://github.com/89luca89/distrobox) - a [toolbox](https://containertoolbx.org/) alternative
+  - [duperemove](https://github.com/markfasheh/duperemove)
+  - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
+  - [mergerfs](https://github.com/trapexit/mergerfs)
+  - [snapraid](https://www.snapraid.it/)
+
 ### `ucore-hci`
 
-Hyper-Coverged Infrastructure(HCI) refers to storage and virtualization in one place... So this image primarily adds the virtualization stack.
+Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place... This image primarily adds libvirt tools for virtualization.
 
-
-- Starts with `ucore` to give you everything above, plus:
+- Starts with a [`ucore`](#ucore) image providing everything above, plus:
 - Adds the following:
   - [cockpit-machines](https://github.com/cockpit-project/cockpit-machines): Cockpit GUI for managing virtual machines
   - [libvirt-client](https://libvirt.org/): `virsh` command-line utility for managing virtual machines
@@ -180,7 +206,7 @@ The utility will prompt for a password. The password will be used to verify this
 
 ## How to Install
 
-### Prerequsites
+### Prerequisites
 
 This image is not currently available for direct install. The user must follow the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
 
@@ -205,16 +231,26 @@ sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 |-|-|
 | [`fedora-coreos`](#fedora-coreos) - *stable* | `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
 | [`fedora-coreos`](#fedora-coreos) - *testing* | `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
+| [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
+| [`ucore-mimimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
 | [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
 | [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 
 
+#### Verified Image Updates
+
+This image now includes container policies to support image verification for improved trust of upgrades. Once running one of the `ucore*` images (not included in `fedora-coreos`), the following command will rebase to the verified image reference:
+
+```bash
+sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/IMAGE:TAG
+```
+
 
 ### Install with Auto-Rebase
 
-Your path to a running uCore can be shortend by using [examples/ucore-autorebase.butane](examples/ucore-autorebase.butane) as the starting point for your CoreOS ignition file.
+Your path to a running uCore can be shortened by using [examples/ucore-autorebase.butane](examples/ucore-autorebase.butane) as the starting point for your CoreOS ignition file.
 
 1. As usual, you'll need to [follow the docs to setup a password](https://coreos.github.io/butane/examples/#using-password-authentication). Substitute your password hash for `YOUR_GOOD_PASSWORD_HASH_HERE` in the `ucore-autorebase.butane` file, and add your ssh pub key while you are at it.
 1. Generate an ignition file from your new `ucore-autorebase.butane` [using the butane utility](https://coreos.github.io/butane/getting-started/).

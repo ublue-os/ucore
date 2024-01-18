@@ -59,7 +59,5 @@ fi
 curl -L https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
 # install packages.json stuffs
+export IMAGE_NAME=ucore-minimal
 /tmp/packages.sh
-
-# install packages direct from github
-/tmp/github-release-install.sh trapexit/mergerfs fc.x86_64

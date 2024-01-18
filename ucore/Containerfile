@@ -1,8 +1,8 @@
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 
 
-# ucore-hci image section
-FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION} AS ucore
+# ucore-minimal image section
+FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION} AS ucore-minimal
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 # build with --build-arg NVIDA_TAG="-nvidia" to install nvidia
@@ -20,10 +20,9 @@ COPY packages.json /tmp/packages.json
 
 COPY usr /usr
 
-RUN export IMAGE_NAME=ucore \
-    && mkdir -p /var/lib/alternatives \
-    && /tmp/install.sh \
-    && /tmp/post-install.sh \
+RUN mkdir -p /var/lib/alternatives \
+    && /tmp/install-ucore-minimal.sh \
+    && /tmp/post-install-ucore-minimal.sh \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \
     && ostree container commit \
@@ -32,6 +31,26 @@ RUN export IMAGE_NAME=ucore \
     && chmod -R 1777 /tmp /var/tmp
 
 COPY --from=docker.io/docker/compose-bin:latest /docker-compose /usr/bin/docker-compose
+
+
+# ucore image section
+FROM ucore-minimal AS ucore
+
+ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+
+COPY *.sh /tmp/
+COPY packages.json /tmp/packages.json
+
+COPY usr /usr
+
+RUN mkdir -p /var/lib/alternatives \
+    && /tmp/install-ucore.sh \
+    && mv /var/lib/alternatives /staged-alternatives \
+    && rm -fr /tmp/* /var/* \
+    && ostree container commit \
+    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
+    && mkdir -p /tmp /var/tmp \
+    && chmod -R 1777 /tmp /var/tmp
 
 
 # ucore-hci image section
@@ -44,9 +63,8 @@ ARG ZFS_TAG="${ZFS_TAG}"
 COPY *.sh /tmp/
 COPY packages.json /tmp/packages.json
 
-RUN export IMAGE_NAME=ucore-hci \
-    && mkdir -p /var/lib/alternatives \
-    && /tmp/install-hci.sh \
+RUN mkdir -p /var/lib/alternatives \
+    && /tmp/install-ucore-hci.sh \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \
     && ostree container commit \
