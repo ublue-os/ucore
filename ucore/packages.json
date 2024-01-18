@@ -7,7 +7,6 @@
                 "cockpit-podman",
                 "cockpit-selinux",
                 "cockpit-system",
-                "distrobox",
                 "firewalld",
                 "open-vm-tools",
                 "podman",
@@ -16,17 +15,18 @@
                 "tailscale",
                 "tmux",
                 "wget",
-                "wireguard-tools",
-                "xdg-dbus-proxy",
-                "xdg-user-dirs"
+                "wireguard-tools"
             ],
             "ucore": [
                 "cockpit-storaged",
+                "distrobox",
                 "duperemove",
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
-                "snapraid"
+                "snapraid",
+                "xdg-dbus-proxy",
+                "xdg-user-dirs"
             ],
             "ucore-hci": [
                 "cockpit-machines",

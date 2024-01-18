@@ -20,8 +20,7 @@ COPY packages.json /tmp/packages.json
 
 COPY usr /usr
 
-RUN export IMAGE_NAME=ucore-minimal \
-    && mkdir -p /var/lib/alternatives \
+RUN mkdir -p /var/lib/alternatives \
     && /tmp/install-ucore-minimal.sh \
     && /tmp/post-install-ucore-minimal.sh \
     && mv /var/lib/alternatives /staged-alternatives \
@@ -44,8 +43,7 @@ COPY packages.json /tmp/packages.json
 
 COPY usr /usr
 
-RUN export IMAGE_NAME=ucore \
-    && mkdir -p /var/lib/alternatives \
+RUN mkdir -p /var/lib/alternatives \
     && /tmp/install-ucore.sh \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \
@@ -65,8 +63,7 @@ ARG ZFS_TAG="${ZFS_TAG}"
 COPY *.sh /tmp/
 COPY packages.json /tmp/packages.json
 
-RUN export IMAGE_NAME=ucore-hci \
-    && mkdir -p /var/lib/alternatives \
+RUN mkdir -p /var/lib/alternatives \
     && /tmp/install-ucore-hci.sh \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \

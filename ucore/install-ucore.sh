@@ -3,6 +3,7 @@
 set -ouex pipefail
 
 # install packages.json stuffs
+export IMAGE_NAME=ucore
 /tmp/packages.sh
 
 # install packages direct from github

@@ -49,11 +49,10 @@ Suitable for running containerized workloads on either bare metal or virtual mac
 
 - Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
 - Adds the following:
-  - [cockpit](https://cockpit-project.org) (podman and system management)
-  - [distrobox](https://github.com/89luca89/distrobox)
+  - [cockpit](https://cockpit-project.org) (podman container and system management)
   - [firewalld](https://firewalld.org/)
   - guest VM agents (`qemu-guest-agent` and `open-vm-tools`))
-  - moby-engine(docker), docker-compose and podman-compose
+  - [docker-compose](https://github.com/docker/compose) and [podman-compose](https://github.com/containers/podman-compose) (podman and moby-engine(docker) come by default with CoreOS)
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
@@ -67,7 +66,7 @@ Suitable for running containerized workloads on either bare metal or virtual mac
 - Disables Zincati auto upgrade/reboot service
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
-- Provides public key to enable [SecureBoot](#secureboot) if using `nvidia` or `zfs` drivers
+- Provides public key allowing [SecureBoot](#secureboot) (for ucore signed `nvidia` or `zfs` drivers)
 
 Note: per [cockpit instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
@@ -77,7 +76,8 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
 
 - Starts with a [`ucore-minimal`](#ucore-minimal) image providing everything above, plus:
 - Adds the following:
-  - [cockpit-storaged](https://cockpit-project.org): Cockpit GUI for managing storage
+  - [cockpit-storaged](https://cockpit-project.org) (udisks2 based storage management)
+  - [distrobox](https://github.com/89luca89/distrobox) - a [toolbox](https://containertoolbx.org/) alternative
   - [duperemove](https://github.com/markfasheh/duperemove)
   - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
   - [mergerfs](https://github.com/trapexit/mergerfs)
