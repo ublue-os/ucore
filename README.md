@@ -82,6 +82,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
   - [mergerfs](https://github.com/trapexit/mergerfs)
   - [snapraid](https://www.snapraid.it/)
+  - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 
 ### `ucore-hci`
 
