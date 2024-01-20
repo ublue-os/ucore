@@ -23,7 +23,9 @@ sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
 
-## CONDITIONAL: install ZFS (and sanoid deps)
+rpm-ostree install /tmp/rpms/ublue-os-ucore-addons-*.rpm
+
+## CONDITIONAL: install ZFS
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     rpm-ostree install pv /tmp/rpms/zfs/*.rpm
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
