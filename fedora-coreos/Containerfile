@@ -9,6 +9,7 @@ ARG NVIDIA_TAG="${NVIDIA_TAG}"
 ARG ZFS_TAG="${ZFS_TAG}"
 ARG KMOD_SRC="${KMOD_SRC:-ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION}}"
 
+COPY --from=${KMOD_SRC} /rpms/kmods/*.rpm /tmp/rpms/
 COPY --from=${KMOD_SRC} /rpms/kmods/nvidia/*.rpm /tmp/rpms/nvidia/
 COPY --from=${KMOD_SRC} /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
 

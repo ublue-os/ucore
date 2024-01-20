@@ -61,8 +61,9 @@ Suitable for running containerized workloads on either bare metal or virtual mac
   - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - Optional [ZFS versions](#tag-matrix) add:
-  - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
   - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series)
+  - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
+    - note: on `ucore-minimal` images, only `pv` is installed
 - Disables Zincati auto upgrade/reboot service
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
@@ -82,6 +83,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
   - [mergerfs](https://github.com/trapexit/mergerfs)
   - [snapraid](https://www.snapraid.it/)
+  - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 
 ### `ucore-hci`
 

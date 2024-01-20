@@ -24,7 +24,9 @@
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
+                "pciutils",
                 "snapraid",
+                "usbutils",
                 "xdg-dbus-proxy",
                 "xdg-user-dirs"
             ],

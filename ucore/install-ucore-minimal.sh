@@ -33,7 +33,9 @@ if [[ "-zfs" == "${ZFS_TAG}" ]]; then
       mhash \
       perl-Capture-Tiny \
       perl-Config-IniFiles \
+      perl-Data-Dumper \
       perl-Getopt-Long \
+      perl-Sys-Hostname \
       pv
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
     depmod -A ${KERNEL}
