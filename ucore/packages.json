@@ -24,7 +24,10 @@
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
+                "nfs-utils",
                 "pciutils",
+                "samba",
+                "samba-usershares",
                 "snapraid",
                 "usbutils",
                 "xdg-dbus-proxy",
@@ -34,17 +37,16 @@
                 "cockpit-machines",
                 "libvirt-client",
                 "libvirt-daemon-kvm",
-                "nfs-utils",
                 "virt-install"
             ]
         },
         "exclude": {
             "all": [],
             "ucore-minimal": [],
-            "ucore": [],
-            "ucore-hci": [
+            "ucore": [
                 "nfs-utils-coreos"
-            ]
+            ],
+            "ucore-hci": []
         }
     }
 }
