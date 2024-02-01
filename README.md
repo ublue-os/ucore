@@ -124,7 +124,7 @@ Note: `libvirtd` is enabled by default, but only starts when triggerd by it's so
 
 SELinux is an integral part of the Fedora Atomic system design. Due to a few interelated issues, if SELinux is disabled, it's difficult to re-enable.
 
-**We recommend to NOT disable SELinux!**
+**We STRONGLY recommend: DO NOT DISABLE SELinux!**
 
 Should you suspect that SELinux is causing a problem, it is easy to enable permissive mode at runtime, which will keep SELinux functioning, provide reporting of problems, but not enforce restrictions.
 
@@ -142,7 +142,7 @@ $ getenforce
 Enforcing
 ```
 
-Fedora provides usefule docs on [SELinux troubleshooting](https://docs.fedoraproject.org/en-US/quick-docs/selinux-troubleshooting/).
+Fedora provides useful docs on [SELinux troubleshooting](https://docs.fedoraproject.org/en-US/quick-docs/selinux-troubleshooting/).
 
 ### Docker/Moby and Podman
 
