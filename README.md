@@ -120,6 +120,30 @@ sudo systemctl enable --now SERVICENAME.service
 
 Note: `libvirtd` is enabled by default, but only starts when triggerd by it's socket (eg, using `virsh` or other clients).
 
+### SELinux Troubleshooting
+
+SELinux is an integral part of the Fedora Atomic system design. Due to a few interelated issues, if SELinux is disabled, it's difficult to re-enable.
+
+**We recommend to NOT disable SELinux!**
+
+Should you suspect that SELinux is causing a problem, it is easy to enable permissive mode at runtime, which will keep SELinux functioning, provide reporting of problems, but not enforce restrictions.
+
+```bash
+# setenforce 0
+$ getenforce
+Permissive
+```
+
+After the problem is resolved, don't forget to re-enable:
+
+```bash
+# setenforce 1
+$ getenforce
+Enforcing
+```
+
+Fedora provides usefule docs on [SELinux troubleshooting](https://docs.fedoraproject.org/en-US/quick-docs/selinux-troubleshooting/).
+
 ### Docker/Moby and Podman
 
 NOTE: CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activation of the docker daemon, given podman is the default.
@@ -158,7 +182,7 @@ It's suggested to read Fedora's [NFS Server docs](https://docs.fedoraproject.org
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
-```
+```bash
 sudo firewall-cmd --permanent --zone=FedoraServer --add-service=nfs
 sudo firewall-cmd --reload
 ```
@@ -168,19 +192,19 @@ sudo firewall-cmd --reload
 By default, nfs-server is blocked from sharing directories unless the context is set. So, generically to enable NFS sharing in SELinux run:
 
 For read-only NFS shares:
-```
+```bash
 sudo semanage fcontext --add --type "public_content_t" "/path/to/share/ro(/.*)?
 sudo restorecon -R /path/to/share/ro
 ```
 
 For read-write NFS shares:
-```
+```bash
 sudo semanage fcontext --add --type "public_content_rw_t" "/path/to/share/rw(/.*)?
 sudo restorecon -R /path/to/share/rw
 ```
 
 Say you wanted to share all home directories:
-```
+```bash
 sudo semanage fcontext --add --type "public_content_rw_t" "/var/home(/.*)?
 sudo restorecon -R /var/home
 ```
@@ -188,12 +212,12 @@ sudo restorecon -R /var/home
 The least secure but simplest way to let NFS share anything configured, is...
 
 For read-only:
-```
+```bash
 sudo setsebool -P nfs_export_all_ro 1
 ```
 
 For read-write:
-```
+```bash
 sudo setsebool -P nfs_export_all_rw 1
 ```
 
@@ -207,7 +231,7 @@ NFS shares are configured in `/etc/exports` or `/etc/exports.d/*` (see docs).
 
 Like all services, NFS needs to be enabled and started:
 
-```
+```bash
 sudo systemctl enable --now nfs-server.service
 sudo systemctl status nfs-server.service
 ```
@@ -220,7 +244,7 @@ It's suggested to read Fedora's [Samba docs](https://docs.fedoraproject.org/en-U
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
-```
+```bash
 sudo firewall-cmd --permanent --zone=FedoraServer --add-service=samba
 sudo firewall-cmd --reload
 ```
@@ -229,19 +253,19 @@ sudo firewall-cmd --reload
 
 By default, samba is blocked from sharing directories unless the context is set. So, generically to enable samba sharing in SELinux run:
 
-```
+```bash
 sudo semanage fcontext --add --type "samba_share_t" "/path/to/share(/.*)?
 sudo restorecon -R /path/to/share
 ```
 
 Say you wanted to share all home directories:
-```
+```bash
 sudo semanage fcontext --add --type "samba_share_t" "/var/home(/.*)?
 sudo restorecon -R /var/home
 ```
 
 The least secure but simplest way to let samba share anything configured, is this:
-```
+```bash
 sudo setsebool -P samba_export_all_rw 1
 ```
 
@@ -252,7 +276,7 @@ There is [much to read](https://linux.die.net/man/8/samba_selinux) on this topic
 Samba shares can be manually configured in `/etc/samba/smb.conf` (see docs), but user shares are also a good option.
 
 An example follows, but you'll probably want to read some docs on this, too:
-```
+```bash
 net usershare add sharename /path/to/share [comment] [user:{R|D|F}] [guest_ok={y|n}]
 ```
 
@@ -260,7 +284,7 @@ net usershare add sharename /path/to/share [comment] [user:{R|D|F}] [guest_ok={y
 
 Like all services, Samba needs to be enabled and started:
 
-```
+```bash
 sudo systemctl enable --now smb.service
 sudo systemctl status smb.service
 ```
@@ -289,7 +313,7 @@ Per the [OpenZFS Fedora documentation](https://openzfs.github.io/openzfs-docs/Ge
 
 > By default ZFS kernel modules are loaded upon detecting a pool. To always load the modules at boot:
 
-```
+```bash
 echo zfs > /etc/modules-load.d/zfs.conf
 ```
 
@@ -297,20 +321,20 @@ echo zfs > /etc/modules-load.d/zfs.conf
 
 The default mountpoint for any newly created zpool `tank` is `/tank`. This is a problem in CoreOS as the root filesystem (`/`) is immutable, which means a directory cannot be created as a mountpoint for the zpool. An example of the problem looks like this:
 
-```
+```bash
 # zpool create tank /dev/sdb
 cannot mount '/tank': failed to create mountpoint: Operation not permitted
 ```
 
 To avoid this problem, always create new zpools with a specified mountpoint:
 
-```
+```bash
 # zpool create -m /var/tank tank /dev/sdb
 ```
 
 If you do forget to specify the mountpoint, or you need to change the mountpoint on an existing zpool:
 
-```
+```bash
 # zfs set mountpoint=/var/tank tank
 ```
 
