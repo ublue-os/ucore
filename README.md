@@ -82,6 +82,8 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [duperemove](https://github.com/markfasheh/duperemove)
   - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
   - [mergerfs](https://github.com/trapexit/mergerfs)
+  - nfs-utils - nfs utils including daemon for kernel NFS server
+  - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 
@@ -137,12 +139,131 @@ Users may use [distrobox](https://github.com/89luca89/distrobox) to run images o
 
 It's a good idea to become familar with the [Fedora CoreOS Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/) as well as the [CoreOS rpm-ostree docs](https://coreos.github.io/rpm-ostree/). Note especially, this image is only possible due to [ostree native containers](https://coreos.github.io/rpm-ostree/container/).
 
+### NAS - Storage
 
-### Sanoid/Syncoid
+`ucore` includes a few packages geared towards a storage server which will require individual research for configuration:
+  - [duperemove](https://github.com/markfasheh/duperemove)
+  - [mergerfs](https://github.com/trapexit/mergerfs)
+  - [snapraid](https://www.snapraid.it/)
 
-sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
+But two others are included, which though common, warrant some explanation:
+  - nfs-utils - replaces a "light" version typically in CoreOS to provide kernel NFS server
+  - samba and samba-usershares - to provide SMB sevices
 
-`ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
+#### NFS
+
+It's suggested to read Fedora's [NFS Server docs](https://docs.fedoraproject.org/en-US/fedora-server/services/filesharing-nfs-installation/) plus other documentation to understand how to setup this service. But here's a few quick tips...
+
+##### Firewall
+
+Unless you've disabled `firewalld`, you'll need to do this:
+
+```
+sudo firewall-cmd --permanent --zone=FedoraServer --add-service=nfs
+sudo firewall-cmd --reload
+```
+
+##### SELinux
+
+By default, nfs-server is blocked from sharing directories unless the context is set. So, generically to enable NFS sharing in SELinux run:
+
+For read-only NFS shares:
+```
+sudo semanage fcontext --add --type "public_content_t" "/path/to/share/ro(/.*)?
+sudo restorecon -R /path/to/share/ro
+```
+
+For read-write NFS shares:
+```
+sudo semanage fcontext --add --type "public_content_rw_t" "/path/to/share/rw(/.*)?
+sudo restorecon -R /path/to/share/rw
+```
+
+Say you wanted to share all home directories:
+```
+sudo semanage fcontext --add --type "public_content_rw_t" "/var/home(/.*)?
+sudo restorecon -R /var/home
+```
+
+The least secure but simplest way to let NFS share anything configured, is...
+
+For read-only:
+```
+sudo setsebool -P nfs_export_all_ro 1
+```
+
+For read-write:
+```
+sudo setsebool -P nfs_export_all_rw 1
+```
+
+There is [more to read](https://linux.die.net/man/8/nfs_selinux) on this topic.
+
+##### Shares
+
+NFS shares are configured in `/etc/exports` or `/etc/exports.d/*` (see docs).
+
+##### Run It
+
+Like all services, NFS needs to be enabled and started:
+
+```
+sudo systemctl enable --now nfs-server.service
+sudo systemctl status nfs-server.service
+```
+
+#### Samba
+
+It's suggested to read Fedora's [Samba docs](https://docs.fedoraproject.org/en-US/quick-docs/samba/) plus other documentation to understand how to setup this service. But here's a few quick tips...
+
+##### Firewall
+
+Unless you've disabled `firewalld`, you'll need to do this:
+
+```
+sudo firewall-cmd --permanent --zone=FedoraServer --add-service=samba
+sudo firewall-cmd --reload
+```
+
+##### SELinux
+
+By default, samba is blocked from sharing directories unless the context is set. So, generically to enable samba sharing in SELinux run:
+
+```
+sudo semanage fcontext --add --type "samba_share_t" "/path/to/share(/.*)?
+sudo restorecon -R /path/to/share
+```
+
+Say you wanted to share all home directories:
+```
+sudo semanage fcontext --add --type "samba_share_t" "/var/home(/.*)?
+sudo restorecon -R /var/home
+```
+
+The least secure but simplest way to let samba share anything configured, is this:
+```
+sudo setsebool -P samba_export_all_rw 1
+```
+
+There is [much to read](https://linux.die.net/man/8/samba_selinux) on this topic.
+
+##### Shares
+
+Samba shares can be manually configured in `/etc/samba/smb.conf` (see docs), but user shares are also a good option.
+
+An example follows, but you'll probably want to read some docs on this, too:
+```
+net usershare add sharename /path/to/share [comment] [user:{R|D|F}] [guest_ok={y|n}]
+```
+
+##### Run It
+
+Like all services, Samba needs to be enabled and started:
+
+```
+sudo systemctl enable --now smb.service
+sudo systemctl status smb.service
+```
 
 ### NVIDIA
 
@@ -193,6 +314,11 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 # zfs set mountpoint=/var/tank tank
 ```
 
+### Sanoid/Syncoid
+
+sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
+
+`ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
 
 ### SecureBoot
 
