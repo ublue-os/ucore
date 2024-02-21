@@ -12,7 +12,6 @@
                 "podman",
                 "podman-compose",
                 "qemu-guest-agent",
-                "restic",
                 "tailscale",
                 "tmux",
                 "wget",
