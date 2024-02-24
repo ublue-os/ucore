@@ -27,6 +27,7 @@
                 "nfs-utils",
                 "pciutils",
                 "rclone",
+                "restic",
                 "samba",
                 "samba-usershares",
                 "snapraid",

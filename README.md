@@ -83,7 +83,8 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
   - [mergerfs](https://github.com/trapexit/mergerfs)
   - nfs-utils - nfs utils including daemon for kernel NFS server
-  - [rclone](https://www.rclone.org/) for file synchronization and mounting of cloud storage
+  - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
+  - [restic](https://www.restic.net/) - backup solution
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
