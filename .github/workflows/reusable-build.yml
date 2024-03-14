@@ -40,10 +40,23 @@ jobs:
       - name: Fetch CoreOS stream versions
         id: fetch
         run: |
+          set -eo pipefail
+
           skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
+
           linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+          if [ -z "$linux" ] || [ "null" = "$linux" ]; then
+              echo "inspected linux version must not be empty or null"
+              exit 1
+          fi
+
+          version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
+          if [ -z "$version" ] || [ "null" = "$verson" ]; then
+              echo "inspected image version must not be empty or null"
+              exit 1
+          fi
+
           echo "linux=$linux" >> $GITHUB_OUTPUT
-          version=$(jq -r '.["Labels"]["version"]' inspect.json)
           echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
