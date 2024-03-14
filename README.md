@@ -415,3 +415,7 @@ These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosig
 ```bash
 cosign verify --key cosign.pub ghcr.io/ublue-os/ucore
 ```
+
+## Metrics
+
+![Alt](https://repobeats.axiom.co/api/embed/07d1ed133f5ed1a1048ea6a76bfe3a23227eedd5.svg "Repobeats analytics image")
