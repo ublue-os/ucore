@@ -34,8 +34,8 @@ jobs:
     name: Get Stream Info
     runs-on: ubuntu-latest
     outputs:
-      linux: ${{ fromJSON(steps.fetch.outputs).linux }}
-      version: ${{ fromJSON(steps.fetch.outputs).version }}
+      linux: ${{ fromJSON(steps.fetch.outputs.outputs).linux }}
+      version: ${{ fromJSON(steps.fetch.outputs.outputs).version }}
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
@@ -64,7 +64,7 @@ jobs:
             echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ fromJSON(steps.fetch.outputs) }}"
+          echo "${{ fromJSON(steps.fetch.outputs.outputs) }}"
 
   build_fcos:
     name: fedora-coreos
