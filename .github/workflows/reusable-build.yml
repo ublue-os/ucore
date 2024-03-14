@@ -34,33 +34,37 @@ jobs:
     name: Get Stream Info
     runs-on: ubuntu-latest
     outputs:
-      linux: ${{ steps.fetch.outputs.linux }}
-      version: ${{ steps.fetch.outputs.version }}
+      linux: ${{ fromJSON(steps.fetch.outputs).linux }}
+      version: ${{ fromJSON(steps.fetch.outputs).version }}
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        run: |
-          set -eo pipefail
+        uses: Wandalen/wretry.action@v1.4.5
+          with:
+            attempt_limit: 3
+            attempt_delay: 15000
+            command: |
+              set -eo pipefail
 
-          skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
+              skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
 
-          linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [ -z "$linux" ] || [ "null" = "$linux" ]; then
-              echo "inspected linux version must not be empty or null"
-              exit 1
-          fi
+              linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+              if [ -z "$linux" ] || [ "null" = "$linux" ]; then
+                  echo "inspected linux version must not be empty or null"
+                  exit 1
+              fi
 
-          version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
-          if [ -z "$version" ] || [ "null" = "$verson" ]; then
-              echo "inspected image version must not be empty or null"
-              exit 1
-          fi
+              version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
+              if [ -z "$version" ] || [ "null" = "$verson" ]; then
+                  echo "inspected image version must not be empty or null"
+                  exit 1
+              fi
 
-          echo "linux=$linux" >> $GITHUB_OUTPUT
-          echo "version=$version" >> $GITHUB_OUTPUT
+              echo "linux=$linux" >> $GITHUB_OUTPUT
+              echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ toJSON(steps.fetch.outputs) }}"
+          echo "${{ steps.fetch.outputs }}"
 
   build_fcos:
     name: fedora-coreos
@@ -141,6 +145,16 @@ jobs:
             org.opencontainers.image.description=An OCI image of Fedora CoreOS with NVIDIA and/or ZFS pre-installed
             org.opencontainers.image.title=${{ matrix.image_name }}
             org.opencontainers.image.version=${{ matrix.image_version }}
+
+      - name: Pull base image
+        uses: Wandalen/wretry.action@v1.4.5
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -303,6 +317,16 @@ jobs:
             org.opencontainers.image.description=${{ matrix.description }}
             org.opencontainers.image.title=${{ matrix.image_base }}${{ matrix.image_suffix }}
             org.opencontainers.image.version=${{ matrix.image_version }}
+
+      - name: Pull base image
+        uses: Wandalen/wretry.action@v1.4.5
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
 
       # Build image using Buildah action
       - name: Build Image
