@@ -7,7 +7,7 @@ on:
         required: true
         type: string
 env:
-    IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
   workflow_info:
@@ -40,28 +40,28 @@ jobs:
       - name: Fetch CoreOS stream versions
         id: fetch
         uses: Wandalen/wretry.action@v1.4.5
-          with:
-            attempt_limit: 3
-            attempt_delay: 15000
-            command: |
-              set -eo pipefail
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            set -eo pipefail
 
-              skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
+            skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
 
-              linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-              if [ -z "$linux" ] || [ "null" = "$linux" ]; then
-                  echo "inspected linux version must not be empty or null"
-                  exit 1
-              fi
+            linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+            if [ -z "$linux" ] || [ "null" = "$linux" ]; then
+                echo "inspected linux version must not be empty or null"
+                exit 1
+            fi
 
-              version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
-              if [ -z "$version" ] || [ "null" = "$verson" ]; then
-                  echo "inspected image version must not be empty or null"
-                  exit 1
-              fi
+            version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
+            if [ -z "$version" ] || [ "null" = "$verson" ]; then
+                echo "inspected image version must not be empty or null"
+                exit 1
+            fi
 
-              echo "linux=$linux" >> $GITHUB_OUTPUT
-              echo "version=$version" >> $GITHUB_OUTPUT
+            echo "linux=$linux" >> $GITHUB_OUTPUT
+            echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
           echo "${{ steps.fetch.outputs }}"
