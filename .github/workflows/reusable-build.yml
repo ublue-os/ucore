@@ -55,7 +55,7 @@ jobs:
             fi
 
             version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
-            if [ -z "$version" ] || [ "null" = "$verson" ]; then
+            if [ -z "$version" ] || [ "null" = "$version" ]; then
                 echo "inspected image version must not be empty or null"
                 exit 1
             fi
@@ -95,6 +95,14 @@ jobs:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
+
+      - name: Verify version
+        shell: bash
+        run: |
+          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
+              echo "inspected image version must not be empty or null"
+              exit 1
+          fi
 
       - name: Generate tags
         id: generate-tags
@@ -263,6 +271,14 @@ jobs:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
+
+      - name: Verify version
+        shell: bash
+        run: |
+          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
+              echo "inspected image version must not be empty or null"
+              exit 1
+          fi
 
       - name: Generate tags
         id: generate-tags
