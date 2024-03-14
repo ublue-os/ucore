@@ -64,7 +64,7 @@ jobs:
             echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ fromJSON(steps.fetch.outputs.outputs) }}"
+          echo "${{ steps.fetch.outputs.outputs }}"
 
   build_fcos:
     name: fedora-coreos
