@@ -4,13 +4,11 @@
             "all": [],
             "ucore-minimal": [
                 "cockpit-networkmanager",
-                "cockpit-pcp",
                 "cockpit-podman",
                 "cockpit-selinux",
                 "cockpit-system",
                 "firewalld",
                 "open-vm-tools",
-                "pcp-zeroconf",
                 "podman",
                 "podman-compose",
                 "qemu-guest-agent",
@@ -20,6 +18,7 @@
                 "wireguard-tools"
             ],
             "ucore": [
+                "cockpit-pcp",
                 "cockpit-storaged",
                 "distrobox",
                 "duperemove",
@@ -27,6 +26,7 @@
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
                 "nfs-utils",
+                "pcp-zeroconf",
                 "pciutils",
                 "samba",
                 "samba-usershares",
