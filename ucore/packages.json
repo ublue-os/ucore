@@ -1,0 +1,54 @@
+{
+    "all": {
+        "include": {
+            "all": [],
+            "ucore-minimal": [
+                "cockpit-networkmanager",
+                "cockpit-pcp",
+                "cockpit-podman",
+                "cockpit-selinux",
+                "cockpit-system",
+                "firewalld",
+                "open-vm-tools",
+                "pcp-zeroconf",
+                "podman",
+                "podman-compose",
+                "qemu-guest-agent",
+                "tailscale",
+                "tmux",
+                "wget",
+                "wireguard-tools"
+            ],
+            "ucore": [
+                "cockpit-storaged",
+                "distrobox",
+                "duperemove",
+                "iwlegacy-firmware",
+                "iwlwifi-dvm-firmware",
+                "iwlwifi-mvm-firmware",
+                "nfs-utils",
+                "pciutils",
+                "samba",
+                "samba-usershares",
+                "snapraid",
+                "usbutils",
+                "xdg-dbus-proxy",
+                "xdg-user-dirs"
+            ],
+            "ucore-hci": [
+                "cockpit-machines",
+                "libvirt-client",
+                "libvirt-daemon-kvm",
+                "virt-install"
+            ]
+        },
+        "exclude": {
+            "all": [],
+            "ucore-minimal": [],
+            "ucore": [
+                "nfs-utils-coreos"
+            ],
+            "ucore-hci": []
+        }
+    }
+}

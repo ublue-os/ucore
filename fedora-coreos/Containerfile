@@ -1,0 +1,26 @@
+ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+
+FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
+
+ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+# build with --build-arg NVIDA_TAG="-nvidia" to install nvidia
+ARG NVIDIA_TAG="${NVIDIA_TAG}"
+# build with --build-arg ZFS_TAG="-zfs" to install zfs
+ARG ZFS_TAG="${ZFS_TAG}"
+ARG KMOD_SRC="${KMOD_SRC:-ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION}}"
+
+COPY --from=${KMOD_SRC} /rpms/kmods/*.rpm /tmp/rpms/
+COPY --from=${KMOD_SRC} /rpms/kmods/nvidia/*.rpm /tmp/rpms/nvidia/
+COPY --from=${KMOD_SRC} /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
+
+COPY *.sh /tmp/
+
+RUN mkdir -p /var/lib/alternatives \
+    && /tmp/install.sh \
+    && /tmp/post-install.sh \
+    && mv /var/lib/alternatives /staged-alternatives \
+    && rm -fr /tmp/* /var/* \
+    && ostree container commit \
+    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
+    && mkdir -p /tmp /var/tmp \
+    && chmod -R 1777 /tmp /var/tmp
