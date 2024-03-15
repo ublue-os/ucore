@@ -3,6 +3,7 @@
         "include": {
             "all": [],
             "ucore-minimal": [
+                "bootc",
                 "cockpit-networkmanager",
                 "cockpit-podman",
                 "cockpit-selinux",

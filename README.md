@@ -49,6 +49,7 @@ Suitable for running containerized workloads on either bare metal or virtual mac
 
 - Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
 - Adds the following:
+  - [bootc](https://github.com/containers/bootc) (new way to update container native systems)
   - [cockpit](https://cockpit-project.org) (podman container and system management)
   - [firewalld](https://firewalld.org/)
   - guest VM agents (`qemu-guest-agent` and `open-vm-tools`))
