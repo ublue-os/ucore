@@ -4,7 +4,7 @@ set -ouex pipefail
 
 ## CONDITIONAL: install sanoid if ZFS
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
-    rpm-ostree install sanoid 
+    rpm-ostree install sanoid
 fi
 
 # install packages.json stuffs
