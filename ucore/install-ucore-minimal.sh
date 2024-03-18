@@ -31,15 +31,7 @@ rpm-ostree install /tmp/rpms/ublue-os-ucore-addons-*.rpm
 ## CONDITIONAL: install ZFS (and sanoid deps)
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     rpm-ostree install /tmp/rpms/zfs/*.rpm \
-      lzop \
-      mbuffer \
-      mhash \
-      perl-Capture-Tiny \
-      perl-Config-IniFiles \
-      perl-Data-Dumper \
-      perl-Getopt-Long \
-      perl-Sys-Hostname \
-      pv
+      perl-Sys-Hostname
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
     depmod -A ${KERNEL}
 fi
