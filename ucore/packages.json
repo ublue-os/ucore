@@ -3,6 +3,7 @@
         "include": {
             "all": [],
             "ucore-minimal": [
+                "bootc",
                 "cockpit-networkmanager",
                 "cockpit-podman",
                 "cockpit-selinux",
@@ -18,6 +19,7 @@
                 "wireguard-tools"
             ],
             "ucore": [
+                "cockpit-pcp",
                 "cockpit-storaged",
                 "distrobox",
                 "duperemove",
@@ -25,6 +27,7 @@
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
                 "nfs-utils",
+                "pcp-zeroconf",
                 "pciutils",
                 "rclone",
                 "restic",

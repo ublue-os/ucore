@@ -49,6 +49,7 @@ Suitable for running containerized workloads on either bare metal or virtual mac
 
 - Starts with a [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags)
 - Adds the following:
+  - [bootc](https://github.com/containers/bootc) (new way to update container native systems)
   - [cockpit](https://cockpit-project.org) (podman container and system management)
   - [firewalld](https://firewalld.org/)
   - guest VM agents (`qemu-guest-agent` and `open-vm-tools`))
@@ -85,6 +86,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - nfs-utils - nfs utils including daemon for kernel NFS server
   - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
   - [restic](https://www.restic.net/) - backup solution
+  - [pcp](https://pcp.io) Performance Co-pilot monitoring
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
@@ -417,3 +419,7 @@ These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosig
 ```bash
 cosign verify --key cosign.pub ghcr.io/ublue-os/ucore
 ```
+
+## Metrics
+
+![Alt](https://repobeats.axiom.co/api/embed/07d1ed133f5ed1a1048ea6a76bfe3a23227eedd5.svg "Repobeats analytics image")

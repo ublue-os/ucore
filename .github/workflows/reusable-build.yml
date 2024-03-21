@@ -7,7 +7,7 @@ on:
         required: true
         type: string
 env:
-    IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 jobs:
   workflow_info:
@@ -34,20 +34,37 @@ jobs:
     name: Get Stream Info
     runs-on: ubuntu-latest
     outputs:
-      linux: ${{ steps.fetch.outputs.linux }}
-      version: ${{ steps.fetch.outputs.version }}
+      linux: ${{ fromJSON(steps.fetch.outputs.outputs).linux }}
+      version: ${{ fromJSON(steps.fetch.outputs.outputs).version }}
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        run: |
-          skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
-          linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          echo "linux=$linux" >> $GITHUB_OUTPUT
-          version=$(jq -r '.["Labels"]["version"]' inspect.json)
-          echo "version=$version" >> $GITHUB_OUTPUT
+        uses: Wandalen/wretry.action@v1.4.5
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            set -eo pipefail
+
+            skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
+
+            linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+            if [ -z "$linux" ] || [ "null" = "$linux" ]; then
+                echo "inspected linux version must not be empty or null"
+                exit 1
+            fi
+
+            version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
+            if [ -z "$version" ] || [ "null" = "$version" ]; then
+                echo "inspected image version must not be empty or null"
+                exit 1
+            fi
+
+            echo "linux=$linux" >> $GITHUB_OUTPUT
+            echo "version=$version" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
-          echo "${{ toJSON(steps.fetch.outputs) }}"
+          echo "${{ steps.fetch.outputs.outputs }}"
 
   build_fcos:
     name: fedora-coreos
@@ -78,6 +95,14 @@ jobs:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
+
+      - name: Verify version
+        shell: bash
+        run: |
+          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
+              echo "matrix.image_version must not be empty or null"
+              exit 1
+          fi
 
       - name: Generate tags
         id: generate-tags
@@ -129,6 +154,16 @@ jobs:
             org.opencontainers.image.title=${{ matrix.image_name }}
             org.opencontainers.image.version=${{ matrix.image_version }}
 
+      - name: Pull base image
+        uses: Wandalen/wretry.action@v1.4.5
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+
       # Build image using Buildah action
       - name: Build Image
         id: build_image
@@ -158,20 +193,24 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: redhat-actions/push-to-registry@v2
+        uses: Wandalen/wretry.action@v1.4.5
         id: push
         if: github.event_name != 'pull_request'
         env:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_PASSWORD: ${{ github.token }}
         with:
-          image: ${{ steps.build_image.outputs.image }}
-          tags: ${{ steps.build_image.outputs.tags }}
-          registry: ${{ steps.registry_case.outputs.lowercase }}
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
-          extra-args: |
-            --disable-content-trust
+          action: redhat-actions/push-to-registry@v2
+          attempt_limit: 3
+          attempt_delay: 15000
+          with: |
+            image: ${{ steps.build_image.outputs.image }}
+            tags: ${{ steps.build_image.outputs.tags }}
+            registry: ${{ steps.registry_case.outputs.lowercase }}
+            username: ${{ env.REGISTRY_USER }}
+            password: ${{ env.REGISTRY_PASSWORD }}
+            extra-args: |
+              --disable-content-trust
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -182,7 +221,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Sign container
-      - uses: sigstore/cosign-installer@v3.3.0
+      - uses: sigstore/cosign-installer@v3.4.0
         if: github.event_name != 'pull_request'
 
       - name: Sign container image
@@ -190,7 +229,7 @@ jobs:
         run: |
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
-          TAGS: ${{ steps.push.outputs.digest }}
+          TAGS: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
 
@@ -236,6 +275,14 @@ jobs:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
+
+      - name: Verify version
+        shell: bash
+        run: |
+          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
+              echo "matrix.image_version must not be empty or null"
+              exit 1
+          fi
 
       - name: Generate tags
         id: generate-tags
@@ -291,6 +338,16 @@ jobs:
             org.opencontainers.image.title=${{ matrix.image_base }}${{ matrix.image_suffix }}
             org.opencontainers.image.version=${{ matrix.image_version }}
 
+      - name: Pull base image
+        uses: Wandalen/wretry.action@v1.4.5
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+
       # Build image using Buildah action
       - name: Build Image
         id: build_image
@@ -322,20 +379,24 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: redhat-actions/push-to-registry@v2
+        uses: Wandalen/wretry.action@v1.4.5
         id: push
         if: github.event_name != 'pull_request'
         env:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_PASSWORD: ${{ github.token }}
         with:
-          image: ${{ steps.build_image.outputs.image }}
-          tags: ${{ steps.build_image.outputs.tags }}
-          registry: ${{ steps.registry_case.outputs.lowercase }}
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
-          extra-args: |
-            --disable-content-trust
+          action: redhat-actions/push-to-registry@v2
+          attempt_limit: 3
+          attempt_delay: 15000
+          with: |
+            image: ${{ steps.build_image.outputs.image }}
+            tags: ${{ steps.build_image.outputs.tags }}
+            registry: ${{ steps.registry_case.outputs.lowercase }}
+            username: ${{ env.REGISTRY_USER }}
+            password: ${{ env.REGISTRY_PASSWORD }}
+            extra-args: |
+              --disable-content-trust
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -346,7 +407,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Sign container
-      - uses: sigstore/cosign-installer@v3.3.0
+      - uses: sigstore/cosign-installer@v3.4.0
         if: github.event_name != 'pull_request'
 
       - name: Sign container image
@@ -354,7 +415,7 @@ jobs:
         run: |
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
-          TAGS: ${{ steps.push.outputs.digest }}
+          TAGS: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
 
