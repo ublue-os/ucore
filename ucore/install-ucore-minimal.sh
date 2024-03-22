@@ -63,3 +63,6 @@ curl -L https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repo
 # install packages.json stuffs
 export IMAGE_NAME=ucore-minimal
 /tmp/packages.sh
+
+# tweak os-release
+sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
