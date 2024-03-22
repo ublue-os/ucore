@@ -13,3 +13,6 @@ export IMAGE_NAME=ucore
 
 # install packages direct from github
 /tmp/github-release-install.sh trapexit/mergerfs fc.x86_64
+
+# tweak os-release
+sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
