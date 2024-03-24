@@ -16,6 +16,9 @@ for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing{,-modular}.repo); do
 done
 fi
 
+# add the ucore copr repo
+curl -L https://copr.fedorainfracloud.org/coprs/ublue-os/ucore/repo/fedora/ublue-os-ucore-fedora.repo -o /etc/yum.repos.d/ublue-os-ucore-fedora.repo
+
 # always disable cisco-open264 repo
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 
@@ -28,14 +31,6 @@ rpm-ostree install /tmp/rpms/ublue-os-ucore-addons-*.rpm
 ## CONDITIONAL: install ZFS (and sanoid deps)
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     rpm-ostree install /tmp/rpms/zfs/*.rpm \
-      lzop \
-      mbuffer \
-      mhash \
-      perl-Capture-Tiny \
-      perl-Config-IniFiles \
-      perl-Data-Dumper \
-      perl-Getopt-Long \
-      perl-Sys-Hostname \
       pv
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
     depmod -A ${KERNEL}
@@ -63,3 +58,6 @@ curl -L https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repo
 # install packages.json stuffs
 export IMAGE_NAME=ucore-minimal
 /tmp/packages.sh
+
+# tweak os-release
+sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release

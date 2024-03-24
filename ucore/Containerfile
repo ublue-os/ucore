@@ -37,6 +37,7 @@ COPY --from=docker.io/docker/compose-bin:latest /docker-compose /usr/bin/docker-
 FROM ucore-minimal AS ucore
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG ZFS_TAG="${ZFS_TAG}"
 
 COPY *.sh /tmp/
 COPY packages.json /tmp/packages.json
