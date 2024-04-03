@@ -81,7 +81,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [cockpit-storaged](https://cockpit-project.org) (udisks2 based storage management)
   - [distrobox](https://github.com/89luca89/distrobox) - a [toolbox](https://containertoolbx.org/) alternative
   - [duperemove](https://github.com/markfasheh/duperemove)
-  - intel wifi firmware - CoreOS omits this despite including atheros wifi firmware... hardware enablement FTW
+  - all wireless (wifi) card firmwares (CoreOS does not include them) - hardware enablement FTW
   - [mergerfs](https://github.com/trapexit/mergerfs)
   - nfs-utils - nfs utils including daemon for kernel NFS server
   - [pcp](https://pcp.io) Performance Co-pilot monitoring
