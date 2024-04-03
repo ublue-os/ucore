@@ -19,6 +19,8 @@
                 "wireguard-tools"
             ],
             "ucore": [
+                "atheros-firmware",
+                "brcmfmac-firmware",
                 "cockpit-pcp",
                 "cockpit-storaged",
                 "distrobox",
@@ -26,12 +28,16 @@
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
+                "mt7xxx-firmware",
                 "nfs-utils",
+                "nxpwireless-firmware",
                 "pciutils",
                 "pcp-zeroconf",
+                "realtek-firmware",
                 "samba",
                 "samba-usershares",
                 "snapraid",
+                "tiwilink-firmware",
                 "usbutils",
                 "xdg-dbus-proxy",
                 "xdg-user-dirs"
