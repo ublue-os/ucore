@@ -25,6 +25,7 @@
                 "cockpit-storaged",
                 "distrobox",
                 "duperemove",
+                "hdparm",
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
