@@ -340,6 +340,20 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 # zfs set mountpoint=/var/tank tank
 ```
 
+#### ZFS scrub timers
+
+It's good practice to run a `zfs scrub` periodically on ZFS pools to check and repair the integrity of data. This can be easily configured with ucore by enabling the timer. There are two timers available: weekly and monthly.
+
+```bash
+# Substitute <pool> with the name of the zpool
+systemctl enable --now zfs-scrub-weekly@<pool>.timer
+
+# Or to run it monthly:
+systemctl enable --now zfs-scrub-monthly@<pool>.timer
+```
+
+This can be enabled for multiple storage pools by enabling and starting a timer for each.
+
 ### Sanoid/Syncoid
 
 sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
