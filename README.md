@@ -342,7 +342,7 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 
 #### ZFS scrub timers
 
-It's good practice to run a `zfs scrub` periodically on ZFS pools to check and repair the integrity of data. This can be easily configured with ucore by enabling the timer. There are two timers available: weekly and monthly.
+It's good practice to run a `zpool scrub` periodically on ZFS pools to check and repair the integrity of data. This can be easily configured with ucore by enabling the timer. There are two timers available: weekly and monthly.
 
 ```bash
 # Substitute <pool> with the name of the zpool
