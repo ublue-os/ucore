@@ -87,6 +87,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [pcp](https://pcp.io) Performance Co-pilot monitoring
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
+  - [apcupsd](https://sourceforge.net/projects/apcupsd/) - interface with APC UPSes and gracefully shutdown in case of power failure
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 
 ### `ucore-hci`

@@ -19,6 +19,7 @@
                 "wireguard-tools"
             ],
             "ucore": [
+                "apcupsd",
                 "atheros-firmware",
                 "brcmfmac-firmware",
                 "cockpit-pcp",
