@@ -30,7 +30,6 @@
                 "pcp-zeroconf",
                 "pciutils",
                 "rclone",
-                "restic",
                 "samba",
                 "samba-usershares",
                 "snapraid",

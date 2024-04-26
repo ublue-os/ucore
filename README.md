@@ -85,7 +85,6 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [mergerfs](https://github.com/trapexit/mergerfs)
   - nfs-utils - nfs utils including daemon for kernel NFS server
   - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
-  - [restic](https://www.restic.net/) - backup solution
   - [pcp](https://pcp.io) Performance Co-pilot monitoring
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
