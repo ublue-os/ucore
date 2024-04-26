@@ -53,7 +53,8 @@ Suitable for running containerized workloads on either bare metal or virtual mac
   - [cockpit](https://cockpit-project.org) (podman container and system management)
   - [firewalld](https://firewalld.org/)
   - guest VM agents (`qemu-guest-agent` and `open-vm-tools`))
-  - [docker-compose](https://github.com/docker/compose) and [podman-compose](https://github.com/containers/podman-compose) *docker(moby-engine) and podman are pre-installed in CoreOS*
+  - [docker-buildx](https://github.com/docker/buildx) and [docker-compose](https://github.com/docker/compose) (versions matched to moby release) *docker(moby-engine) is pre-installed in CoreOS*
+  - [podman-compose](https://github.com/containers/podman-compose) *podman is pre-installed in CoreOS*
   - [tailscale](https://tailscale.com) and [wireguard-tools](https://www.wireguard.com)
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
