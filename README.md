@@ -85,8 +85,8 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - all wireless (wifi) card firmwares (CoreOS does not include them) - hardware enablement FTW
   - [mergerfs](https://github.com/trapexit/mergerfs)
   - nfs-utils - nfs utils including daemon for kernel NFS server
-  - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
   - [pcp](https://pcp.io) Performance Co-pilot monitoring
+  - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
