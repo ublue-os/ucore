@@ -11,6 +11,11 @@ ARG NVIDIA_TAG="${NVIDIA_TAG}"
 ARG ZFS_TAG="${ZFS_TAG}"
 ARG KMOD_SRC="${KMOD_SRC:-ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION}}"
 
+# 0.12.1 matches docker/moby 24.0.5 which FCOS ships as of 40.20240421
+ARG DOCKER_BUILDX_VERSION=0.12.1
+# 2.24.7 matches docker/moby 24.0.5  which FCOS ships as of 40.20240421
+ARG DOCKER_COMPOSE_VERSION=v2.24.7
+
 COPY --from=${KMOD_SRC} /rpms/kmods/*.rpm /tmp/rpms/
 COPY --from=${KMOD_SRC} /rpms/kmods/nvidia/*.rpm /tmp/rpms/nvidia/
 COPY --from=${KMOD_SRC} /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
@@ -30,13 +35,23 @@ RUN mkdir -p /var/lib/alternatives \
     && mkdir -p /tmp /var/tmp \
     && chmod -R 1777 /tmp /var/tmp
 
-COPY --from=docker.io/docker/compose-bin:latest /docker-compose /usr/bin/docker-compose
+COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
+COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
+
+RUN ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose \
+    && mv /var/lib/alternatives /staged-alternatives \
+    && rm -fr /tmp/* /var/* \
+    && ostree container commit \
+    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
+    && mkdir -p /tmp /var/tmp \
+    && chmod -R 1777 /tmp /var/tmp
 
 
 # ucore image section
 FROM ucore-minimal AS ucore
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG ZFS_TAG="${ZFS_TAG}"
 
 COPY *.sh /tmp/
 COPY packages.json /tmp/packages.json
