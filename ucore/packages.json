@@ -35,6 +35,7 @@
                 "nxpwireless-firmware",
                 "pciutils",
                 "pcp-zeroconf",
+                "rclone",
                 "realtek-firmware",
                 "samba",
                 "samba-usershares",

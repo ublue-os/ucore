@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.4.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -155,7 +155,7 @@ jobs:
             org.opencontainers.image.version=${{ matrix.image_version }}
 
       - name: Pull base image
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.4.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -193,7 +193,7 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.4.0
         id: push
         if: github.event_name != 'pull_request'
         env:
@@ -221,7 +221,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Sign container
-      - uses: sigstore/cosign-installer@v3.4.0
+      - uses: sigstore/cosign-installer@v3.5.0
         if: github.event_name != 'pull_request'
 
       - name: Sign container image
@@ -339,7 +339,7 @@ jobs:
             org.opencontainers.image.version=${{ matrix.image_version }}
 
       - name: Pull base image
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.4.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -379,7 +379,7 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.4.0
         id: push
         if: github.event_name != 'pull_request'
         env:
@@ -407,7 +407,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Sign container
-      - uses: sigstore/cosign-installer@v3.4.0
+      - uses: sigstore/cosign-installer@v3.5.0
         if: github.event_name != 'pull_request'
 
       - name: Sign container image
