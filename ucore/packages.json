@@ -19,8 +19,6 @@
                 "wireguard-tools"
             ],
             "ucore": [
-                "atheros-firmware",
-                "brcmfmac-firmware",
                 "NetworkManager-wifi",
                 "atheros-firmware",
                 "brcmfmac-firmware",
