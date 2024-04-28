@@ -39,6 +39,7 @@ COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/li
 COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
 
 RUN ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose \
+    && ln -s /sbin/ldconfig /sbin/ldconfig.real \
     && mv /var/lib/alternatives /staged-alternatives \
     && rm -fr /tmp/* /var/* \
     && ostree container commit \
