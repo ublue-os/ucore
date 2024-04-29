@@ -3,9 +3,9 @@
 [![stable](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml)
 [![testing](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml)
 
-uCore is an OCI image of [Fedora CoreOS](https://getfedora.org/coreos/) with "batteries included". More specifically, it's an opinionated, custom CoreOS image, built daily with some commonly used tools added in. The idea is to make a lightweight server image including most used services or the building blocks to host them.
+uCore is an OCI image of [Fedora CoreOS](https://getfedora.org/coreos/) with "batteries included". More specifically, it's an opinionated, custom CoreOS image, built daily with some commonly used tools added in. The idea is to make a lightweight server image including commonly used services or the building blocks to host them.
 
-Please take a look at the included modifications and help us test uCore if the project interests you.
+Please take a look at the included modifications, and help us improve uCore if the project interests you.
 
 ## Table of Contents <!-- omit in toc -->
 
@@ -19,26 +19,25 @@ Please take a look at the included modifications and help us test uCore if the p
 - [Installation](#installation)
   - [Image Verification](#image-verification)
   - [Auto-Rebase Install](#auto-rebase-install)
-  - [Manually Install/Rebase](#manually-installrebase)
-    - [Verified Image Updates](#verified-image-updates)
+  - [Manual Install/Rebase](#manual-installrebase)
 - [Tips and Tricks](#tips-and-tricks)
+  - [CoreOS and ostree Docs](#coreos-and-ostree-docs)
   - [Immutability and Podman](#immutability-and-podman)
   - [Default Services](#default-services)
   - [SELinux Troubleshooting](#selinux-troubleshooting)
   - [Docker/Moby and Podman](#dockermoby-and-podman)
   - [Podman and FirewallD](#podman-and-firewalld)
   - [Distrobox](#distrobox)
-  - [CoreOS and ostree Docs](#coreos-and-ostree-docs)
   - [NAS - Storage](#nas---storage)
     - [NFS](#nfs)
     - [Samba](#samba)
+  - [SecureBoot w/ kmods](#secureboot-w-kmods)
   - [NVIDIA](#nvidia)
     - [Included Drivers](#included-drivers)
     - [Other Drivers](#other-drivers)
   - [ZFS](#zfs)
     - [ZFS and immutable root filesystem](#zfs-and-immutable-root-filesystem)
-  - [Sanoid/Syncoid](#sanoidsyncoid)
-  - [SecureBoot](#secureboot)
+    - [Sanoid/Syncoid](#sanoidsyncoid)
 - [Metrics](#metrics)
 
 ## Features
@@ -64,19 +63,19 @@ The [tag matrix](#tag-matrix) includes combinations of the following:
 #### `fedora-coreos`
 
 > [!IMPORTANT]
-> This was previously named `fedora-coreos-zfs`, but that version of the image did not offer the nvidia option. If on the previous image name, please update with `rpm-ostree rebase`.
+> This was previously named `fedora-coreos-zfs`, but that version of the image did not offer the nvidia option. If on the previous image name, please rebase with `rpm-ostree rebase`.
 
 A generic [Fedora CoreOS image](https://quay.io/repository/fedora/fedora-coreos?tab=tags) image with choice of add-on kernel modules:
 
 - [nvidia versions](#tag-matrix) add:
-  - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently version 535) built from negativo17's akmod package
+  - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver built from negativo17's akmod package
   - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - [ZFS versions](#tag-matrix) add:
   - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series)
 
 > [!NOTE]
-> currently, zincati fails to start on all systems with OCI based deployments (like uCore). Upstream efforts are active to correct this.
+> zincati fails to start on all systems with OCI based deployments (like uCore). Upstream efforts are active to develop an alternative.
 
 #### `ucore-minimal`
 
@@ -94,13 +93,12 @@ Suitable for running containerized workloads on either bare metal or virtual mac
   - [tmux](https://github.com/tmux/tmux/wiki/Getting-Started)
   - udev rules enabling full functionality on some [Realtek 2.5Gbit USB Ethernet](https://github.com/wget/realtek-r8152-linux/) devices
 - Optional [nvidia versions](#tag-matrix) add:
-  - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently version 535) built from negativo17's akmod package
+  - [nvidia driver](https://github.com/ublue-os/ucore-kmods) - latest driver built from negativo17's akmod package
   - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/sample-workload.html) - latest toolkit which supports both root and rootless podman containers and CDI
   - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - allows using `--security-opt label=type:nvidia_container_t` for some jobs (some will still need `--security-opt label=disable` as suggested by nvidia)
 - Optional [ZFS versions](#tag-matrix) add:
-  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series)
-  - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
-    - note: on `ucore-minimal` images, only `pv` is installed
+  - [ZFS driver](https://github.com/ublue-os/ucore-kmods) - latest driver (currently pinned to 2.2.x series) - [see below](#zfs) for details
+  - `pv` is installed with zfs as a complementary tool
 - Disables Zincati auto upgrade/reboot service
 - Enables staging of automatic system updates via rpm-ostreed
 - Enables password based SSH auth (required for locally running cockpit web interface)
@@ -126,6 +124,8 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
+- Optional [ZFS versions](#tag-matrix) add:
+  - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
 
 #### `ucore-hci`
 
@@ -139,7 +139,7 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
   - virt-install: command-line utility for installing virtual machines
 
 > [!NOTE]
-> Fedora now uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
+> Fedora uses `DefaultTimeoutStop=45s` for systemd services which could cause `libvirtd` to quit before shutting down slow VMs. Consider adding `TimeoutStopSec=120s` as an override for `libvirtd.service` if needed.
 
 ### Tag Matrix
 
@@ -163,25 +163,25 @@ There are varying methods of installation for bare metal, cloud providers, and v
 **All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/).** This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
 
 > [!NOTE]
-> It is highly recommended that for bare metal installs, first test your ignition configuration by installing in a VM using bare metal process.*
+> It is highly recommended that for bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the same bare metal process.
 
 ### Image Verification
 
 These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by running the following command:
 
 ```bash
-cosign verify --key https://github.com/ublue-os/ucore/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
+cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
 ```
 
 ### Auto-Rebase Install
 
-One of the fastest paths to a running uCore is using [examples/ucore-autorebase.butane](examples/ucore-autorebase.butane) as a template for your CoreOS butane file.
+One of the fastest paths to running uCore is using [examples/ucore-autorebase.butane](examples/ucore-autorebase.butane) as a template for your CoreOS butane file.
 
 1. As usual, you'll need to [follow the docs to setup a password](https://coreos.github.io/butane/examples/#using-password-authentication). Substitute your password hash for `YOUR_GOOD_PASSWORD_HASH_HERE` in the `ucore-autorebase.butane` file, and add your ssh pub key while you are at it.
 1. Generate an ignition file from your new `ucore-autorebase.butane` [using the butane utility](https://coreos.github.io/butane/getting-started/).
 1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable` (or other `IMAGE:TAG` combo), rebooting and leaving your install ready to use.
 
-### Manually Install/Rebase
+### Manual Install/Rebase
 
 Once a machine is running any Fedora CoreOS version, you can easily rebase to uCore.  Installing CoreOS itself can be done through [a number of provisioning methods](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/).
 
@@ -195,7 +195,7 @@ To rebase an existing machine to the latest uCore:
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 ```
 
-#### Verified Image Updates
+#### Verified Image Updates <!-- omit in toc -->
 
 The `ucore*` images include container policies to support image verification for improved trust of upgrades. Once running one of the `ucore*` images, the following command will rebase to the verified image reference:
 
@@ -208,11 +208,15 @@ sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/IMAGE:TAG
 
 ## Tips and Tricks
 
+### CoreOS and ostree Docs
+
+It's a good idea to become familar with the [Fedora CoreOS Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/) as well as the [CoreOS rpm-ostree docs](https://coreos.github.io/rpm-ostree/). Note especially, this image is only possible due to [ostree native containers](https://coreos.github.io/rpm-ostree/container/).
+
 ### Immutability and Podman
 
-These images are immutable and you probably shouldn't install packages like in a mutable "normal" distribution.
+A CoreOS root filesystem system is immutable at runtime, and it is not recommended to install packages like in a mutable "normal" distribution.
 
-Fedora CoreOS expects the user to run services using [podman](https://podman.io). `moby-engine`, the free Docker implementation, is installed for those who desire docker instead of podman.
+Fedora CoreOS expects the user to run services using [podman](https://podman.io). `moby-engine`, the free Docker implementation, is also installed for those who desire docker instead of podman.
 
 ### Default Services
 
@@ -232,7 +236,7 @@ sudo systemctl enable --now SERVICENAME.service
 SELinux is an integral part of the Fedora Atomic system design. Due to a few interelated issues, if SELinux is disabled, it's difficult to re-enable.
 
 > [!WARNING]
-> We STRONGLY recommend: DO NOT DISABLE SELinux!
+> **We STRONGLY recommend: DO NOT DISABLE SELinux!**
 
 Should you suspect that SELinux is causing a problem, it is easy to enable permissive mode at runtime, which will keep SELinux functioning, provide reporting of problems, but not enforce restrictions.
 
@@ -254,7 +258,10 @@ Fedora provides useful docs on [SELinux troubleshooting](https://docs.fedoraproj
 
 ### Docker/Moby and Podman
 
-NOTE: CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activation of the docker daemon, given podman is the default.
+> [!IMPORTANT]
+> CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activation of the docker daemon, given podman is the default.
+>
+> Ony run both simultaneously if you understand the risk.
 
 ### Podman and FirewallD
 
@@ -265,10 +272,6 @@ As of [netavark v1.9.0](https://blog.podman.io/2023/11/new-netavark-firewalld-re
 ### Distrobox
 
 Users may use [distrobox](https://github.com/89luca89/distrobox) to run images of mutable distributions where applications can be installed with traditional package managers. This may be useful for installing interactive utilities such has `htop`, `nmap`, etc. As stated above, however, *services* should run as containers.
-
-### CoreOS and ostree Docs
-
-It's a good idea to become familar with the [Fedora CoreOS Documentation](https://docs.fedoraproject.org/en-US/fedora-coreos/) as well as the [CoreOS rpm-ostree docs](https://coreos.github.io/rpm-ostree/). Note especially, this image is only possible due to [ostree native containers](https://coreos.github.io/rpm-ostree/container/).
 
 ### NAS - Storage
 
@@ -406,6 +409,18 @@ sudo systemctl enable --now smb.service
 sudo systemctl status smb.service
 ```
 
+### SecureBoot w/ kmods
+
+For those wishing to use `nvidia` or `zfs` images with pre-built kmods AND run SecureBoot, the kernel will not load those kmods until the public signing key has been imported as a MOK (Machine-Owner Key).
+
+Do so like this:
+
+```bash
+sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der
+```
+
+The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the UEFI MOK import utility.
+
 ### NVIDIA
 
 #### Included Drivers
@@ -457,23 +472,11 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 # zfs set mountpoint=/var/tank tank
 ```
 
-### Sanoid/Syncoid
+#### Sanoid/Syncoid
 
 sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
 
 `ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
-
-### SecureBoot
-
-For those wishing to use `nvidia` or `zfs` images with pre-built kmods AND run SecureBoot, the kernel will not load those kmods until the public signing key has been imported as a MOK (Machine-Owner Key).
-
-Do so like this:
-
-```bash
-sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der
-```
-
-The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the UEFI MOK import utility.
 
 ## Metrics
 
