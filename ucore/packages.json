@@ -15,7 +15,6 @@
                 "qemu-guest-agent",
                 "tailscale",
                 "tmux",
-                "wget",
                 "wireguard-tools"
             ],
             "ucore": [
