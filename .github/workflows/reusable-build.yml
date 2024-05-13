@@ -39,7 +39,7 @@ jobs:
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        uses: Wandalen/wretry.action@v3.4.0
+        uses: Wandalen/wretry.action@v3.5.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -155,7 +155,7 @@ jobs:
             org.opencontainers.image.version=${{ matrix.image_version }}
 
       - name: Pull base image
-        uses: Wandalen/wretry.action@v3.4.0
+        uses: Wandalen/wretry.action@v3.5.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -193,7 +193,7 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@v3.4.0
+        uses: Wandalen/wretry.action@v3.5.0
         id: push
         if: github.event_name != 'pull_request'
         env:
@@ -339,7 +339,7 @@ jobs:
             org.opencontainers.image.version=${{ matrix.image_version }}
 
       - name: Pull base image
-        uses: Wandalen/wretry.action@v3.4.0
+        uses: Wandalen/wretry.action@v3.5.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -379,7 +379,7 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@v3.4.0
+        uses: Wandalen/wretry.action@v3.5.0
         id: push
         if: github.event_name != 'pull_request'
         env:
