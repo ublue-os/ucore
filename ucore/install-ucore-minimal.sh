@@ -22,6 +22,10 @@ curl -L https://copr.fedorainfracloud.org/coprs/ublue-os/ucore/repo/fedora/ublue
 # always disable cisco-open264 repo
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 
+# required for some package versions on coreos
+curl -L -o /etc/yum.repos.d/fedora-coreos-pool.repo \
+    https://raw.githubusercontent.com/coreos/fedora-coreos-config/testing-devel/fedora-coreos-pool.repo
+
 #### INSTALL
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
@@ -61,3 +65,6 @@ export IMAGE_NAME=ucore-minimal
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
+
+# remove after installing coreos packages
+rm -f /etc/yum.repos.d/fedora-coreos-pool.repo
