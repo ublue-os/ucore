@@ -95,7 +95,7 @@ jobs:
         fedora_version:
           - ${{ needs.stream_info.outputs.fedora}}
         image_name:
-          - fedora-coreos
+          - "fedora-coreos"
         image_version:
           - ${{ needs.stream_info.outputs.image}}
         kernel_version:
@@ -103,9 +103,9 @@ jobs:
         pr_prefix:
           - ${{ needs.workflow_info.outputs.pr_prefix }}
         include:
-          - image_version: stable
+          - image_version: "stable"
             kernel_flavor: "coreos"
-          - image_version: testing
+          - image_version: "testing"
             kernel_flavor: "coreos-testing"
         exclude:
           - nvidia_tag: ""
