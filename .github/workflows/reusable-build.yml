@@ -87,7 +87,7 @@ jobs:
       fedora_version: ${{ needs.stream_info.outputs.fedora}}
       image_name: fedora-coreos
       image_version: ${{ needs.stream_info.outputs.image}}
-      kernel_flavor: ${{ inputs.coreos_version == 'stable' && format('{0}', 'coreos') format('coreos-{0}', inputs.coreos_version) }}
+      kernel_flavor: ${{ inputs.coreos_version == 'stable' && format('{0}', 'coreos') || format('coreos-{0}', inputs.coreos_version) }}
       kernel_version: ${{ needs.stream_info.outputs.kernel}}
       pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
