@@ -95,7 +95,7 @@ jobs:
         fedora_version:
           - ${{ needs.stream_info.outputs.fedora}}
         image_name:
-          - "fedora-coreos"
+          - fedora-coreos
         image_version:
           - ${{ needs.stream_info.outputs.image}}
         kernel_version:
@@ -103,10 +103,10 @@ jobs:
         pr_prefix:
           - ${{ needs.workflow_info.outputs.pr_prefix }}
         include:
-          - image_version: "stable"
-            kernel_flavor: "coreos"
-          - image_version: "testing"
-            kernel_flavor: "coreos-testing"
+          - image_version: stable
+            kernel_flavor: coreos
+          - image_version: testing
+            kernel_flavor: coreos-testing
         exclude:
           - nvidia_tag: ""
             zfs_tag: ""
@@ -130,7 +130,7 @@ jobs:
       - name: Verify versions
         shell: bash
         run: |
-          if [ -z "${{ matrix.fedora_version }}" ] || [ "null" = "${{ fedora.image_version }}" ]; then
+          if [ -z "${{ matrix.fedora_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
               echo "matrix.fedora_version must not be empty or null"
               exit 1
           fi
