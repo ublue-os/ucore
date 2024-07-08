@@ -138,7 +138,7 @@ jobs:
               echo "matrix.image_version must not be empty or null"
               exit 1
           fi
-          if [ -z "${{ matrix.kernel_version }}" ] || [ "null" = "${{ kernel.image_version }}" ]; then
+          if [ -z "${{ matrix.kernel_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
               echo "matrix.kernel_version must not be empty or null"
               exit 1
           fi
