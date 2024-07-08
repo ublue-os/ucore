@@ -290,6 +290,14 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    env:
+      fedora_version: ${{ needs.stream_info.outputs.fedora}}
+      image_base: ucore
+      image_name: fedora-coreos
+      image_version: ${{ needs.stream_info.outputs.image}}
+      kernel_flavor: ${{ inputs.coreos_version == 'stable' && format('{0}', 'coreos') || format('coreos-{0}', inputs.coreos_version) }}
+      kernel_version: ${{ needs.stream_info.outputs.kernel}}
+      pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
       fail-fast: false
       matrix:
@@ -304,9 +312,6 @@ jobs:
           - "-zfs"
           - ""
         include:
-          - image_base: ucore
-          - image_version: ${{ needs.stream_info.outputs.version }}
-          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
@@ -319,11 +324,50 @@ jobs:
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
 
-      - name: Verify version
+      - name: Pull base and kmod images
+        uses: Wandalen/wretry.action@v3.5.0
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }}
+
+      - name: Verify versions
         shell: bash
         run: |
-          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
-              echo "matrix.image_version must not be empty or null"
+          if [ -z "${{ env.fedora_version }}" ] || [ "null" = "${{ env.fedora_version }}" ]; then
+              echo "env.fedora_version must not be empty or null"
+              exit 1
+          fi
+          if [ -z "${{ env.image_version }}" ] || [ "null" = "${{ env.image_version }}" ]; then
+              echo "env.image_version must not be empty or null"
+              exit 1
+          fi
+          if [ -z "${{ env.kernel_version }}" ] || [ "null" = "${{ env.kernel_version }}" ]; then
+              echo "env.kernel_version must not be empty or null"
+              exit 1
+          fi
+          skopeo inspect containers-storage:quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > i-coreos.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }} > i-kmod.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }} > i-kmod-nv.json
+
+          kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-coreos.json)
+          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
+              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              exit 1
+          fi
+          kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod.json)
+          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              exit 1
+          fi
+          kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod-nv.json)
+          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
               exit 1
           fi
 
@@ -373,13 +417,13 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ matrix.image_base }}${{ matrix.image_suffix }}
+            ${{ env.image_base }}${{ matrix.image_suffix }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.title=${{ matrix.image_base }}${{ matrix.image_suffix }}
-            org.opencontainers.image.version=${{ matrix.image_version }}
+            org.opencontainers.image.title=${{ env.image_base }}${{ matrix.image_suffix }}
+            org.opencontainers.image.version=${{ env.image_version }}
 
       - name: Pull base image
         uses: Wandalen/wretry.action@v3.5.0
@@ -399,18 +443,21 @@ jobs:
           containerfiles: |
             ./ucore/Containerfile
           context: ./ucore
-          image: ${{ matrix.image_base }}${{ matrix.image_suffix }}
+          image: ${{ env.image_base }}${{ matrix.image_suffix }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
-            PR_PREFIX=${{ matrix.pr_prefix }}
+            FEDORA_VERSION=${{ env.fedora_version }}
+            IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
+            KERNEL_FLAVOR=${{ env.kernel_flavor }}
+            PR_PREFIX=${{ env.pr_prefix }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
           extra-args: |
-            --target=${{ matrix.image_base }}${{ matrix.image_suffix }}
+            --target=${{ env.image_base }}${{ matrix.image_suffix }}
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
