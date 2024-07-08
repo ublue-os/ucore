@@ -83,6 +83,13 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    env:
+      fedora_version: ${{ needs.stream_info.outputs.fedora}}
+      image_name: fedora-coreos
+      image_version: ${{ needs.stream_info.outputs.image}}
+      kernel_flavor: ${{ inputs.coreos_version == 'stable' && format('{0}', 'coreos') format('coreos-{0}', inputs.coreos_version) }}
+      kernel_version: ${{ needs.stream_info.outputs.kernel}}
+      pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
       fail-fast: false
       matrix:
@@ -92,21 +99,6 @@ jobs:
         zfs_tag:
           - "-zfs"
           - ""
-        fedora_version:
-          - ${{ needs.stream_info.outputs.fedora}}
-        image_name:
-          - fedora-coreos
-        image_version:
-          - ${{ needs.stream_info.outputs.image}}
-        kernel_version:
-          - ${{ needs.stream_info.outputs.kernel}}
-        pr_prefix:
-          - ${{ needs.workflow_info.outputs.pr_prefix }}
-        include:
-          - image_version: stable
-            kernel_flavor: coreos
-          - image_version: testing
-            kernel_flavor: coreos-testing
         exclude:
           - nvidia_tag: ""
             zfs_tag: ""
@@ -124,41 +116,41 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }}
 
       - name: Verify versions
         shell: bash
         run: |
-          if [ -z "${{ matrix.fedora_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
-              echo "matrix.fedora_version must not be empty or null"
+          if [ -z "${{ env.fedora_version }}" ] || [ "null" = "${{ env.fedora_version }}" ]; then
+              echo "env.fedora_version must not be empty or null"
               exit 1
           fi
-          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
-              echo "matrix.image_version must not be empty or null"
+          if [ -z "${{ env.image_version }}" ] || [ "null" = "${{ env.image_version }}" ]; then
+              echo "env.image_version must not be empty or null"
               exit 1
           fi
-          if [ -z "${{ matrix.kernel_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
-              echo "matrix.kernel_version must not be empty or null"
+          if [ -z "${{ env.kernel_version }}" ] || [ "null" = "${{ env.kernel_version }}" ]; then
+              echo "env.kernel_version must not be empty or null"
               exit 1
           fi
           skopeo inspect containers-storage:quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > i-coreos.json
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }} > i-kmod.json
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }} > i-kmod-nv.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }} > i-kmod.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }} > i-kmod-nv.json
 
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-coreos.json)
-          if [ "$kernel" != "${{ matrix.kernel_version }}" ]; then
-              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ matrix.kernel_version }}"
+          if [ "$kernel" != "${{ env.kernel_version }}" ]; then
+              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod.json)
-          if [ "$kernel" != "${{ matrix.kernel_version }}" ]; then
-              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ matrix.kernel_version }}"
+          if [ "$kernel" != "${{ env.kernel_version }}" ]; then
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod-nv.json)
-          if [ "$kernel" != "${{ matrix.kernel_version }}" ]; then
-              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ matrix.kernel_version }}"
+          if [ "$kernel" != "${{ env.kernel_version }}" ]; then
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
               exit 1
           fi
 
@@ -204,13 +196,13 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ matrix.image_name }}
+            ${{ env.image_name }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=An OCI image of Fedora CoreOS with NVIDIA and/or ZFS pre-installed
-            org.opencontainers.image.title=${{ matrix.image_name }}
-            org.opencontainers.image.version=${{ matrix.image_version }}
+            org.opencontainers.image.title=${{ env.image_name }}
+            org.opencontainers.image.version=${{ env.image_version }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -220,15 +212,15 @@ jobs:
           containerfiles: |
             ./fedora-coreos/Containerfile
           context: ./fedora-coreos
-          image: ${{ matrix.image_name }}
+          image: ${{ env.image_name }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
-            FEDORA_VERSION=${{ matrix.fedora_version }}
+            FEDORA_VERSION=${{ env.fedora_version }}
             IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
-            KERNEL_FLAVOR=${{ matrix.kernel_flavor }}
-            PR_PREFIX=${{ matrix.pr_prefix }}
+            KERNEL_FLAVOR=${{ env.kernel_flavor }}
+            PR_PREFIX=${{ env.pr_prefix }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
