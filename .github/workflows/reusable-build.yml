@@ -34,8 +34,9 @@ jobs:
     name: Get Stream Info
     runs-on: ubuntu-latest
     outputs:
-      linux: ${{ fromJSON(steps.fetch.outputs.outputs).linux }}
-      version: ${{ fromJSON(steps.fetch.outputs.outputs).version }}
+      fedora: ${{ fromJSON(steps.fetch.outputs.outputs).fedora}}
+      image: ${{ fromJSON(steps.fetch.outputs.outputs).image}}
+      kernel: ${{ fromJSON(steps.fetch.outputs.outputs).kernel}}
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
@@ -48,20 +49,27 @@ jobs:
 
             skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
 
-            linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-            if [ -z "$linux" ] || [ "null" = "$linux" ]; then
-                echo "inspected linux version must not be empty or null"
+            kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+            if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
+                echo "inspected linux (kernel) version must not be empty or null"
                 exit 1
             fi
 
-            version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
-            if [ -z "$version" ] || [ "null" = "$version" ]; then
+            image=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
+            if [ -z "$image" ] || [ "null" = "$image" ]; then
                 echo "inspected image version must not be empty or null"
                 exit 1
             fi
 
-            echo "linux=$linux" >> $GITHUB_OUTPUT
-            echo "version=$version" >> $GITHUB_OUTPUT
+            fedora=$(echo "$image" | cut -f1 -d.)
+            if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
+                echo "fedora version must not be empty or null"
+                exit 1
+            fi
+
+            echo "kernel=$kernel" >> $GITHUB_OUTPUT
+            echo "image=$image" >> $GITHUB_OUTPUT
+            echo "fedora=$fedora" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
           echo "${{ steps.fetch.outputs.outputs }}"
@@ -84,10 +92,21 @@ jobs:
         zfs_tag:
           - "-zfs"
           - ""
+        fedora_version:
+          - ${{ needs.stream_info.outputs.fedora}}
+        image_name:
+          - fedora-coreos
+        image_version:
+          - ${{ needs.stream_info.outputs.image}}
+        kernel_version:
+          - ${{ needs.stream_info.outputs.kernel}}
+        pr_prefix:
+          - ${{ needs.workflow_info.outputs.pr_prefix }}
         include:
-          - image_name: fedora-coreos
-          - image_version: ${{ needs.stream_info.outputs.version }}
-          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
+          - image_version: stable
+            kernel_flavor: "coreos"
+          - image_version: testing
+            kernel_flavor: "coreos-testing"
         exclude:
           - nvidia_tag: ""
             zfs_tag: ""
@@ -96,11 +115,50 @@ jobs:
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
 
-      - name: Verify version
+      - name: Pull base and kmod images
+        uses: Wandalen/wretry.action@v3.5.0
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }}
+
+      - name: Verify versions
         shell: bash
         run: |
+          if [ -z "${{ matrix.fedora_version }}" ] || [ "null" = "${{ fedora.image_version }}" ]; then
+              echo "matrix.fedora_version must not be empty or null"
+              exit 1
+          fi
           if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
               echo "matrix.image_version must not be empty or null"
+              exit 1
+          fi
+          if [ -z "${{ matrix.kernel_version }}" ] || [ "null" = "${{ kernel.image_version }}" ]; then
+              echo "matrix.kernel_version must not be empty or null"
+              exit 1
+          fi
+          skopeo inspect containers-storage:quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > i-coreos.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }} > i-kmod.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ matrix.kernel_flavor }}-${{ matrix.fedora_version }} > i-kmod-nv.json
+
+          kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-coreos.json)
+          if [ "$kernel" != "${{ matrix.kernel_version }}" ]; then
+              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ matrix.kernel_version }}"
+              exit 1
+          fi
+          kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod.json)
+          if [ "$kernel" != "${{ matrix.kernel_version }}" ]; then
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ matrix.kernel_version }}"
+              exit 1
+          fi
+          kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod-nv.json)
+          if [ "$kernel" != "${{ matrix.kernel_version }}" ]; then
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ matrix.kernel_version }}"
               exit 1
           fi
 
@@ -154,16 +212,6 @@ jobs:
             org.opencontainers.image.title=${{ matrix.image_name }}
             org.opencontainers.image.version=${{ matrix.image_version }}
 
-      - name: Pull base image
-        uses: Wandalen/wretry.action@v3.5.0
-        with:
-          attempt_limit: 3
-          attempt_delay: 15000
-          command: |
-            # pull the base image used for FROM in containerfile so
-            # we can retry on that unfortunately common failure case
-            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-
       # Build image using Buildah action
       - name: Build Image
         id: build_image
@@ -177,6 +225,9 @@ jobs:
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
+            FEDORA_VERSION=${{ matrix.fedora_version }}
+            IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
+            KERNEL_FLAVOR=${{ matrix.kernel_flavor }}
             PR_PREFIX=${{ matrix.pr_prefix }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}

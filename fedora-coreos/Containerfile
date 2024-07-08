@@ -1,5 +1,17 @@
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
+ARG FEDORA_VERSION="${FEDORA_VERSION:-40}"
+ARG IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/ublue-os}"
+ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos}"
 
+# FROMs for copying
+ARG KMOD_SRC="${IMAGE_REGISTRY}/ucore-kmods:${COREOS_VERSION}"
+ARG KMOD_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
+ARG KMOD_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
+FROM ${KMOD_SRC} AS ucore-kmods
+FROM ${KMOD_COMMON} AS kmods-common
+FROM ${KMOD_NVIDIA} AS kmods-nvidia
+
+# image base
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
@@ -7,11 +19,11 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
 # build with --build-arg ZFS_TAG="-zfs" to install zfs
 ARG ZFS_TAG="${ZFS_TAG}"
-ARG KMOD_SRC="${KMOD_SRC:-ghcr.io/ublue-os/ucore-kmods:${COREOS_VERSION}}"
 
-COPY --from=${KMOD_SRC} /rpms/kmods/*.rpm /tmp/rpms/
-COPY --from=${KMOD_SRC} /rpms/kmods/nvidia/*.rpm /tmp/rpms/nvidia/
-COPY --from=${KMOD_SRC} /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
+COPY --from=ucore-kmods  /rpms/kmods/ublue*.rpm /tmp/rpms/
+COPY --from=ucore-kmods  /rpms/kmods/nvidia/ublue*.rpm /tmp/rpms/nvidia/
+COPY --from=kmods-nvidia /rpms/kmods/*.rpm /tmp/rpms/nvidia/
+COPY --from=kmods-common /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
 
 COPY *.sh /tmp/
 
