@@ -139,17 +139,17 @@ jobs:
           skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }} > i-kmod-nv.json
 
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-coreos.json)
-          if [ "$kernel" != "${{ env.kernel_version }}" ]; then
+          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
               echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod.json)
-          if [ "$kernel" != "${{ env.kernel_version }}" ]; then
+          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
               echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod-nv.json)
-          if [ "$kernel" != "${{ env.kernel_version }}" ]; then
+          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
               echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
               exit 1
           fi
