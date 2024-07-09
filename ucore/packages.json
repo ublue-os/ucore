@@ -26,6 +26,7 @@
                 "distrobox",
                 "duperemove",
                 "hdparm",
+                "intel-compute-runtime",
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
