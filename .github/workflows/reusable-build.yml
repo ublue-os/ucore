@@ -87,7 +87,7 @@ jobs:
       fedora_version: ${{ needs.stream_info.outputs.fedora}}
       image_name: fedora-coreos
       image_version: ${{ needs.stream_info.outputs.image}}
-      kernel_flavor: ${{ inputs.coreos_version == 'stable' && format('{0}', 'coreos') || format('coreos-{0}', inputs.coreos_version) }}
+      kernel_flavor: coreos-${{ inputs.coreos_version }}
       kernel_version: ${{ needs.stream_info.outputs.kernel}}
       pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
@@ -122,6 +122,7 @@ jobs:
       - name: Verify versions
         shell: bash
         run: |
+          set -x
           if [ -z "${{ env.fedora_version }}" ] || [ "null" = "${{ env.fedora_version }}" ]; then
               echo "env.fedora_version must not be empty or null"
               exit 1
@@ -140,17 +141,17 @@ jobs:
 
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-coreos.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod-nv.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
 
@@ -295,7 +296,7 @@ jobs:
       image_base: ucore
       image_name: fedora-coreos
       image_version: ${{ needs.stream_info.outputs.image}}
-      kernel_flavor: ${{ inputs.coreos_version == 'stable' && format('{0}', 'coreos') || format('coreos-{0}', inputs.coreos_version) }}
+      kernel_flavor: coreos-${{ inputs.coreos_version }}
       kernel_version: ${{ needs.stream_info.outputs.kernel}}
       pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
@@ -339,6 +340,7 @@ jobs:
       - name: Verify versions
         shell: bash
         run: |
+          set -x
           if [ -z "${{ env.fedora_version }}" ] || [ "null" = "${{ env.fedora_version }}" ]; then
               echo "env.fedora_version must not be empty or null"
               exit 1
@@ -357,17 +359,17 @@ jobs:
 
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-coreos.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' i-kmod-nv.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }}"
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
 
