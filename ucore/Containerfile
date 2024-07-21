@@ -1,16 +1,17 @@
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG FEDORA_VERSION="${FEDORA_VERSION:-40}"
 ARG IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/ublue-os}"
-ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos}"
+ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos-stable}"
 
 # FROMs for copying
-ARG KMOD_SRC="${IMAGE_REGISTRY}/ucore-kmods:${COREOS_VERSION}"
-ARG KMOD_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
-ARG KMOD_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
-FROM ${KMOD_SRC} AS ucore-kmods
-FROM ${KMOD_COMMON} AS kmods-common
-FROM ${KMOD_NVIDIA} AS kmods-nvidia
-
+ARG AKMODS_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
+ARG AKMODS_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
+ARG AKMODS_ZFS="${IMAGE_REGISTRY}/akmods-zfs:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
+ARG KERNEL="${IMAGE_REGISTRY}/kernel-cache:${COREOS_VERSION}"
+FROM ${AKMODS_COMMON} AS akmods-common
+FROM ${AKMODS_NVIDIA} AS akmods-nvidia
+FROM ${AKMODS_ZFS} AS akmods-zfs
+FROM ${KERNEL} AS kernel
 
 # ucore-minimal image section
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION} AS ucore-minimal
@@ -26,10 +27,10 @@ ARG DOCKER_BUILDX_VERSION=0.12.1
 # 2.24.7 matches docker/moby 24.0.5  which FCOS ships as of 40.20240421
 ARG DOCKER_COMPOSE_VERSION=v2.24.7
 
-COPY --from=ucore-kmods  /rpms/kmods/ublue*.rpm /tmp/rpms/
-COPY --from=ucore-kmods  /rpms/kmods/nvidia/ublue*.rpm /tmp/rpms/nvidia/
-COPY --from=kmods-nvidia /rpms/kmods/*.rpm /tmp/rpms/nvidia/
-COPY --from=kmods-common /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
+COPY --from=akmods-common /rpms/ucore/ublue*.rpm /tmp/rpms/
+COPY --from=akmods-nvidia /rpms/kmods/*.rpm /tmp/rpms/nvidia/
+COPY --from=akmods-nvidia /rpms/ucore/ublue*.rpm /tmp/rpms/nvidia/
+COPY --from=akmods-zfs /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
 
 COPY *.sh /tmp/
 COPY packages.json /tmp/packages.json
