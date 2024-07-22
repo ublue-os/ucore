@@ -84,12 +84,12 @@ jobs:
       packages: write
       id-token: write
     env:
-      fedora_version: ${{ needs.stream_info.outputs.fedora}}
-      image_name: fedora-coreos
-      image_version: ${{ needs.stream_info.outputs.image}}
-      kernel_flavor: coreos-${{ inputs.coreos_version }}
-      kernel_version: ${{ needs.stream_info.outputs.kernel}}
-      pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
+      FEDORA_VERSION: ${{ needs.stream_info.outputs.fedora}}
+      IMAGE_NAME: fedora-coreos
+      IMAGE_VERSION: ${{ needs.stream_info.outputs.image}}
+      KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
+      KERNEL_VERSION: ${{ needs.stream_info.outputs.kernel}}
+      PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
       fail-fast: false
       matrix:
@@ -116,55 +116,55 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.kernel_flavor }}-${{ env.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
 
       - name: Verify versions
         shell: bash
         run: |
           set -x
-          if [ -z "${{ env.fedora_version }}" ] || [ "null" = "${{ env.fedora_version }}" ]; then
-              echo "env.fedora_version must not be empty or null"
+          if [ -z "${{ env.FEDORA_VERSION }}" ] || [ "null" = "${{ env.FEDORA_VERSION }}" ]; then
+              echo "env.FEDORA_VERSION must not be empty or null"
               exit 1
           fi
-          if [ -z "${{ env.image_version }}" ] || [ "null" = "${{ env.image_version }}" ]; then
-              echo "env.image_version must not be empty or null"
+          if [ -z "${{ env.IMAGE_VERSION }}" ] || [ "null" = "${{ env.IMAGE_VERSION }}" ]; then
+              echo "env.IMAGE_VERSION must not be empty or null"
               exit 1
           fi
-          if [ -z "${{ env.kernel_version }}" ] || [ "null" = "${{ env.kernel_version }}" ]; then
-              echo "env.kernel_version must not be empty or null"
+          if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
+              echo "env.KERNEL_VERSION must not be empty or null"
               exit 1
           fi
           skopeo inspect containers-storage:quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
 
@@ -210,13 +210,13 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ env.image_name }}
+            ${{ env.IMAGE_NAME }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=An OCI image of Fedora CoreOS with NVIDIA and/or ZFS pre-installed
-            org.opencontainers.image.title=${{ env.image_name }}
-            org.opencontainers.image.version=${{ env.image_version }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -226,15 +226,15 @@ jobs:
           containerfiles: |
             ./fedora-coreos/Containerfile
           context: ./fedora-coreos
-          image: ${{ env.image_name }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
-            FEDORA_VERSION=${{ env.fedora_version }}
+            FEDORA_VERSION=${{ env.FEDORA_VERSION }}
             IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
-            KERNEL_FLAVOR=${{ env.kernel_flavor }}
-            PR_PREFIX=${{ env.pr_prefix }}
+            KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
+            PR_PREFIX=${{ env.PR_PREFIX }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -305,13 +305,14 @@ jobs:
       packages: write
       id-token: write
     env:
-      fedora_version: ${{ needs.stream_info.outputs.fedora}}
-      image_base: ucore
-      image_name: fedora-coreos
-      image_version: ${{ needs.stream_info.outputs.image}}
-      kernel_flavor: coreos-${{ inputs.coreos_version }}
-      kernel_version: ${{ needs.stream_info.outputs.kernel}}
-      pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
+      FEDORA_VERSION: ${{ needs.stream_info.outputs.fedora}}
+      IMAGE_BASE: ucore
+      IMAGE_NAME: fedora-coreos
+      IMAGE_VERSION: ${{ needs.stream_info.outputs.image}}
+      KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
+      KERNEL_VERSION: ${{ needs.stream_info.outputs.kernel}}
+      PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -347,55 +348,55 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.kernel_flavor }}-${{ env.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
 
       - name: Verify versions
         shell: bash
         run: |
           set -x
-          if [ -z "${{ env.fedora_version }}" ] || [ "null" = "${{ env.fedora_version }}" ]; then
-              echo "env.fedora_version must not be empty or null"
+          if [ -z "${{ env.FEDORA_VERSION }}" ] || [ "null" = "${{ env.FEDORA_VERSION }}" ]; then
+              echo "env.FEDORA_VERSION must not be empty or null"
               exit 1
           fi
-          if [ -z "${{ env.image_version }}" ] || [ "null" = "${{ env.image_version }}" ]; then
-              echo "env.image_version must not be empty or null"
+          if [ -z "${{ env.IMAGE_VERSION }}" ] || [ "null" = "${{ env.IMAGE_VERSION }}" ]; then
+              echo "env.IMAGE_VERSION must not be empty or null"
               exit 1
           fi
-          if [ -z "${{ env.kernel_version }}" ] || [ "null" = "${{ env.kernel_version }}" ]; then
-              echo "env.kernel_version must not be empty or null"
+          if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
+              echo "env.KERNEL_VERSION must not be empty or null"
               exit 1
           fi
           skopeo inspect containers-storage:quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
 
@@ -445,13 +446,13 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ env.image_base }}${{ matrix.image_suffix }}
+            ${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.title=${{ env.image_base }}${{ matrix.image_suffix }}
-            org.opencontainers.image.version=${{ env.image_version }}
+            org.opencontainers.image.title=${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
+            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -461,21 +462,21 @@ jobs:
           containerfiles: |
             ./ucore/Containerfile
           context: ./ucore
-          image: ${{ env.image_base }}${{ matrix.image_suffix }}
+          image: ${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
-            FEDORA_VERSION=${{ env.fedora_version }}
+            FEDORA_VERSION=${{ env.FEDORA_VERSION }}
             IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
-            KERNEL_FLAVOR=${{ env.kernel_flavor }}
-            PR_PREFIX=${{ env.pr_prefix }}
+            KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
+            PR_PREFIX=${{ env.PR_PREFIX }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
           extra-args: |
-            --target=${{ env.image_base }}${{ matrix.image_suffix }}
+            --target=${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
