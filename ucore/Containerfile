@@ -31,6 +31,7 @@ COPY --from=akmods-common /rpms/ucore/ublue*.rpm /tmp/rpms/
 COPY --from=akmods-nvidia /rpms/kmods/*.rpm /tmp/rpms/nvidia/
 COPY --from=akmods-nvidia /rpms/ucore/ublue*.rpm /tmp/rpms/nvidia/
 COPY --from=akmods-zfs /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
+COPY --from=kernel /tmp/rpms/ /tmp/kernel-rpms/
 
 COPY *.sh /tmp/
 COPY packages.json /tmp/packages.json

@@ -2,8 +2,12 @@
 
 set -ouex pipefail
 
-KERNEL="$(rpm -q kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
+ARCH="$(rpm -E %{_arch})"
 RELEASE="$(rpm -E %fedora)"
+pushd /tmp/kernel-rpms
+KERNEL_VERSION=$(find kernel-*.rpm | grep -P "kernel-(\d+\.\d+\.\d+)-.*\.fc${RELEASE}\.${ARCH}" | sed -E 's/kernel-//' | sed -E 's/\.rpm//')
+popd
+QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kernel-//')"
 
 #### PREPARE
 # enable testing repos if not enabled on testing stream
@@ -29,15 +33,34 @@ curl -L -o /etc/yum.repos.d/fedora-coreos-pool.repo \
 #### INSTALL
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
+find /tmp/kernel-rpms/
 
-rpm-ostree install /tmp/rpms/ublue-os-ucore-addons-*.rpm
+rpm-ostree install /tmp/rpms/*.rpm
+
+# Handle Kernel Skew with override replace
+rpm-ostree cliwrap install-to-root /
+if [[ "${KERNEL_VERSION}" == "${QUALIFIED_KERNEL}" ]]; then
+    echo "Installing signed kernel from kernel-cache."
+    cd /tmp
+    rpm2cpio /tmp/kernel-rpms/kernel-core-*.rpm | cpio -idmv
+    cp ./lib/modules/*/vmlinuz /usr/lib/modules/*/vmlinuz
+    cd /
+else
+    echo "Install kernel version ${KERNEL_VERSION} from kernel-cache."
+    rpm-ostree override replace \
+        --experimental \
+        --install=zstd \
+        /tmp/kernel-rpms/kernel-[0-9]*.rpm \
+        /tmp/kernel-rpms/kernel-core-*.rpm \
+        /tmp/kernel-rpms/kernel-modules-*.rpm
+fi
 
 ## CONDITIONAL: install ZFS (and sanoid deps)
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     rpm-ostree install /tmp/rpms/zfs/*.rpm \
       pv
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
-    depmod -A ${KERNEL}
+    depmod -A ${KERNEL_VERSION}
 fi
 
 ## CONDITIONAL: install NVIDIA
