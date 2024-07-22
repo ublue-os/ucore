@@ -116,7 +116,7 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/kernel-cache:${{ env.kernel_flavor }}-${{ env.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.kernel_flavor }}-${{ env.fedora_version }}
@@ -143,7 +143,7 @@ jobs:
               echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/kernel-cache:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
               echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
@@ -347,7 +347,7 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/kernel-cache:${{ env.kernel_flavor }}-${{ env.fedora_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.kernel_flavor }}-${{ env.fedora_version }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.kernel_flavor }}-${{ env.fedora_version }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.kernel_flavor }}-${{ env.fedora_version }}
@@ -374,7 +374,7 @@ jobs:
               echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
               exit 1
           fi
-          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/kernel-cache:${{ env.kernel_flavor }}-${{ env.fedora_version }} > inspect.json
+          skopeo inspect containers-storage:${{ env.IMAGE_REGISTRY }}/${{ env.kernel_flavor }}-kernel:${{ env.fedora_version }} > inspect.json
           kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.kernel_version }}" != "$kernel"*  ]]; then
               echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.kernel_version }})"
