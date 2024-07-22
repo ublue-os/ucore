@@ -252,7 +252,7 @@ jobs:
             sudo apt update
             sudo apt install sbsigntool curl openssl
           fi
-          podman run -d --rm --name ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) "localhost/${{ env.IMAGE_NAME }}":$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) sleep 1000
+          podman run -d --rm --name ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) "${{ env.IMAGE_NAME }}":$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) sleep 1000
           podman cp ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1):/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
           podman rm -f ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1)
           sbverify --list vmlinuz
@@ -329,8 +329,6 @@ jobs:
       id-token: write
     env:
       FEDORA_VERSION: ${{ needs.stream_info.outputs.fedora}}
-      IMAGE_BASE: ucore
-      IMAGE_NAME: fedora-coreos
       IMAGE_VERSION: ${{ needs.stream_info.outputs.image}}
       KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
       KERNEL_VERSION: ${{ needs.stream_info.outputs.kernel}}
@@ -361,6 +359,14 @@ jobs:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
+
+      # sent env variables which depend on the matrix
+      - name: Matrix variables
+        shell: bash
+        run: |
+          set -x
+          IMAGE_NAME=ucore-${{ matrix.image_suffix }}
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
       - name: Pull base and kmod images
         uses: Wandalen/wretry.action@v3.5.0
@@ -469,12 +475,12 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
+            ${{ env.IMAGE_NAME }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.title=${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
 
       # Build image using Buildah action
@@ -485,7 +491,7 @@ jobs:
           containerfiles: |
             ./ucore/Containerfile
           context: ./ucore
-          image: ${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
@@ -499,7 +505,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
           extra-args: |
-            --target=${{ env.IMAGE_BASE }}${{ matrix.image_suffix }}
+            --target=${{ env.IMAGE_NAME }}
 
       - name: Check Secureboot
         shell: bash
@@ -509,9 +515,9 @@ jobs:
             sudo apt update
             sudo apt install sbsigntool curl openssl
           fi
-          podman run -d --rm --name ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) "localhost/${{ env.IMAGE_NAME }}":$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) sleep 1000
-          podman cp ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1):/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
-          podman rm -f ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1)
+          podman run -d --rm --name ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) "${{ env.IMAGE_NAME }}":$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) sleep 1000
+          podman cp ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1):/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
+          podman rm -f ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1)
           sbverify --list vmlinuz
           curl --retry 3 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
           curl --retry 3 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
