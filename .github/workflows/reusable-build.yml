@@ -365,7 +365,7 @@ jobs:
         shell: bash
         run: |
           set -x
-          IMAGE_NAME=ucore-${{ matrix.image_suffix }}
+          IMAGE_NAME=ucore${{ matrix.image_suffix }}
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
       - name: Pull base and kmod images
