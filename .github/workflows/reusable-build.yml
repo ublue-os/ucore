@@ -124,6 +124,7 @@ jobs:
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
 
       - name: Verify versions
         shell: bash
@@ -381,6 +382,7 @@ jobs:
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
 
       - name: Verify versions
         shell: bash
