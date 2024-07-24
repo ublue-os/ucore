@@ -7,10 +7,12 @@ ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos-stable}"
 ARG AKMODS_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_ZFS="${IMAGE_REGISTRY}/akmods-zfs:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
+ARG CONFIG="${IMAGE_REGISTRY}/config:latest"
 ARG KERNEL="${IMAGE_REGISTRY}/${KERNEL_FLAVOR}-kernel:${FEDORA_VERSION}"
 FROM ${AKMODS_COMMON} AS akmods-common
 FROM ${AKMODS_NVIDIA} AS akmods-nvidia
 FROM ${AKMODS_ZFS} AS akmods-zfs
+FROM ${CONFIG} AS config
 FROM ${KERNEL} AS kernel
 
 # image base
@@ -26,6 +28,7 @@ COPY --from=akmods-common /rpms/ucore/ublue*.rpm /tmp/rpms/
 COPY --from=akmods-nvidia /rpms/kmods/*.rpm /tmp/rpms/nvidia/
 COPY --from=akmods-nvidia /rpms/ucore/ublue*.rpm /tmp/rpms/nvidia/
 COPY --from=akmods-zfs /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
+COPY --from=config /rpms/ublue-os-signing*.rpm /tmp/rpms/
 COPY --from=kernel /tmp/rpms/ /tmp/kernel-rpms/
 
 COPY *.sh /tmp/
