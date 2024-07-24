@@ -9,6 +9,7 @@
                 "cockpit-selinux",
                 "cockpit-system",
                 "firewalld",
+                "intel-compute-runtime",
                 "open-vm-tools",
                 "podman",
                 "podman-compose",
