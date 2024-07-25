@@ -16,7 +16,7 @@ concurrency:
 jobs:
   workflow_info:
     name: Get Workflow Info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
@@ -36,7 +36,7 @@ jobs:
 
   stream_info:
     name: Get Stream Info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       fedora: ${{ fromJSON(steps.fetch.outputs.outputs).fedora}}
       image: ${{ fromJSON(steps.fetch.outputs.outputs).image}}
@@ -80,7 +80,7 @@ jobs:
 
   build_fcos:
     name: fedora-coreos
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     permissions:
@@ -110,6 +110,28 @@ jobs:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
+
+      - name: Use OBS buildah/podman
+        shell: bash
+        run: |
+          # prereq packages
+          sudo apt-get update
+          sudo apt-get install -y wget ca-certificates gnupg2
+
+          # remove old packages
+          sudo apt-get purge -y buildah podman
+
+          # add repo and signing key
+          VERSION_ID=$(lsb_release -r | cut -f2)
+          echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/devel-kubic-libcontainers-stable.list
+          curl -Ls https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_$VERSION_ID/Release.key | sudo apt-key add -
+          sudo apt-get update
+
+          # install buildah and podman
+          sudo apt install buildah podman -y
+
+          # fix known issue 11745 with [machine] entry
+          sudo sed -i 's/^\[machine\]$/#\[machine\]/' /usr/share/containers/containers.conf
 
       - name: Pull base and kmod images
         uses: Wandalen/wretry.action@v3.5.0
@@ -321,7 +343,7 @@ jobs:
 
   build_ucore:
     name: ucore
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     permissions:
