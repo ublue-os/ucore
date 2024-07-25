@@ -15,7 +15,9 @@ FROM ${AKMODS_ZFS} AS akmods-zfs
 FROM ${CONFIG} AS config
 FROM ${KERNEL} AS kernel
 
-# image base
+FROM scratch AS ctx
+COPY / /
+
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
@@ -24,21 +26,20 @@ ARG NVIDIA_TAG="${NVIDIA_TAG}"
 # build with --build-arg ZFS_TAG="-zfs" to install zfs
 ARG ZFS_TAG="${ZFS_TAG}"
 
-COPY --from=akmods-common /rpms/ucore/ublue*.rpm /tmp/rpms/
-COPY --from=akmods-nvidia /rpms/kmods/*.rpm /tmp/rpms/nvidia/
-COPY --from=akmods-nvidia /rpms/ucore/ublue*.rpm /tmp/rpms/nvidia/
-COPY --from=akmods-zfs /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
-COPY --from=config /rpms/ublue-os-signing*.rpm /tmp/rpms/
-COPY --from=kernel /tmp/rpms/ /tmp/kernel-rpms/
 
-COPY *.sh /tmp/
-
-RUN mkdir -p /var/lib/alternatives \
-    && /tmp/install.sh \
-    && /tmp/post-install.sh \
+RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=bind,from=akmods-common,src=/rpms/ucore,dst=/tmp/rpms/akmods-common \
+    --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
+    --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
+    --mount=type=bind,from=config,src=/rpms,dst=/tmp/rpms/config \
+    --mount=type=bind,from=kernel,src=/tmp/rpms,dst=/tmp/rpms/kernel \
+    mkdir -p /var/lib/alternatives \
+    && /ctx/install.sh \
+    && /ctx/post-install.sh \
     && mv /var/lib/alternatives /staged-alternatives \
-    && rm -fr /tmp/* /var/* \
+    && /ctx/cleanup.sh \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /tmp /var/tmp \
-    && chmod -R 1777 /tmp /var/tmp
+    && mkdir -p /var/tmp \
+    && chmod -R 1777 /var/tmp
