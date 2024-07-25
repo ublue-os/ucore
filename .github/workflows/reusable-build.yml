@@ -16,7 +16,7 @@ concurrency:
 jobs:
   workflow_info:
     name: Get Workflow Info
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
@@ -36,7 +36,7 @@ jobs:
 
   stream_info:
     name: Get Stream Info
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       fedora: ${{ fromJSON(steps.fetch.outputs.outputs).fedora}}
       image: ${{ fromJSON(steps.fetch.outputs.outputs).image}}
