@@ -11,10 +11,10 @@ fi
 
 # install packages.json stuffs
 export IMAGE_NAME=ucore
-/tmp/packages.sh
+/ctx/packages.sh
 
 # install packages direct from github
-/tmp/github-release-install.sh trapexit/mergerfs fc${RELEASE}.x86_64
+/ctx/github-release-install.sh trapexit/mergerfs fc${RELEASE}.x86_64
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release

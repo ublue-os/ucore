@@ -15,6 +15,9 @@ FROM ${AKMODS_ZFS} AS akmods-zfs
 FROM ${CONFIG} AS config
 FROM ${KERNEL} AS kernel
 
+FROM scratch AS ctx
+COPY / /
+
 # ucore-minimal image section
 FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION} AS ucore-minimal
 
@@ -29,39 +32,26 @@ ARG DOCKER_BUILDX_VERSION=0.12.1
 # 2.24.7 matches docker/moby 24.0.5  which FCOS ships as of 40.20240421
 ARG DOCKER_COMPOSE_VERSION=v2.24.7
 
-COPY --from=akmods-common /rpms/ucore/ublue*.rpm /tmp/rpms/
-COPY --from=akmods-nvidia /rpms/kmods/*.rpm /tmp/rpms/nvidia/
-COPY --from=akmods-nvidia /rpms/ucore/ublue*.rpm /tmp/rpms/nvidia/
-COPY --from=akmods-zfs /rpms/kmods/zfs/*.rpm /tmp/rpms/zfs/
-COPY --from=config /rpms/ublue-os-signing*.rpm /tmp/rpms/
-COPY --from=kernel /tmp/rpms/ /tmp/kernel-rpms/
-
-COPY *.sh /tmp/
-COPY packages.json /tmp/packages.json
-
 COPY usr /usr
-
-RUN mkdir -p /var/lib/alternatives \
-    && /tmp/install-ucore-minimal.sh \
-    && /tmp/post-install-ucore-minimal.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && rm -fr /tmp/* /var/* \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /tmp /var/tmp \
-    && chmod -R 1777 /tmp /var/tmp
-
 COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
 COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
 
-RUN ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose \
+RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=bind,from=akmods-common,src=/rpms/ucore,dst=/tmp/rpms/akmods-common \
+    --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
+    --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
+    --mount=type=bind,from=config,src=/rpms,dst=/tmp/rpms/config \
+    --mount=type=bind,from=kernel,src=/tmp/rpms,dst=/tmp/rpms/kernel \
+    mkdir -p /var/lib/alternatives \
+    && /ctx/install-ucore-minimal.sh \
+    && /ctx/post-install-ucore-minimal.sh \
     && mv /var/lib/alternatives /staged-alternatives \
-    && rm -fr /tmp/* /var/* \
+    && /ctx/cleanup.sh \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /tmp /var/tmp \
-    && chmod -R 1777 /tmp /var/tmp
-
+    && mkdir -p /var/tmp \
+    && chmod -R 1777 /var/tmp
 
 # ucore image section
 FROM ucore-minimal AS ucore
@@ -70,19 +60,16 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
 ARG ZFS_TAG="${ZFS_TAG}"
 
-COPY *.sh /tmp/
-COPY packages.json /tmp/packages.json
-
-COPY usr /usr
-
-RUN mkdir -p /var/lib/alternatives \
-    && /tmp/install-ucore.sh \
+RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    mkdir -p /var/lib/alternatives \
+    && /ctx/install-ucore.sh \
     && mv /var/lib/alternatives /staged-alternatives \
-    && rm -fr /tmp/* /var/* \
+    && /ctx/cleanup.sh \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /tmp /var/tmp \
-    && chmod -R 1777 /tmp /var/tmp
+    && mkdir -p /var/tmp \
+    && chmod -R 1777 /var/tmp
 
 
 # ucore-hci image section
@@ -92,14 +79,13 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
 ARG ZFS_TAG="${ZFS_TAG}"
 
-COPY *.sh /tmp/
-COPY packages.json /tmp/packages.json
-
-RUN mkdir -p /var/lib/alternatives \
-    && /tmp/install-ucore-hci.sh \
+RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    mkdir -p /var/lib/alternatives \
+    && /ctx/install-ucore-hci.sh \
     && mv /var/lib/alternatives /staged-alternatives \
-    && rm -fr /tmp/* /var/* \
+    && /ctx/cleanup.sh \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /tmp /var/tmp \
-    && chmod -R 1777 /tmp /var/tmp
+    && mkdir -p /var/tmp \
+    && chmod -R 1777 /var/tmp

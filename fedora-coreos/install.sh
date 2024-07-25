@@ -31,7 +31,6 @@ rpm-ostree install \
     /tmp/rpms/akmods-common/ublue-os-ucore-addons*.rpm \
     /tmp/rpms/config/ublue-os-signing*.rpm
 
-
 # Handle Kernel Skew with override replace
 rpm-ostree cliwrap install-to-root /
 if [[ "${KERNEL_VERSION}" == "${QUALIFIED_KERNEL}" ]]; then
