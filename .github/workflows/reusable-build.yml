@@ -16,7 +16,7 @@ concurrency:
 jobs:
   workflow_info:
     name: Get Workflow Info
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
@@ -80,7 +80,7 @@ jobs:
 
   build_fcos:
     name: fedora-coreos
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     permissions:
@@ -321,7 +321,7 @@ jobs:
 
   build_ucore:
     name: ucore
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     permissions:
