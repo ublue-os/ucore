@@ -59,6 +59,11 @@ if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     depmod -A ${KERNEL_VERSION}
 fi
 
+## CONDITIONAL: install sanoid if ZFS
+if [[ "-zfs" == "${ZFS_TAG}" ]]; then
+    rpm-ostree install sanoid
+fi
+
 ## CONDITIONAL: install NVIDIA
 if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
     # repo for nvidia rpms
