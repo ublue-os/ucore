@@ -52,11 +52,13 @@ else
         /tmp/rpms/kernel/kernel-modules-*.rpm
 fi
 
-## CONDITIONAL: install ZFS (and sanoid deps)
+## CONDITIONAL: install ZFS (and sanoid with deps)
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     rpm-ostree install pv /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
     depmod -A ${KERNEL_VERSION}
+    
+    rpm-ostree install sanoid
 fi
 
 ## CONDITIONAL: install NVIDIA
