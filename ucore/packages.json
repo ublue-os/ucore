@@ -19,6 +19,7 @@
                 "wireguard-tools"
             ],
             "ucore": [
+                "nginx",
                 "NetworkManager-wifi",
                 "atheros-firmware",
                 "brcmfmac-firmware",
