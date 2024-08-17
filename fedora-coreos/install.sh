@@ -51,7 +51,7 @@ fi
 
 ## CONDITIONAL: install ZFS
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
-    rpm-ostree install pv /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm
+    rpm-ostree install pv /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
     depmod -A ${KERNEL_VERSION}
 fi
