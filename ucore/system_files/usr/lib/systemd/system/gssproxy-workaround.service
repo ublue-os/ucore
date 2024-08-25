@@ -1,0 +1,12 @@
+[Unit]
+Description=Workaround to relabel gssproxy files and directories
+ConditionPathIsDirectory=/var/lib/gssproxy/
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/sbin/restorecon -Rv /var/lib/gssproxy/
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

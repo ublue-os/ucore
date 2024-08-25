@@ -23,6 +23,11 @@ ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose
 systemctl disable docker.socket
 systemctl disable zincati.service
 
+systemctl enable gssproxy-workaround.service
+systemctl enable libvirt-workaround.service
+systemctl enable swtpm-workaround.service
+
+
 systemctl enable ucore-paths-provision.service
 systemctl enable rpm-ostreed-automatic.timer
 
