@@ -3,7 +3,7 @@ on:
   pull_request:
   merge_group:
   schedule:
-    - cron: '55 23 * * *' # 11:45PM UTC everyday (approx 1.75 hours after coreos images publish)
+    - cron: '55 2 * * *'  # 2:55am-ish UTC everyday (approx 50 minutes after akmods images run)
   workflow_dispatch:
 
 jobs:
