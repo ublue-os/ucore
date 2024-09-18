@@ -239,6 +239,8 @@ As of [netavark v1.9.0](https://blog.podman.io/2023/11/new-netavark-firewalld-re
 
 By default, UCore does not automatically start `restart: always` containers on system boot, however this can be easily enabled:
 
+##### For containers running under the `core` user
+
 ```bash
 # Copy the system's podman-restart service to the user location
 cp /lib/systemd/system/podman-restart.service /var/home/core/.config/systemd/user
@@ -259,6 +261,14 @@ loginctl enable-linger $UID
 ```
 
 You can find more information regarding this on the [Podman troubleshooting page](https://github.com/containers/podman/blob/main/troubleshooting.md#21-a-rootless-container-running-in-detached-mode-is-closed-at-logout).
+
+##### For containers running under the root user (rootful containers)
+
+You just need to enable the built-in service:
+
+```bash
+sudo systemctl enable podman-restart.service
+```
 
 ### Default Services
 
