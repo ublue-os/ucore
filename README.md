@@ -148,7 +148,7 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 | [`fedora-coreos`](#fedora-coreos) - *stable* | `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
 | [`fedora-coreos`](#fedora-coreos) - *testing* | `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
-| [`ucore-mimimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
+| [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
 | [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-zfs`, `testing-nvidia-zfs` |
 | [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-zfs`,`stable-nvidia-zfs` |
