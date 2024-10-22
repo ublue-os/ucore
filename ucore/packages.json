@@ -23,7 +23,6 @@
                 "NetworkManager-wifi",
                 "atheros-firmware",
                 "brcmfmac-firmware",
-                "cockpit-pcp",
                 "cockpit-storaged",
                 "distrobox",
                 "duperemove",
