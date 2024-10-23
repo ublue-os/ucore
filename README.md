@@ -40,6 +40,7 @@ Please take a look at the included modifications, and help us improve uCore if t
   - [ZFS](#zfs)
     - [ZFS and immutable root filesystem](#zfs-and-immutable-root-filesystem)
     - [Sanoid/Syncoid](#sanoidsyncoid)
+- [DIY](#diy)
 - [Metrics](#metrics)
 
 ## Features
@@ -516,6 +517,12 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
 
 `ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
+
+## DIY
+
+Is all this too easy, leaving you with the desire to create a custom uCore image?
+
+Then [create an image `FROM ucore`](https://github.com/ublue-os/image-template) using our [image template](https://github.com/ublue-os/image-template)!
 
 ## Metrics
 
