@@ -9,6 +9,7 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Table of Contents <!-- omit in toc -->
 
+- [Announcements](#announcements)
 - [Features](#features)
   - [Images](#images)
     - [`fedora-coreos`](#fedora-coreos)
@@ -42,6 +43,20 @@ Please take a look at the included modifications, and help us improve uCore if t
     - [Sanoid/Syncoid](#sanoidsyncoid)
 - [DIY](#diy)
 - [Metrics](#metrics)
+
+## Announcements
+
+### 2024.11.12 - uCore has updated to Fedora 41
+
+As of today our upstream Fedora CoreOS stable image updated to Fedora 41 under the hood, so expect a lot of package updates.
+
+### 2024.11.12 - uCore *stable* has pinned to kernel version *6.11.3*
+
+Kernel version `6.11.3` was the previous *stable* update's kernel, and despite the update to Fedora 41, we've stuck with `6.11.3` rather than updating to `6.11.5` from upstream.
+
+This is due to a kernel bug in versions `6.11.4`/`6.11.5` which [breaks tailscale status reporting](https://github.com/tailscale/tailscale/issues/13863). As many users of uCore do use tailscale, we've decided to be extra cautious and hold back the kernel, even though the rest of stable updated as usual.
+
+We expect the next update of Fedora CoreOS to be on `6.11.6` per the current state of the testing stream. So uCore will follow when that update occurs.
 
 ## Features
 
