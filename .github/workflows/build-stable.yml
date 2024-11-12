@@ -1,9 +1,11 @@
 name: stable
 on:
-  pull_request:
   merge_group:
-  schedule:
-    - cron: '50 2 * * *'  # 2:50am-ish UTC everyday (approx 45 minutes after akmods images run)
+  pull_request:
+    branches:
+      - main
+  #schedule:
+  #  - cron: '50 2 * * *'  # 2:50am-ish UTC everyday (approx 45 minutes after akmods images run)
   workflow_dispatch:
 
 jobs:

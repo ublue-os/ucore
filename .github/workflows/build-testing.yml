@@ -1,7 +1,9 @@
 name: testing
 on:
-  pull_request:
   merge_group:
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '55 2 * * *'  # 2:55am-ish UTC everyday (approx 50 minutes after akmods images run)
   workflow_dispatch:
