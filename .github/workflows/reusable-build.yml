@@ -409,20 +409,14 @@ jobs:
               echo "env.KERNEL_VERSION must not be empty or null"
               exit 1
           fi
-          skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
-          kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled coreos image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
-              exit 1
-          fi
-          skopeo inspect docker://${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+          podman inspect ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
-          skopeo inspect docker://${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
@@ -433,8 +427,8 @@ jobs:
         shell: bash
         run: |
           set -x
-          skopeo inspect docker://${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
@@ -445,8 +439,8 @@ jobs:
         shell: bash
         run: |
           set -x
-          skopeo inspect docker://${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
