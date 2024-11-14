@@ -174,14 +174,15 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 
 ## Installation
 
-**Please read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. As uCore is an extension of CoreOS, it does not provide it's own custom or GUI installer.
+> [!IMPORTANT]
+> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; it does not provide it's own custom or GUI installer.
 
 There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
 
 **All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/).** This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
 
-> [!NOTE]
-> It is highly recommended that for bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the same bare metal process.
+> [!TIP]
+> For bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the bare metal process.
 
 ### Image Verification
 
@@ -203,7 +204,11 @@ One of the fastest paths to running uCore is using [examples/ucore-autorebase.bu
 
 Once a machine is running any Fedora CoreOS version, you can easily rebase to uCore.  Installing CoreOS itself can be done through [a number of provisioning methods](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/).
 
-To rebase an existing machine to the latest uCore:
+> [!WARNING]
+> **Rebasing from Fedora IoT or Atomic Desktops is not supported!**
+> If ignition doesn't provide a desired feature, then Fedora CoreOS doesn't support that feature. Rebasing from another system to gain a filesystem feature or GUI installation is very likely to cause problems later on.
+
+To rebase an existing CoreOS machine to the latest uCore:
 
 1. Execute the `rpm-ostree rebase` command (below) with desired `IMAGE` and `TAG`.
 1. Reboot, as instructed.
