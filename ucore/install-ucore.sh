@@ -14,7 +14,8 @@ export IMAGE_NAME=ucore
 /ctx/packages.sh
 
 # install packages direct from github
-/ctx/github-release-install.sh trapexit/mergerfs fc${RELEASE}.x86_64
+# Fedora 41 packages missing for mergerfs
+#/ctx/github-release-install.sh trapexit/mergerfs fc${RELEASE}.x86_64
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release

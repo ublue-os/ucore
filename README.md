@@ -46,6 +46,10 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Announcements
 
+### 2024.11.14 - mergerfs not yet available on Fedora 41
+
+It turns out mergerfs packages are not being built yet for Fedora 41, so it is missing from uCore at this time. It will be restored when possible.
+
 ### 2024.11.12 - uCore has updated to Fedora 41
 
 As of today our upstream Fedora CoreOS stable image updated to Fedora 41 under the hood, so expect a lot of package updates.
@@ -135,7 +139,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [distrobox](https://github.com/89luca89/distrobox) - a [toolbox](https://containertoolbx.org/) alternative
   - [duperemove](https://github.com/markfasheh/duperemove)
   - all wireless (wifi) card firmwares (CoreOS does not include them) - hardware enablement FTW
-  - [mergerfs](https://github.com/trapexit/mergerfs)
+  - ~~[mergerfs](https://github.com/trapexit/mergerfs)~~ (missing since Fedora 41 update)
   - nfs-utils - nfs utils including daemon for kernel NFS server
   - [pcp](https://pcp.io) Performance Co-pilot monitoring
   - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
