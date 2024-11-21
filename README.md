@@ -248,7 +248,7 @@ Fedora CoreOS expects the user to run services using [podman](https://podman.io)
 > [!IMPORTANT]
 > CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activation of the docker daemon, given podman is the default.
 >
-> Ony run both simultaneously if you understand the risk.
+> Only run both simultaneously if you understand the risk.
 
 #### Podman and FirewallD
 
