@@ -264,6 +264,7 @@ By default, UCore does not automatically start `restart: always` containers on s
 
 ```bash
 # Copy the system's podman-restart service to the user location
+mkdir -p /var/home/core/.config/systemd/user
 cp /lib/systemd/system/podman-restart.service /var/home/core/.config/systemd/user
 
 # Enable the user service
