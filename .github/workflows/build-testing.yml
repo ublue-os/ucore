@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
   schedule:
     - cron: '55 2 * * *'  # 2:55am-ish UTC everyday (approx 50 minutes after akmods images run)
   workflow_dispatch:
