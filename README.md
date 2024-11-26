@@ -141,6 +141,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [rclone](https://www.rclone.org/) - file synchronization and mounting of cloud storage
   - [samba](https://www.samba.org/) and samba-usershares to provide SMB sevices
   - [snapraid](https://www.snapraid.it/)
+  - [apcupsd](https://sourceforge.net/projects/apcupsd/) - interface with APC UPSes and gracefully shutdown in case of power failure
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 - Optional [ZFS versions](#tag-matrix) add:
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
