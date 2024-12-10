@@ -47,6 +47,7 @@
             ],
             "ucore-hci": [
                 "cockpit-machines",
+                "incus",
                 "libvirt-client",
                 "libvirt-daemon-kvm",
                 "virt-install"

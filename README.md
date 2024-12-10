@@ -152,6 +152,7 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 - Starts with a [`ucore`](#ucore) image providing everything above, plus:
 - Adds the following:
   - [cockpit-machines](https://github.com/cockpit-project/cockpit-machines): Cockpit GUI for managing virtual machines
+  - [incus](https://linuxcontainers.org/incus/): container and virtual machine manager
   - [libvirt-client](https://libvirt.org/): `virsh` command-line utility for managing virtual machines
   - [libvirt-daemon-kvm](https://libvirt.org/): libvirt KVM hypervisor management
   - virt-install: command-line utility for installing virtual machines
