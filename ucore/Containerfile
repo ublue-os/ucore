@@ -51,7 +51,9 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
     && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    && chmod -R 1777 /var/tmp \
+    && rm -r -f /var/run \
+    && ln -s /run /var/run
 
 # ucore image section
 FROM ucore-minimal AS ucore
@@ -69,7 +71,9 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
     && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    && chmod -R 1777 /var/tmp \
+    && rm -r -f /var/run \
+    && ln -s /run /var/run
 
 
 # ucore-hci image section
@@ -88,4 +92,6 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     && ostree container commit \
     && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
     && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    && chmod -R 1777 /var/tmp \
+    && rm -r -f /var/run \
+    && ln -s /run /var/run
