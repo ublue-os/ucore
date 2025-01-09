@@ -57,9 +57,6 @@ if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     rpm-ostree install pv /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
     # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
     depmod -a -v ${KERNEL_VERSION}
-
-    curl -L https://github.com/45Drives/cockpit-zfs-manager/archive/refs/tags/v1.3.1.tar.gz | tar xz -C /tmp
-    mv /tmp/cockpit-zfs-manager-1.3.1/zfs /usr/share/cockpit
 fi
 
 ## CONDITIONAL: install NVIDIA
