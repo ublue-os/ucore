@@ -18,7 +18,7 @@ if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     # cockpit plugin for ZFS management
     curl --fail --retry 5 --retry-delay 5 --retry-all-errors -sSL -o /tmp/cockpit-zfs-manager-api.json \
         "https://api.github.com/repos/45Drives/cockpit-zfs-manager/releases/latest"
-    CZM_TGZ_URL=$(cat /tmp/cockpit-zfs-manager-api.json | jq -r .tarball_url)
+    CZM_TGZ_URL=$(jq -r .tarball_url /tmp/cockpit-zfs-manager-api.json)
     curl -sSL -o /tmp/cockpit-zfs-manager.tar.gz "${CZM_TGZ_URL}"
 
     mkdir -p /tmp/cockpit-zfs-manager
