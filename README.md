@@ -143,6 +143,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 - Optional [ZFS versions](#tag-matrix) add:
+  - [cockpit-zfs-manager](https://github.com/45Drives/cockpit-zfs-manager) (an interactive ZFS on Linux admin package for Cockpit)
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
 
 #### `ucore-hci`
