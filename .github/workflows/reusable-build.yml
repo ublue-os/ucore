@@ -9,10 +9,14 @@ on:
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}
+  cancel-in-progress: true
+
 jobs:
   workflow_info:
     name: Get Workflow Info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
@@ -32,14 +36,15 @@ jobs:
 
   stream_info:
     name: Get Stream Info
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
-      linux: ${{ fromJSON(steps.fetch.outputs.outputs).linux }}
-      version: ${{ fromJSON(steps.fetch.outputs.outputs).version }}
+      fedora: ${{ fromJSON(steps.fetch.outputs.outputs).fedora}}
+      image: ${{ fromJSON(steps.fetch.outputs.outputs).image}}
+      kernel: ${{ fromJSON(steps.fetch.outputs.outputs).kernel}}
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.7.3
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -48,33 +53,48 @@ jobs:
 
             skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
 
-            linux=$(jq -r '.["Labels"]["ostree.linux"]' inspect.json)
-            if [ -z "$linux" ] || [ "null" = "$linux" ]; then
-                echo "inspected linux version must not be empty or null"
-                exit 1
-            fi
-
-            version=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
-            if [ -z "$version" ] || [ "null" = "$version" ]; then
+            image=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
+            if [ -z "$image" ] || [ "null" = "$image" ]; then
                 echo "inspected image version must not be empty or null"
                 exit 1
             fi
 
-            echo "linux=$linux" >> $GITHUB_OUTPUT
-            echo "version=$version" >> $GITHUB_OUTPUT
+            fedora=$(echo "$image" | cut -f1 -d.)
+            if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
+                echo "fedora version must not be empty or null"
+                exit 1
+            fi
+
+            kernel=$(skopeo inspect docker://ghcr.io/ublue-os/coreos-${{ inputs.coreos_version }}-kernel:${fedora} | jq -r '.["Labels"]["ostree.linux"]')
+            if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
+                echo "inspected linux (kernel) version must not be empty or null"
+                exit 1
+            fi
+
+
+            echo "kernel=$kernel" >> $GITHUB_OUTPUT
+            echo "image=$image" >> $GITHUB_OUTPUT
+            echo "fedora=$fedora" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
           echo "${{ steps.fetch.outputs.outputs }}"
 
   build_fcos:
     name: fedora-coreos
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     permissions:
       contents: read
       packages: write
       id-token: write
+    env:
+      FEDORA_VERSION: ${{ needs.stream_info.outputs.fedora}}
+      IMAGE_NAME: fedora-coreos
+      IMAGE_VERSION: ${{ needs.stream_info.outputs.image}}
+      KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
+      KERNEL_VERSION: ${{ needs.stream_info.outputs.kernel}}
+      PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
       fail-fast: false
       matrix:
@@ -84,10 +104,6 @@ jobs:
         zfs_tag:
           - "-zfs"
           - ""
-        include:
-          - image_name: fedora-coreos
-          - image_version: ${{ needs.stream_info.outputs.version }}
-          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
         exclude:
           - nvidia_tag: ""
             zfs_tag: ""
@@ -96,11 +112,73 @@ jobs:
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
 
-      - name: Verify version
+      - name: Pull base and kmod images
+        uses: Wandalen/wretry.action@v3.7.3
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
+
+      - name: Verify versions
         shell: bash
         run: |
-          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
-              echo "matrix.image_version must not be empty or null"
+          set -x
+          if [ -z "${{ env.FEDORA_VERSION }}" ] || [ "null" = "${{ env.FEDORA_VERSION }}" ]; then
+              echo "env.FEDORA_VERSION must not be empty or null"
+              exit 1
+          fi
+          if [ -z "${{ env.IMAGE_VERSION }}" ] || [ "null" = "${{ env.IMAGE_VERSION }}" ]; then
+              echo "env.IMAGE_VERSION must not be empty or null"
+              exit 1
+          fi
+          if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
+              echo "env.KERNEL_VERSION must not be empty or null"
+              exit 1
+          fi
+
+          #Use Podman Inspect instead of skopeo for local checks.
+          podman inspect ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              exit 1
+          fi
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              exit 1
+          fi
+
+      - name: Verify versions (nvidia)
+        if: matrix.nvidia_tag == '-nvidia'
+        shell: bash
+        run: |
+          set -x
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              exit 1
+          fi
+
+      - name: Verify versions (ZFS)
+        if: matrix.zfs_tag == '-zfs'
+        shell: bash
+        run: |
+          set -x
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
 
@@ -146,23 +224,13 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ matrix.image_name }}
+            ${{ env.IMAGE_NAME }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=An OCI image of Fedora CoreOS with NVIDIA and/or ZFS pre-installed
-            org.opencontainers.image.title=${{ matrix.image_name }}
-            org.opencontainers.image.version=${{ matrix.image_version }}
-
-      - name: Pull base image
-        uses: Wandalen/wretry.action@v3.0.0
-        with:
-          attempt_limit: 3
-          attempt_delay: 15000
-          command: |
-            # pull the base image used for FROM in containerfile so
-            # we can retry on that unfortunately common failure case
-            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -172,16 +240,38 @@ jobs:
           containerfiles: |
             ./fedora-coreos/Containerfile
           context: ./fedora-coreos
-          image: ${{ matrix.image_name }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
-            PR_PREFIX=${{ matrix.pr_prefix }}
+            FEDORA_VERSION=${{ env.FEDORA_VERSION }}
+            IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
+            KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
+            PR_PREFIX=${{ env.PR_PREFIX }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
+
+      - name: Check Secureboot
+        shell: bash
+        run: |
+          set -x
+          if [[ ! $(command -v sbverify) || ! $(command -v curl) || ! $(command -v openssl) ]]; then
+            sudo apt update
+            sudo apt install sbsigntool curl openssl
+          fi
+          podman run -d --rm --name ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) "${{ env.IMAGE_NAME }}":$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) sleep 1000
+          podman cp ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1):/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
+          podman rm -f ${{env.IMAGE_NAME}}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1)
+          sbverify --list vmlinuz
+          curl --retry 3 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
+          curl --retry 3 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
+          openssl x509 -in kernel-sign.der -out kernel-sign.crt
+          openssl x509 -in akmods.der -out akmods.crt
+          sbverify --cert kernel-sign.crt vmlinuz || exit 1
+          sbverify --cert akmods.crt vmlinuz || exit 1
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
@@ -193,7 +283,7 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.7.3
         id: push
         if: github.event_name != 'pull_request'
         env:
@@ -221,7 +311,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Sign container
-      - uses: sigstore/cosign-installer@v3.4.0
+      - uses: sigstore/cosign-installer@v3.7.0
         if: github.event_name != 'pull_request'
 
       - name: Sign container image
@@ -240,13 +330,20 @@ jobs:
 
   build_ucore:
     name: ucore
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: always() && !cancelled()
     needs: [workflow_info, stream_info]
     permissions:
       contents: read
       packages: write
       id-token: write
+    env:
+      FEDORA_VERSION: ${{ needs.stream_info.outputs.fedora}}
+      IMAGE_VERSION: ${{ needs.stream_info.outputs.image}}
+      KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
+      KERNEL_VERSION: ${{ needs.stream_info.outputs.kernel}}
+      PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -261,9 +358,6 @@ jobs:
           - "-zfs"
           - ""
         include:
-          - image_base: ucore
-          - image_version: ${{ needs.stream_info.outputs.version }}
-          - pr_prefix: ${{ needs.workflow_info.outputs.pr_prefix }}
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
@@ -276,11 +370,79 @@ jobs:
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
 
-      - name: Verify version
+      # sent env variables which depend on the matrix
+      - name: Matrix variables
         shell: bash
         run: |
-          if [ -z "${{ matrix.image_version }}" ] || [ "null" = "${{ matrix.image_version }}" ]; then
-              echo "matrix.image_version must not be empty or null"
+          set -x
+          IMAGE_NAME=ucore${{ matrix.image_suffix }}
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+      - name: Pull base and kmod images
+        uses: Wandalen/wretry.action@v3.7.3
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
+
+      - name: Verify versions
+        shell: bash
+        run: |
+          set -x
+          if [ -z "${{ env.FEDORA_VERSION }}" ] || [ "null" = "${{ env.FEDORA_VERSION }}" ]; then
+              echo "env.FEDORA_VERSION must not be empty or null"
+              exit 1
+          fi
+          if [ -z "${{ env.IMAGE_VERSION }}" ] || [ "null" = "${{ env.IMAGE_VERSION }}" ]; then
+              echo "env.IMAGE_VERSION must not be empty or null"
+              exit 1
+          fi
+          if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
+              echo "env.KERNEL_VERSION must not be empty or null"
+              exit 1
+          fi
+          podman inspect ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              exit 1
+          fi
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              exit 1
+          fi
+
+      - name: Verify versions (nvidia)
+        if: matrix.nvidia_tag == '-nvidia'
+        shell: bash
+        run: |
+          set -x
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              exit 1
+          fi
+
+      - name: Verify versions (ZFS)
+        if: matrix.zfs_tag == '-zfs'
+        shell: bash
+        run: |
+          set -x
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
 
@@ -330,23 +492,13 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ matrix.image_base }}${{ matrix.image_suffix }}
+            ${{ env.IMAGE_NAME }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
             org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.title=${{ matrix.image_base }}${{ matrix.image_suffix }}
-            org.opencontainers.image.version=${{ matrix.image_version }}
-
-      - name: Pull base image
-        uses: Wandalen/wretry.action@v3.0.0
-        with:
-          attempt_limit: 3
-          attempt_delay: 15000
-          command: |
-            # pull the base image used for FROM in containerfile so
-            # we can retry on that unfortunately common failure case
-            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -356,18 +508,40 @@ jobs:
           containerfiles: |
             ./ucore/Containerfile
           context: ./ucore
-          image: ${{ matrix.image_base }}${{ matrix.image_suffix }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
-            PR_PREFIX=${{ matrix.pr_prefix }}
+            FEDORA_VERSION=${{ env.FEDORA_VERSION }}
+            IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
+            KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
+            PR_PREFIX=${{ env.PR_PREFIX }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
             ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
           extra-args: |
-            --target=${{ matrix.image_base }}${{ matrix.image_suffix }}
+            --target=${{ env.IMAGE_NAME }}
+
+      - name: Check Secureboot
+        shell: bash
+        run: |
+          set -x
+          if [[ ! $(command -v sbverify) || ! $(command -v curl) || ! $(command -v openssl) ]]; then
+            sudo apt update
+            sudo apt install sbsigntool curl openssl
+          fi
+          podman run -d --rm --name ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) "${{ env.IMAGE_NAME }}":$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) sleep 1000
+          podman cp ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1):/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
+          podman rm -f ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1)
+          sbverify --list vmlinuz
+          curl --retry 3 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
+          curl --retry 3 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
+          openssl x509 -in kernel-sign.der -out kernel-sign.crt
+          openssl x509 -in akmods.der -out akmods.crt
+          sbverify --cert kernel-sign.crt vmlinuz || exit 1
+          sbverify --cert akmods.crt vmlinuz || exit 1
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
@@ -379,7 +553,7 @@ jobs:
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@v3.0.0
+        uses: Wandalen/wretry.action@v3.7.3
         id: push
         if: github.event_name != 'pull_request'
         env:
@@ -407,7 +581,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Sign container
-      - uses: sigstore/cosign-installer@v3.4.0
+      - uses: sigstore/cosign-installer@v3.7.0
         if: github.event_name != 'pull_request'
 
       - name: Sign container image
