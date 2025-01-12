@@ -199,7 +199,7 @@ One of the fastest paths to running uCore is using [examples/ucore-autorebase.bu
 
 1. As usual, you'll need to [follow the docs to setup a password](https://coreos.github.io/butane/examples/#using-password-authentication). Substitute your password hash for `YOUR_GOOD_PASSWORD_HASH_HERE` in the `ucore-autorebase.butane` file, and add your ssh pub key while you are at it.
 1. Generate an ignition file from your new `ucore-autorebase.butane` [using the butane utility](https://coreos.github.io/butane/getting-started/).
-1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable` (or other `IMAGE:TAG` combo), rebooting and leaving your install ready to use.
+1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/), i.e. `sudo coreos-installer install /dev/nvme0n1 --ignition-url https://example.com/ucore-autorebase.ign` (or `--ignition-file /path/to/ucore-autorebase.ign`). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable` (or other `IMAGE:TAG` combo), rebooting and leaving your install ready to use.
 
 ### Manual Install/Rebase
 
@@ -368,21 +368,21 @@ By default, nfs-server is blocked from sharing directories unless the context is
 For read-only NFS shares:
 
 ```bash
-sudo semanage fcontext --add --type "public_content_t" "/path/to/share/ro(/.*)?
+sudo semanage fcontext --add --type "public_content_t" "/path/to/share/ro(/.*)?"
 sudo restorecon -R /path/to/share/ro
 ```
 
 For read-write NFS shares:
 
 ```bash
-sudo semanage fcontext --add --type "public_content_rw_t" "/path/to/share/rw(/.*)?
+sudo semanage fcontext --add --type "public_content_rw_t" "/path/to/share/rw(/.*)?"
 sudo restorecon -R /path/to/share/rw
 ```
 
 Say you wanted to share all home directories:
 
 ```bash
-sudo semanage fcontext --add --type "public_content_rw_t" "/var/home(/.*)?
+sudo semanage fcontext --add --type "public_content_rw_t" "/var/home(/.*)?"
 sudo restorecon -R /var/home
 ```
 
@@ -433,14 +433,14 @@ sudo firewall-cmd --reload
 By default, samba is blocked from sharing directories unless the context is set. So, generically to enable samba sharing in SELinux run:
 
 ```bash
-sudo semanage fcontext --add --type "samba_share_t" "/path/to/share(/.*)?
+sudo semanage fcontext --add --type "samba_share_t" "/path/to/share(/.*)?"
 sudo restorecon -R /path/to/share
 ```
 
 Say you wanted to share all home directories:
 
 ```bash
-sudo semanage fcontext --add --type "samba_share_t" "/var/home(/.*)?
+sudo semanage fcontext --add --type "samba_share_t" "/var/home(/.*)?"
 sudo restorecon -R /var/home
 ```
 
