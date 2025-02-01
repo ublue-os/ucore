@@ -41,6 +41,9 @@
                 "samba-usershares",
                 "snapraid",
                 "tiwilink-firmware",
+                "tuned",
+                "tuned-profiles-atomic",
+                "tuned-utils",
                 "usbutils",
                 "xdg-dbus-proxy",
                 "xdg-user-dirs"
