@@ -8,12 +8,10 @@ ARG AKMODS_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_ZFS="${IMAGE_REGISTRY}/akmods-zfs:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG CONFIG="${IMAGE_REGISTRY}/config:latest"
-ARG KERNEL="${IMAGE_REGISTRY}/${KERNEL_FLAVOR}-kernel:${FEDORA_VERSION}"
 FROM ${AKMODS_COMMON} AS akmods-common
 FROM ${AKMODS_NVIDIA} AS akmods-nvidia
 FROM ${AKMODS_ZFS} AS akmods-zfs
 FROM ${CONFIG} AS config
-FROM ${KERNEL} AS kernel
 
 FROM scratch AS ctx
 COPY / /
@@ -42,7 +40,7 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
     --mount=type=bind,from=config,src=/rpms,dst=/tmp/rpms/config \
-    --mount=type=bind,from=kernel,src=/tmp/rpms,dst=/tmp/rpms/kernel \
+    --mount=type=bind,from=akmods-common,src=/kernel-rpms,dst=/tmp/rpms/kernel \
     mkdir -p /var/lib/alternatives \
     && /ctx/install-ucore-minimal.sh \
     && /ctx/post-install-ucore-minimal.sh \
