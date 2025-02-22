@@ -65,7 +65,7 @@ jobs:
                 exit 1
             fi
 
-            kernel=$(skopeo inspect docker://ghcr.io/ublue-os/akmods:${{ inputs.coreos_version }}-${fedora} | jq -r '.["Labels"]["ostree.linux"]')
+            kernel=$(skopeo inspect docker://ghcr.io/ublue-os/akmods:coreos-${{ inputs.coreos_version }}-${fedora} | jq -r '.["Labels"]["ostree.linux"]')
             if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
                 echo "inspected linux (kernel) version must not be empty or null"
                 exit 1
