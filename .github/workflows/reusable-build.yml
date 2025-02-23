@@ -65,7 +65,7 @@ jobs:
                 exit 1
             fi
 
-            kernel=$(skopeo inspect docker://ghcr.io/ublue-os/coreos-${{ inputs.coreos_version }}-kernel:${fedora} | jq -r '.["Labels"]["ostree.linux"]')
+            kernel=$(skopeo inspect docker://ghcr.io/ublue-os/akmods:coreos-${{ inputs.coreos_version }}-${fedora} | jq -r '.["Labels"]["ostree.linux"]')
             if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
                 echo "inspected linux (kernel) version must not be empty or null"
                 exit 1
@@ -121,7 +121,6 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
@@ -141,14 +140,6 @@ jobs:
           fi
           if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
               echo "env.KERNEL_VERSION must not be empty or null"
-              exit 1
-          fi
-
-          #Use Podman Inspect instead of skopeo for local checks.
-          podman inspect ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
           podman inspect ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
@@ -387,7 +378,6 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
@@ -407,12 +397,6 @@ jobs:
           fi
           if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
               echo "env.KERNEL_VERSION must not be empty or null"
-              exit 1
-          fi
-          podman inspect ${{ env.IMAGE_REGISTRY }}/${{ env.KERNEL_FLAVOR }}-kernel:${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled kernel-cache image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
           podman inspect ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
