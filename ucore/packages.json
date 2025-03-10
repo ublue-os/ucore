@@ -11,6 +11,7 @@
                 "firewalld",
                 "fwupd-efi",
                 "intel-compute-runtime",
+                "msr-tools",
                 "open-vm-tools",
                 "podman",
                 "podman-compose",
