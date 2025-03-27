@@ -9,6 +9,7 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Table of Contents <!-- omit in toc -->
 
+- [Announcements](#announcements)
 - [Features](#features)
   - [Images](#images)
     - [`fedora-coreos`](#fedora-coreos)
@@ -40,7 +41,22 @@ Please take a look at the included modifications, and help us improve uCore if t
   - [ZFS](#zfs)
     - [ZFS and immutable root filesystem](#zfs-and-immutable-root-filesystem)
     - [Sanoid/Syncoid](#sanoidsyncoid)
+- [DIY](#diy)
 - [Metrics](#metrics)
+
+## Announcements
+
+### 2024.11.12 - uCore has updated to Fedora 41
+
+As of today our upstream Fedora CoreOS stable image updated to Fedora 41 under the hood, so expect a lot of package updates.
+
+### 2024.11.12 - uCore *stable* has pinned to kernel version *6.11.3*
+
+Kernel version `6.11.3` was the previous *stable* update's kernel, and despite the update to Fedora 41, we've stuck with `6.11.3` rather than updating to `6.11.5` from upstream.
+
+This is due to a kernel bug in versions `6.11.4`/`6.11.5` which [breaks tailscale status reporting](https://github.com/tailscale/tailscale/issues/13863). As many users of uCore do use tailscale, we've decided to be extra cautious and hold back the kernel, even though the rest of stable updated as usual.
+
+We expect the next update of Fedora CoreOS to be on `6.11.6` per the current state of the testing stream. So uCore will follow when that update occurs.
 
 ## Features
 
@@ -127,6 +143,7 @@ This image builds on `ucore-minimal` but adds drivers, storage tools and utiliti
   - [snapraid](https://www.snapraid.it/)
   - usbutils(and pciutils) - technically pciutils is pulled in by open-vm-tools in ucore-minimal
 - Optional [ZFS versions](#tag-matrix) add:
+  - [cockpit-zfs-manager](https://github.com/45Drives/cockpit-zfs-manager) (an interactive ZFS on Linux admin package for Cockpit)
   - [sanoid/syncoid dependencies](https://github.com/jimsalterjrs/sanoid) - [see below](#zfs) for details
 
 #### `ucore-hci`
@@ -158,14 +175,15 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 
 ## Installation
 
-**Please read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. As uCore is an extension of CoreOS, it does not provide it's own custom or GUI installer.
+> [!IMPORTANT]
+> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; it does not provide it's own custom or GUI installer.
 
 There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
 
 **All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/).** This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
 
-> [!NOTE]
-> It is highly recommended that for bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the same bare metal process.
+> [!TIP]
+> For bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the bare metal process.
 
 ### Image Verification
 
@@ -181,13 +199,17 @@ One of the fastest paths to running uCore is using [examples/ucore-autorebase.bu
 
 1. As usual, you'll need to [follow the docs to setup a password](https://coreos.github.io/butane/examples/#using-password-authentication). Substitute your password hash for `YOUR_GOOD_PASSWORD_HASH_HERE` in the `ucore-autorebase.butane` file, and add your ssh pub key while you are at it.
 1. Generate an ignition file from your new `ucore-autorebase.butane` [using the butane utility](https://coreos.github.io/butane/getting-started/).
-1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable` (or other `IMAGE:TAG` combo), rebooting and leaving your install ready to use.
+1. Now install CoreOS for [hypervisor, cloud provider or bare-metal](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/), i.e. `sudo coreos-installer install /dev/nvme0n1 --ignition-url https://example.com/ucore-autorebase.ign` (or `--ignition-file /path/to/ucore-autorebase.ign`). Your ignition file should work for any platform, auto-rebasing to the `ucore:stable` (or other `IMAGE:TAG` combo), rebooting and leaving your install ready to use.
 
 ### Manual Install/Rebase
 
 Once a machine is running any Fedora CoreOS version, you can easily rebase to uCore.  Installing CoreOS itself can be done through [a number of provisioning methods](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/).
 
-To rebase an existing machine to the latest uCore:
+> [!WARNING]
+> **Rebasing from Fedora IoT or Atomic Desktops is not supported!**
+> If ignition doesn't provide a desired feature, then Fedora CoreOS doesn't support that feature. Rebasing from another system to gain a filesystem feature or GUI installation is very likely to cause problems later on.
+
+To rebase an existing CoreOS machine to the latest uCore:
 
 1. Execute the `rpm-ostree rebase` command (below) with desired `IMAGE` and `TAG`.
 1. Reboot, as instructed.
@@ -227,7 +249,7 @@ Fedora CoreOS expects the user to run services using [podman](https://podman.io)
 > [!IMPORTANT]
 > CoreOS [cautions against](https://docs.fedoraproject.org/en-US/fedora-coreos/faq/#_can_i_run_containers_via_docker_and_podman_at_the_same_time) running podman and docker containers at the same time.  Thus, `docker.socket` is disabled by default to prevent accidental activation of the docker daemon, given podman is the default.
 >
-> Ony run both simultaneously if you understand the risk.
+> Only run both simultaneously if you understand the risk.
 
 #### Podman and FirewallD
 
@@ -243,6 +265,7 @@ By default, UCore does not automatically start `restart: always` containers on s
 
 ```bash
 # Copy the system's podman-restart service to the user location
+mkdir -p /var/home/core/.config/systemd/user
 cp /lib/systemd/system/podman-restart.service /var/home/core/.config/systemd/user
 
 # Enable the user service
@@ -345,21 +368,21 @@ By default, nfs-server is blocked from sharing directories unless the context is
 For read-only NFS shares:
 
 ```bash
-sudo semanage fcontext --add --type "public_content_t" "/path/to/share/ro(/.*)?
+sudo semanage fcontext --add --type "public_content_t" "/path/to/share/ro(/.*)?"
 sudo restorecon -R /path/to/share/ro
 ```
 
 For read-write NFS shares:
 
 ```bash
-sudo semanage fcontext --add --type "public_content_rw_t" "/path/to/share/rw(/.*)?
+sudo semanage fcontext --add --type "public_content_rw_t" "/path/to/share/rw(/.*)?"
 sudo restorecon -R /path/to/share/rw
 ```
 
 Say you wanted to share all home directories:
 
 ```bash
-sudo semanage fcontext --add --type "public_content_rw_t" "/var/home(/.*)?
+sudo semanage fcontext --add --type "public_content_rw_t" "/var/home(/.*)?"
 sudo restorecon -R /var/home
 ```
 
@@ -410,14 +433,14 @@ sudo firewall-cmd --reload
 By default, samba is blocked from sharing directories unless the context is set. So, generically to enable samba sharing in SELinux run:
 
 ```bash
-sudo semanage fcontext --add --type "samba_share_t" "/path/to/share(/.*)?
+sudo semanage fcontext --add --type "samba_share_t" "/path/to/share(/.*)?"
 sudo restorecon -R /path/to/share
 ```
 
 Say you wanted to share all home directories:
 
 ```bash
-sudo semanage fcontext --add --type "samba_share_t" "/var/home(/.*)?
+sudo semanage fcontext --add --type "samba_share_t" "/var/home(/.*)?"
 sudo restorecon -R /var/home
 ```
 
@@ -511,11 +534,31 @@ If you do forget to specify the mountpoint, or you need to change the mountpoint
 # zfs set mountpoint=/var/tank tank
 ```
 
+#### ZFS scrub timers
+
+It's good practice to run a `zpool scrub` periodically on ZFS pools to check and repair the integrity of data. This can be easily configured with ucore by enabling the timer. There are two timers available: weekly and monthly.
+
+```bash
+# Substitute <pool> with the name of the zpool
+systemctl enable --now zfs-scrub-weekly@<pool>.timer
+
+# Or to run it monthly:
+systemctl enable --now zfs-scrub-monthly@<pool>.timer
+```
+
+This can be enabled for multiple storage pools by enabling and starting a timer for each.
+
 #### Sanoid/Syncoid
 
 sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
 
 `ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
+
+## DIY
+
+Is all this too easy, leaving you with the desire to create a custom uCore image?
+
+Then [create an image `FROM ucore`](https://github.com/ublue-os/image-template) using our [image template](https://github.com/ublue-os/image-template)!
 
 ## Metrics
 

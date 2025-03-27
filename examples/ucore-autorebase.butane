@@ -36,7 +36,7 @@ systemd:
         [Unit]
         Description=uCore autorebase to signed OCI and reboot
         ConditionPathExists=/etc/ucore-autorebase/unverified
-        ConditionPathExists=!/etc/ucore-autorebase/verified
+        ConditionPathExists=!/etc/ucore-autorebase/signed
         After=network-online.target
         Wants=network-online.target
         [Service]
