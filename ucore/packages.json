@@ -30,6 +30,7 @@
                 "iwlegacy-firmware",
                 "iwlwifi-dvm-firmware",
                 "iwlwifi-mvm-firmware",
+                "man-db",
                 "mt7xxx-firmware",
                 "nfs-utils",
                 "nxpwireless-firmware",
