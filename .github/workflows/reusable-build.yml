@@ -59,6 +59,11 @@ jobs:
                 exit 1
             fi
 
+            if [ "42.20250410.3.1" == "${image}" ]; then
+                echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.1 to 41.20250331.3.0"
+                image="41.20250331.3.0"
+            fi
+
             fedora=$(echo "$image" | cut -f1 -d.)
             if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
                 echo "fedora version must not be empty or null"
