@@ -59,6 +59,11 @@ jobs:
                 exit 1
             fi
 
+            if [ "42.20250410.3.1" == "${image}" ]; then
+                echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.1 to 41.20250331.3.0"
+                image="41.20250331.3.0"
+            fi
+
             fedora=$(echo "$image" | cut -f1 -d.)
             if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
                 echo "fedora version must not be empty or null"
@@ -120,7 +125,7 @@ jobs:
           command: |
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
-            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
@@ -237,6 +242,7 @@ jobs:
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
             FEDORA_VERSION=${{ env.FEDORA_VERSION }}
+            IMAGE_VERSION=${{ env.IMAGE_VERSION }}
             IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
             KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
             PR_PREFIX=${{ env.PR_PREFIX }}
@@ -377,7 +383,7 @@ jobs:
           command: |
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
-            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
@@ -498,6 +504,7 @@ jobs:
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
             FEDORA_VERSION=${{ env.FEDORA_VERSION }}
+            IMAGE_VERSION=${{ env.IMAGE_VERSION }}
             IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
             KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
             PR_PREFIX=${{ env.PR_PREFIX }}

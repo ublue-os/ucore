@@ -1,5 +1,6 @@
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG FEDORA_VERSION="${FEDORA_VERSION:-40}"
+ARG IMAGE_VERSION="${IMAGE_VERSION:-stable}"
 ARG IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/ublue-os}"
 ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos-stable}"
 
@@ -16,7 +17,7 @@ FROM ${CONFIG} AS config
 FROM scratch AS ctx
 COPY / /
 
-FROM quay.io/fedora/fedora-coreos:${COREOS_VERSION}
+FROM quay.io/fedora/fedora-coreos:${IMAGE_VERSION}
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 # build with --build-arg NVIDA_TAG="-nvidia" to install nvidia
