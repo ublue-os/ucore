@@ -232,6 +232,7 @@ jobs:
             ./fedora-coreos/Containerfile
           context: ./fedora-coreos
           image: ${{ env.IMAGE_NAME }}
+          arches: amd64 arm64
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
@@ -493,6 +494,7 @@ jobs:
             ./ucore/Containerfile
           context: ./ucore
           image: ${{ env.IMAGE_NAME }}
+          archs: amd64 arm64
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
           build-args: |
