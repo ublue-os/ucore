@@ -383,7 +383,7 @@ jobs:
           command: |
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
-            podman pull quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }}
+            podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
