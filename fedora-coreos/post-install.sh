@@ -11,5 +11,8 @@ fi
 if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/nvidia-container-toolkit.repo
 
+    rpm -qa | grep nvidia
+    rpm -qil nvidia-container-toolkit
+
     semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
 fi
