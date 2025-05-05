@@ -11,6 +11,9 @@ fi
 if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
     sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/nvidia-container-toolkit.repo
 
+    rpm -qil ublue-os-ucore-nvidia
+    test -f /usr/share/selinux/packages/nvidia-container.pp
+
     semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
 
     systemctl enable ublue-nvctk-cdi.service
