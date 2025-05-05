@@ -21,7 +21,7 @@ done
 fi
 
 # enable ublue-os repos
-dnf5 dnf5-plugins
+dnf5 -y install dnf5-plugins
 dnf5 -y copr enable ublue-os/packages
 
 # always disable cisco-open264 repo
