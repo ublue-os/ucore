@@ -40,15 +40,9 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
     --mount=type=bind,from=akmods-common,src=/kernel-rpms,dst=/tmp/rpms/kernel \
-    mkdir -p /var/lib/alternatives \
     && /ctx/install-ucore-minimal.sh \
     && /ctx/post-install-ucore-minimal.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && /ctx/cleanup.sh \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    && /ctx/cleanup.sh
 
 # ucore image section
 FROM ucore-minimal AS ucore
@@ -60,15 +54,8 @@ ARG ZFS_TAG="${ZFS_TAG}"
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
-    mkdir -p /var/lib/alternatives \
     && /ctx/install-ucore.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && /ctx/cleanup.sh \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
-
+    && /ctx/cleanup.sh
 
 # ucore-hci image section
 FROM ucore AS ucore-hci
@@ -80,11 +67,5 @@ ARG ZFS_TAG="${ZFS_TAG}"
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
-    mkdir -p /var/lib/alternatives \
     && /ctx/install-ucore-hci.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && /ctx/cleanup.sh \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    && /ctx/cleanup.sh

@@ -30,12 +30,6 @@ RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
     --mount=type=bind,from=akmods-common,src=/kernel-rpms,dst=/tmp/rpms/kernel \
-    mkdir -p /var/lib/alternatives \
     && /ctx/install.sh \
     && /ctx/post-install.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && /ctx/cleanup.sh \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    && /ctx/cleanup.sh
