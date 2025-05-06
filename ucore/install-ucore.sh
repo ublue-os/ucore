@@ -6,7 +6,7 @@ RELEASE="$(rpm -E %fedora)"
 
 ## CONDITIONAL: install sanoid if ZFS
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
-    dnf5 -y install sanoid
+    dnf -y install sanoid
 fi
 
 # install packages.json stuffs
