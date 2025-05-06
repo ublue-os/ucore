@@ -50,6 +50,7 @@
                 "cockpit-machines",
                 "libvirt-client",
                 "libvirt-daemon-kvm",
+                "ublue-os-libvirt-workarounds",
                 "virt-install"
             ]
         },

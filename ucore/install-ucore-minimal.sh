@@ -5,10 +5,6 @@ set -ouex pipefail
 ARCH="$(rpm -E %{_arch})"
 RELEASE="$(rpm -E %fedora)"
 
-# try to address some issues with COPY system_files /
-restorecon -Rv /etc
-restorecon -Rv /usr
-
 pushd /tmp/rpms/kernel
 KERNEL_VERSION=$(find kernel-*.rpm | grep -P "kernel-(\d+\.\d+\.\d+)-.*\.fc${RELEASE}\.${ARCH}" | sed -E 's/kernel-//' | sed -E 's/\.rpm//')
 popd
