@@ -77,12 +77,14 @@ fi
 
 ## ALWAYS: install regular packages
 
+echo "ALERT ALERT MUCH STUFFS NOT INSTALLED HERE FOR TESTING"
+
 # add tailscale repo
-curl -L https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
+#curl -L https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
 # install packages.json stuffs
-export IMAGE_NAME=ucore-minimal
-/ctx/packages.sh
+#export IMAGE_NAME=ucore-minimal
+#/ctx/packages.sh
 
 # tweak os-release
-sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
+#sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
