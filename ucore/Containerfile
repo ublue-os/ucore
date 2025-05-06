@@ -29,9 +29,9 @@ ARG DOCKER_BUILDX_VERSION=0.12.1
 # 2.24.7 matches docker/moby 24.0.5  which FCOS ships as of 40.20240421
 ARG DOCKER_COMPOSE_VERSION=v2.24.7
 
-COPY system_files /
-COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
-COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
+#COPY system_files /
+#COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
+#COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
