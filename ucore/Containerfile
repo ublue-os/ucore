@@ -30,8 +30,8 @@ ARG DOCKER_BUILDX_VERSION=0.12.1
 ARG DOCKER_COMPOSE_VERSION=v2.24.7
 
 #COPY system_files /
-#COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
-#COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
+COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
+COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
