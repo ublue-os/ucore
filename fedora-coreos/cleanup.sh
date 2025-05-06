@@ -1,8 +1,12 @@
 #!/usr/bin/bash
 
 set -eoux pipefail
-shopt -s extglob
 
 rm -rf /tmp/* || true
-rm -rf /var/!(cache)
-rm -rf /var/cache/!(rpm-ostree)
+find /var/* -maxdepth 0 -type d -exec rm -fr {} \;
+
+# this currently fails on /usr/etc
+#bootc container lint
+ostree container commit
+mkdir -p /var/tmp \
+&& chmod -R 1777 /var/tmp

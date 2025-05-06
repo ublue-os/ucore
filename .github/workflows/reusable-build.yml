@@ -59,8 +59,8 @@ jobs:
                 exit 1
             fi
 
-            if [ "42.20250410.3.1" == "${image}" ]; then
-                echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.1 to 41.20250331.3.0"
+            if [[ "${image}" =~ "42.20250410.3" ]]; then
+                echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.* to 41.20250331.3.0"
                 image="41.20250331.3.0"
             fi
 
