@@ -24,7 +24,6 @@ systemctl disable docker.socket
 systemctl disable zincati.service
 
 systemctl enable gssproxy-workaround.service
-systemctl enable libvirt-workaround.service
 systemctl enable swtpm-workaround.service
 
 

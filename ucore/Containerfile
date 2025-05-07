@@ -8,11 +8,9 @@ ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos-stable}"
 ARG AKMODS_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_ZFS="${IMAGE_REGISTRY}/akmods-zfs:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
-ARG CONFIG="${IMAGE_REGISTRY}/config:latest"
 FROM ${AKMODS_COMMON} AS akmods-common
 FROM ${AKMODS_NVIDIA} AS akmods-nvidia
 FROM ${AKMODS_ZFS} AS akmods-zfs
-FROM ${CONFIG} AS config
 
 FROM scratch AS ctx
 COPY / /
@@ -31,26 +29,22 @@ ARG DOCKER_BUILDX_VERSION=0.12.1
 # 2.24.7 matches docker/moby 24.0.5  which FCOS ships as of 40.20240421
 ARG DOCKER_COMPOSE_VERSION=v2.24.7
 
-COPY system_files /
+COPY system_files/etc /
+COPY system_files/usr/lib /usr/lib/
+COPY system_files/usr/sbin /usr/sbin/
 COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
 COPY --from=docker.io/docker/compose-bin:${DOCKER_COMPOSE_VERSION} /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
 
-RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
     --mount=type=bind,from=akmods-common,src=/rpms/ucore,dst=/tmp/rpms/akmods-common \
     --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
-    --mount=type=bind,from=config,src=/rpms,dst=/tmp/rpms/config \
     --mount=type=bind,from=akmods-common,src=/kernel-rpms,dst=/tmp/rpms/kernel \
-    mkdir -p /var/lib/alternatives \
-    && /ctx/install-ucore-minimal.sh \
+    /ctx/install-ucore-minimal.sh \
     && /ctx/post-install-ucore-minimal.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && /ctx/cleanup.sh \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    && /ctx/cleanup.sh
 
 # ucore image section
 FROM ucore-minimal AS ucore
@@ -59,17 +53,11 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
 ARG ZFS_TAG="${ZFS_TAG}"
 
-RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
-    mkdir -p /var/lib/alternatives \
-    && /ctx/install-ucore.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && /ctx/cleanup.sh \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
-
+    /ctx/install-ucore.sh \
+    && /ctx/cleanup.sh
 
 # ucore-hci image section
 FROM ucore AS ucore-hci
@@ -78,13 +66,8 @@ ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
 ARG ZFS_TAG="${ZFS_TAG}"
 
-RUN --mount=type=cache,dst=/var/cache/rpm-ostree \
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
-    mkdir -p /var/lib/alternatives \
-    && /ctx/install-ucore-hci.sh \
-    && mv /var/lib/alternatives /staged-alternatives \
-    && /ctx/cleanup.sh \
-    && ostree container commit \
-    && mkdir -p /var/lib && mv /staged-alternatives /var/lib/alternatives \
-    && mkdir -p /var/tmp \
-    && chmod -R 1777 /var/tmp
+    /ctx/install-ucore-hci.sh \
+    && /ctx/cleanup.sh
