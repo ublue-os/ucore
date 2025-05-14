@@ -46,9 +46,13 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Announcements
 
+### 2025.05.14 - uCore update to Fedora 42
+
+As of today, Fedora CoreOS upstream has updated to kernel 6.14.3 and uCore has unpinned and is building on F42.
+
 ### 2025.04.30 - uCore delaying Fedora 42 update
 
-As of today, Fedora CoreOS upstream has updated to Fedora 42 as a base, however it uses a rawhide kernel 6.14.0 which our
+As of today, Fedora CoreOS upstream has updated to Fedora 42 as a base, however it uses kernel 6.14.0 which our
 team has agreed, we don't want to ship. As of April 30, this means uCore has been in an inbetween state. We have some hacks
 in place to pin our builds to the last F41 kernel/release 6.13.8/41.20250331.3.0. This also means that rebase from F42 of
 Fedora CoreOS to F41 of uCore will fail. So in the meantime, if you are attempting to install, use the following installer:
