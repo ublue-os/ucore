@@ -3,6 +3,7 @@
 set -ouex pipefail
 
 RELEASE="$(rpm -E %fedora)"
+IMAGE_NAME="uCore"
 
 ## CONDITIONAL: install sanoid if ZFS
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
@@ -12,6 +13,8 @@ fi
 # install packages.json stuffs
 export IMAGE_NAME=ucore
 /ctx/packages.sh
+
+sed -i "s|^VARIANT_ID=.*|VARIANT_ID=$IMAGE_NAME|" /usr/lib/os-release
 
 ## CONDITIONAL: ZFS support
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
