@@ -40,5 +40,3 @@ fi
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
-sed -i "s|^VARIANT_ID=.*|VARIANT_ID=$IMAGE_NAME|" /usr/lib/os-release
-sed -i "s|^VARIANT=.*|VARIANT=$IMAGE_NAME|" /usr/lib/os-release
