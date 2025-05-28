@@ -13,9 +13,6 @@ fi
 export IMAGE_NAME=ucore
 /ctx/packages.sh
 
-## change coreos to ucore so it can be counted
-sed -i "s|^VARIANT_ID=.*|VARIANT_ID=$IMAGE_NAME|" /usr/lib/os-release
-
 ## CONDITIONAL: ZFS support
 if [[ "-zfs" == "${ZFS_TAG}" ]]; then
     # cockpit plugin for ZFS management
@@ -43,3 +40,4 @@ fi
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
+sed -i "s|^VARIANT_ID=.*|VARIANT_ID=$IMAGE_NAME|" /usr/lib/os-release
