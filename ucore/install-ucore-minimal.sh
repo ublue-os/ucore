@@ -87,5 +87,5 @@ export IMAGE_NAME=ucore-minimal
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
-sed -i "s|^VARIANT_ID=.*|VARIANT_ID=$IMAGE_NAME|" /usr/lib/os-release
-sed -i "s|^VARIANT=.*|VARIANT=$IMAGE_NAME|" /usr/lib/os-release
+sed -i "s|^VARIANT_ID=.*|VARIANT_ID=uCore|" /usr/lib/os-release
+sed -i "s|^VARIANT=.*|VARIANT=ucore|" /usr/lib/os-release
