@@ -24,7 +24,7 @@ ARG NVIDIA_TAG="${NVIDIA_TAG}"
 # build with --build-arg ZFS_TAG="-zfs" to install zfs
 ARG ZFS_TAG="${ZFS_TAG}"
 
-# thes versions match docker/moby 27.5.1 which FCOS ships as of 42.20250410
+# these versions match docker/moby 27.5.1 which FCOS ships as of 42.20250410
 ARG DOCKER_BUILDX_VERSION=0.20.0
 ARG DOCKER_COMPOSE_VERSION=v2.32.2
 
