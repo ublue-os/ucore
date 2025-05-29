@@ -24,10 +24,9 @@ ARG NVIDIA_TAG="${NVIDIA_TAG}"
 # build with --build-arg ZFS_TAG="-zfs" to install zfs
 ARG ZFS_TAG="${ZFS_TAG}"
 
-# 0.12.1 matches docker/moby 24.0.5 which FCOS ships as of 40.20240421
-ARG DOCKER_BUILDX_VERSION=0.12.1
-# 2.24.7 matches docker/moby 24.0.5  which FCOS ships as of 40.20240421
-ARG DOCKER_COMPOSE_VERSION=v2.24.7
+# these versions match docker/moby 27.5.1 which FCOS ships as of 42.20250410
+ARG DOCKER_BUILDX_VERSION=0.20.0
+ARG DOCKER_COMPOSE_VERSION=v2.32.2
 
 COPY system_files/etc /
 COPY system_files/usr/lib /usr/lib/
