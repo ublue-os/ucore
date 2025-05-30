@@ -28,7 +28,7 @@ ARG ZFS_TAG="${ZFS_TAG}"
 ARG DOCKER_BUILDX_VERSION=0.20.0
 ARG DOCKER_COMPOSE_VERSION=v2.32.2
 
-COPY system_files/etc /
+COPY system_files/etc /etc
 COPY system_files/usr/lib /usr/lib/
 COPY system_files/usr/sbin /usr/sbin/
 COPY --from=docker.io/docker/buildx-bin:${DOCKER_BUILDX_VERSION} /buildx /usr/libexec/docker/cli-plugins/docker-buildx
