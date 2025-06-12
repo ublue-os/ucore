@@ -110,9 +110,6 @@ jobs:
         nvidia_tag:
           - "-nvidia"
           - ""
-        zfs_tag:
-          - "-zfs"
-          - ""
         include:
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
@@ -148,7 +145,7 @@ jobs:
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
 
-      - name: Verify versions
+      - name: Verify versions (image, kernel, zfs)
         shell: bash
         run: |
           set -x
@@ -170,6 +167,12 @@ jobs:
               echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
+          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
+              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              exit 1
+          fi
 
       - name: Verify versions (nvidia)
         if: matrix.nvidia_tag == '-nvidia'
@@ -183,25 +186,13 @@ jobs:
               exit 1
           fi
 
-      - name: Verify versions (ZFS)
-        if: matrix.zfs_tag == '-zfs'
-        shell: bash
-        run: |
-          set -x
-          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
-          kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
-          if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
-              exit 1
-          fi
-
       - name: Generate tags
         id: generate-tags
         shell: bash
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}${{ matrix.zfs_tag }}"
+          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
@@ -212,6 +203,9 @@ jobs:
           COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
 
           BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
+          # always add the '-zfs' tag to each image since we include ZFS with them all
+          # and we want users of the existing '-zfs' images to still get updates
+          BUILD_TAGS=("${COREOS_VERSION}-zfs" "${COREOS_VERSION}-zfs-${TIMESTAMP}")
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               echo "Generated the following commit tags: "
@@ -268,7 +262,6 @@ jobs:
             KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
             PR_PREFIX=${{ env.PR_PREFIX }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
-            ZFS_TAG=${{ matrix.zfs_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
           extra-args: |
