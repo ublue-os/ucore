@@ -192,7 +192,7 @@ jobs:
         run: |
           # Generate a timestamp for creating an image version history
           TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}
+          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}"
 
           COMMIT_TAGS=()
           BUILD_TAGS=()
