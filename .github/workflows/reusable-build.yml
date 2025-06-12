@@ -205,7 +205,8 @@ jobs:
           BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
           # always add the '-zfs' tag to each image since we include ZFS with them all
           # and we want users of the existing '-zfs' images to still get updates
-          BUILD_TAGS=("${COREOS_VERSION}-zfs" "${COREOS_VERSION}-zfs-${TIMESTAMP}")
+          BUILD_TAGS+=("${COREOS_VERSION}-zfs")
+          BUILD_TAGS+=("${COREOS_VERSION}-zfs-${TIMESTAMP}")
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               echo "Generated the following commit tags: "
