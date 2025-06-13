@@ -55,12 +55,10 @@ else
         /tmp/rpms/kernel/kernel-modules-*.rpm
 fi
 
-## CONDITIONAL: install ZFS (and sanoid deps)
-if [[ "-zfs" == "${ZFS_TAG}" ]]; then
-    dnf -y install pv /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
-    # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
-    depmod -a -v ${KERNEL_VERSION}
-fi
+## ALWAYS: install ZFS (and sanoid deps)
+dnf -y install /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
+# for some reason depmod ran automatically with zfs 2.1 but not with 2.2
+depmod -a -v ${KERNEL_VERSION}
 
 ## CONDITIONAL: install NVIDIA
 if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then

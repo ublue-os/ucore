@@ -21,8 +21,6 @@ FROM quay.io/fedora/fedora-coreos:${IMAGE_VERSION} AS ucore-minimal
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 # build with --build-arg NVIDA_TAG="-nvidia" to install nvidia
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
-# build with --build-arg ZFS_TAG="-zfs" to install zfs
-ARG ZFS_TAG="${ZFS_TAG}"
 
 # these versions match docker/moby 27.5.1 which FCOS ships as of 42.20250410
 ARG DOCKER_BUILDX_VERSION=0.20.0
@@ -50,7 +48,6 @@ FROM ucore-minimal AS ucore
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
-ARG ZFS_TAG="${ZFS_TAG}"
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
@@ -63,7 +60,6 @@ FROM ucore AS ucore-hci
 
 ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
 ARG NVIDIA_TAG="${NVIDIA_TAG}"
-ARG ZFS_TAG="${ZFS_TAG}"
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
