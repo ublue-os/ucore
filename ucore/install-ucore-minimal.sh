@@ -36,6 +36,10 @@ find /tmp/rpms/
 dnf -y install /tmp/rpms/akmods-common/ublue-os-ucore-addons*.rpm
 dnf -y install ublue-os-signing
 
+# Put the policy file in the correct place and cleanup /usr/etc
+cp /usr/etc/containers/policy.json /etc/containers/policy.json
+rm -rf /usr/etc
+
 # Handle Kernel Skew with override replace
 if [[ "${KERNEL_VERSION}" == "${QUALIFIED_KERNEL}" ]]; then
     echo "Installing signed kernel from kernel-cache."
