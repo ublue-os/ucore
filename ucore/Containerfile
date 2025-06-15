@@ -43,6 +43,8 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     && /ctx/post-install-ucore-minimal.sh \
     && /ctx/cleanup.sh
 
+RUN ["bootc", "container", "lint"]
+
 # ucore image section
 FROM ucore-minimal AS ucore
 
@@ -55,6 +57,8 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     /ctx/install-ucore.sh \
     && /ctx/cleanup.sh
 
+RUN ["bootc", "container", "lint"]
+
 # ucore-hci image section
 FROM ucore AS ucore-hci
 
@@ -66,3 +70,5 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
     /ctx/install-ucore-hci.sh \
     && /ctx/cleanup.sh
+
+RUN ["bootc", "container", "lint"]
