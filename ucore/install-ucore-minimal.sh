@@ -50,7 +50,9 @@ if [[ "${KERNEL_VERSION}" == "${QUALIFIED_KERNEL}" ]]; then
 else
     # Remove Existing Kernel
     for pkg in kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra; do
-        rpm --erase $pkg --nodeps
+        if rpm -q $pkg >/dev/null 2>&1; then
+            rpm --erase $pkg --nodeps
+        fi
     done
     echo "Install kernel version ${KERNEL_VERSION} from kernel-cache."
     dnf -y install \
