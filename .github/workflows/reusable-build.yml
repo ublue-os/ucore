@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        uses: Wandalen/wretry.action@v3.8.0
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -132,7 +132,7 @@ jobs:
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
       - name: Pull base and kmod images
-        uses: Wandalen/wretry.action@v3.8.0
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         with:
           attempt_limit: 3
           attempt_delay: 15000
@@ -232,7 +232,7 @@ jobs:
 
       # Build metadata
       - name: Image Metadata
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5
         id: meta
         with:
           images: |
@@ -247,7 +247,7 @@ jobs:
       # Build image using Buildah action
       - name: Build Image
         id: build_image
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
         with:
           containerfiles: |
             ./ucore/Containerfile
@@ -291,13 +291,13 @@ jobs:
       # https://github.com/macbre/push-to-ghcr/issues/12
       - name: Lowercase Registry
         id: registry_case
-        uses: ASzc/change-string-case-action@v6
+        uses: ASzc/change-string-case-action@d0603cd0a7dd490be678164909f65c7737470a7f # v6
         with:
           string: ${{ env.IMAGE_REGISTRY }}
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
-        uses: Wandalen/wretry.action@v3.8.0
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: push
         if: github.event_name != 'pull_request'
         env:
@@ -317,7 +317,7 @@ jobs:
               --disable-content-trust
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3
         if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
