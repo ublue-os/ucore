@@ -131,8 +131,7 @@ Suitable for running containerized workloads on either bare metal or virtual mac
 > Per [cockpit's instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
 
 > [!NOTE]
-> zincati fails to start on all systems with OCI based deployments (like uCore). Upstream efforts are active to develop an alternative.
-
+> When uCore was first created, zincati failed to start on systems using OCI-based deployments (such as uCore). This issue has since been addressed, but further testing is needed to verify zincati’s compatibility with custom systems like uCore.
 #### `ucore`
 
 This image builds on `ucore-minimal` but adds drivers, storage tools and utilities making it more useful on bare metal or as a storage server (NAS).
