@@ -13,8 +13,6 @@ fi
 
 
 ## ALWAYS: regular post-install
-ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose
-
 systemctl disable coreos-oci-migration-motd.service
 systemctl disable docker.socket
 systemctl disable zincati.service
