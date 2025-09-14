@@ -8,6 +8,8 @@
                 "cockpit-podman",
                 "cockpit-selinux",
                 "cockpit-system",
+                "docker-buildx",
+                "docker-compose",
                 "firewalld",
                 "fwupd-efi",
                 "intel-compute-runtime",
