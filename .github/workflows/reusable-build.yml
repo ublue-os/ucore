@@ -326,6 +326,8 @@ jobs:
 
       # Sign container
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        with:
+          cosign-release: "v2.6.1"
         if: github.event_name != 'pull_request'
 
       - name: Sign container image
