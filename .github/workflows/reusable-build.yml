@@ -3,7 +3,7 @@ on:
   workflow_call:
     inputs:
       coreos_version:
-        description: 'The CoreOS stream: stable or testing'
+        description: "The CoreOS stream: stable or testing"
         required: true
         type: string
 env:
