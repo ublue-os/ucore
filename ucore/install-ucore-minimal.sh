@@ -58,7 +58,7 @@ dnf versionlock add kernel kernel-core kernel-modules kernel-modules-core kernel
 dnf -y install /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
 # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
 echo "Update modules.dep, etc..."
-depmod -a ${KERNEL_VERSION}
+depmod -a "${KERNEL_VERSION}"
 
 # Regenerate initramfs, for new kernel and zfs; not including NVIDIA kmod
 QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kernel-//')"
