@@ -292,7 +292,7 @@ jobs:
           TAGS="${{ steps.meta.outputs.tags }}"
           IMAGE_TAGGED=${TAGS%%$'\n'*}
           CONTAINER=$(echo $IMAGE_TAGGED | sed 's/:/-/')
-          podman run -d --rm --name "CONTAINER" "$IMAGE_TAGGED" sleep 1000
+          podman run -d --rm --name "$CONTAINER" "$IMAGE_TAGGED" sleep 1000
           podman cp "$CONTAINER":/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
           podman rm -f  "$CONTAINER"
           sbverify --list vmlinuz
