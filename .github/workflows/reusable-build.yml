@@ -266,7 +266,6 @@ jobs:
           containerfiles: |
             ./ucore/Containerfile
           context: ./ucore
-          image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.meta.outputs.tags }}
           build-args: |
