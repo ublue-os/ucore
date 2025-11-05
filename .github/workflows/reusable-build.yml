@@ -194,7 +194,7 @@ jobs:
         id: meta
         with:
           images: |
-            ${{ env.IMAGE_NAME }}
+            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
           labels: |
             io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
             io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
@@ -211,6 +211,13 @@ jobs:
             type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
             type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
 
+      - name: Space tags (convert newlines to spaces)
+        id: space-tags
+        run: |
+          tags="${{ steps.meta.outputs.tags }}"
+          tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
+          echo "tags=${tags_space}" >> $GITHUB_OUTPUT
+
       # Build image using Buildah action
       - name: Build Image
         id: build_image
@@ -220,7 +227,7 @@ jobs:
             ./ucore/Containerfile
           context: ./ucore
           tags: |
-            ${{ steps.meta.outputs.tags }}
+            ${{ steps.space-tags.outputs.tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
             FEDORA_VERSION=${{ env.FEDORA_VERSION }}
@@ -244,10 +251,9 @@ jobs:
           fi
           TAGS="${{ steps.meta.outputs.tags }}"
           IMAGE_TAGGED=${TAGS%%$'\n'*}
-          CONTAINER=$(echo $IMAGE_TAGGED | sed 's/:/-/')
-          podman run -d --rm --name "$CONTAINER" "$IMAGE_TAGGED" sleep 1000
-          podman cp "$CONTAINER":/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
-          podman rm -f  "$CONTAINER"
+          podman run -d --rm --name checksb "$IMAGE_TAGGED" sleep 1000
+          podman cp checksb:/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
+          podman rm -f  checksb
           sbverify --list vmlinuz
           curl --retry 3 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
           curl --retry 3 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
@@ -255,14 +261,6 @@ jobs:
           openssl x509 -in akmods.der -out akmods.crt
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
-
-      # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
-      # https://github.com/macbre/push-to-ghcr/issues/12
-      - name: Lowercase Registry
-        id: registry_case
-        uses: ASzc/change-string-case-action@d0603cd0a7dd490be678164909f65c7737470a7f # v6
-        with:
-          string: ${{ env.IMAGE_REGISTRY }}
 
       # Push the image to GHCR (Image Registry)
       - name: Push To GHCR
@@ -275,7 +273,6 @@ jobs:
         with:
           image: ${{ steps.build_image.outputs.image }}
           tags: ${{ steps.build_image.outputs.tags }}
-          registry: ${{ steps.registry_case.outputs.lowercase }}
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
           extra-args: |
@@ -298,7 +295,7 @@ jobs:
       - name: Sign container image
         if: github.event_name != 'pull_request'
         run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
           TAGS: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
