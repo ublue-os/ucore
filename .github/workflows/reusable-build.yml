@@ -130,6 +130,8 @@ jobs:
           set -x
           IMAGE_NAME=ucore${{ matrix.image_suffix }}
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
 
       - name: Pull base and kmod images
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
@@ -230,16 +232,11 @@ jobs:
 
           echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
 
-      - name: Get timestamp
-        id: timestamp
-        run: echo "ts=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
-
       # Build metadata
       - name: Image Metadata
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
         id: meta
         with:
-          env: COREOS_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}
           images: |
             ${{ env.IMAGE_NAME }}
           labels: |
@@ -250,16 +247,16 @@ jobs:
             org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
           tags: |
             # SHA tag (short)
-            type=sha,format=short,suffix=-${{ env.COREOS_VERSION }}
+            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
             # PR tag
-            type=ref,event=pr,suffix=-${{ env.COREOS_VERSION }}
+            type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
             # Tags only for push to main or workflow_dispatch on main
-            # COREOS_VERSION, COREOS_VERSION-TIMESTAMP
-            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0},priority=800\ntype=raw,value={0}-{1},priority=700', env.COREOS_VERSION, steps.timestamp.outputs.ts) || '' }}
-            # COREOS_VERSION-zfs, COREOS_VERSION-zfs-TIMESTAMP
-            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0}-zfs\ntype=raw,value={0}-zfs-{1}', env.COREOS_VERSION, steps.timestamp.outputs.ts) || '' }}
-            # latest only for COREOS_VERSION=stable
-            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.COREOS_VERSION == 'stable' }}
+            # TAG_VERSION, COREOS_VERSION-TIMESTAMP
+            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0},priority=800\ntype=raw,value={0}-{1},priority=700', env.TAG_VERSION, env.TIMESTAMP) || '' }}
+            # TAG_VERSION-zfs, TAG_VERSION-zfs-TIMESTAMP
+            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0}-zfs\ntype=raw,value={0}-zfs-{1}', env.TAG_VERSION, env.TIMESTAMP) || '' }}
+            # latest only for TAG_VERSION=stable
+            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
 
       # Build image using Buildah action
       - name: Build Image
