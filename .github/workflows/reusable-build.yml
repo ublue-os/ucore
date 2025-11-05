@@ -130,6 +130,8 @@ jobs:
           set -x
           IMAGE_NAME=ucore${{ matrix.image_suffix }}
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
 
       - name: Pull base and kmod images
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
@@ -186,50 +188,6 @@ jobs:
               exit 1
           fi
 
-      - name: Generate tags
-        id: generate-tags
-        shell: bash
-        run: |
-          # Generate a timestamp for creating an image version history
-          TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}"
-
-          COMMIT_TAGS=()
-          BUILD_TAGS=()
-
-          # Have tags for tracking builds during pull request
-          SHA_SHORT="${GITHUB_SHA::7}"
-          COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION}")
-          COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
-
-          BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
-          # always add the '-zfs' tag to each image since we include ZFS with them all
-          # and we want users of the existing '-zfs' images to still get updates
-          BUILD_TAGS+=("${COREOS_VERSION}-zfs")
-          BUILD_TAGS+=("${COREOS_VERSION}-zfs-${TIMESTAMP}")
-
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              echo "Generated the following commit tags: "
-              for TAG in "${COMMIT_TAGS[@]}"; do
-                  echo "${TAG}"
-              done
-
-              alias_tags=("${COMMIT_TAGS[@]}")
-          else
-              if [[ "${COREOS_VERSION}" == "stable" ]]; then
-                  BUILD_TAGS+=("latest")
-              fi
-
-              alias_tags=("${BUILD_TAGS[@]}")
-          fi
-
-          echo "Generated the following build tags: "
-          for TAG in "${BUILD_TAGS[@]}"; do
-              echo "${TAG}"
-          done
-
-          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
-
       # Build metadata
       - name: Image Metadata
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
@@ -243,6 +201,18 @@ jobs:
             org.opencontainers.image.description=${{ matrix.description }}
             org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
+          tags: |
+            # SHA tag (short)
+            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
+            # PR tag
+            type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
+            # Tags only for push to main or workflow_dispatch on main
+            # TAG_VERSION, COREOS_VERSION-TIMESTAMP
+            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0},priority=800\ntype=raw,value={0}-{1},priority=700', env.TAG_VERSION, env.TIMESTAMP) || '' }}
+            # TAG_VERSION-zfs, TAG_VERSION-zfs-TIMESTAMP
+            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0}-zfs\ntype=raw,value={0}-zfs-{1}', env.TAG_VERSION, env.TIMESTAMP) || '' }}
+            # latest only for TAG_VERSION=stable
+            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -252,9 +222,8 @@ jobs:
           containerfiles: |
             ./ucore/Containerfile
           context: ./ucore
-          image: ${{ env.IMAGE_NAME }}
           tags: |
-            ${{ steps.generate-tags.outputs.alias_tags }}
+            ${{ steps.meta.outputs.tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
             FEDORA_VERSION=${{ env.FEDORA_VERSION }}
@@ -276,9 +245,12 @@ jobs:
             sudo apt update
             sudo apt install sbsigntool curl openssl
           fi
-          podman run -d --rm --name ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) "${{ env.IMAGE_NAME }}":$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1) sleep 1000
-          podman cp ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1):/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
-          podman rm -f ${{env.IMAGE_NAME }}-$(echo "${{ steps.generate-tags.outputs.alias_tags }}" | cut -d " " -f 1)
+          TAGS="${{ steps.meta.outputs.tags }}"
+          IMAGE_TAGGED=${TAGS%%$'\n'*}
+          CONTAINER=$(echo $IMAGE_TAGGED | sed 's/:/-/')
+          podman run -d --rm --name "$CONTAINER" "$IMAGE_TAGGED" sleep 1000
+          podman cp "$CONTAINER":/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
+          podman rm -f  "$CONTAINER"
           sbverify --list vmlinuz
           curl --retry 3 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
           curl --retry 3 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
