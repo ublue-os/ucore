@@ -239,6 +239,7 @@ jobs:
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
         id: meta
         with:
+          env: COREOS_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}
           images: |
             ${{ env.IMAGE_NAME }}
           labels: |
