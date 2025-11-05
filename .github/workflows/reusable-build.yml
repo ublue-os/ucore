@@ -230,6 +230,10 @@ jobs:
 
           echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
 
+      - name: Get timestamp
+        id: timestamp
+        run: echo "ts=$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+
       # Build metadata
       - name: Image Metadata
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
@@ -243,6 +247,18 @@ jobs:
             org.opencontainers.image.description=${{ matrix.description }}
             org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
+          tags: |
+            # SHA tag (short)
+            type=sha,format=short,suffix=-${{ env.COREOS_VERSION }}
+            # PR tag
+            type=ref,event=pr,suffix=-${{ env.COREOS_VERSION }}
+            # Tags only for push to main or workflow_dispatch on main
+            # COREOS_VERSION, COREOS_VERSION-TIMESTAMP
+            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0},priority=800\ntype=raw,value={0}-{1},priority=700', env.COREOS_VERSION, steps.timestamp.outputs.ts) || '' }}
+            # COREOS_VERSION-zfs, COREOS_VERSION-zfs-TIMESTAMP
+            ${{ ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main') && format('type=raw,value={0}-zfs\ntype=raw,value={0}-zfs-{1}', env.COREOS_VERSION, steps.timestamp.outputs.ts) || '' }}
+            # latest only for COREOS_VERSION=stable
+            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && gthub.ref == 'refs/heads/main' && env.COREOS_VERSION == 'stable' }}
 
       # Build image using Buildah action
       - name: Build Image
@@ -254,7 +270,7 @@ jobs:
           context: ./ucore
           image: ${{ env.IMAGE_NAME }}
           tags: |
-            ${{ steps.generate-tags.outputs.alias_tags }}
+            ${{ steps.meta.outputs.tags }}
           build-args: |
             COREOS_VERSION=${{ inputs.coreos_version }}
             FEDORA_VERSION=${{ env.FEDORA_VERSION }}
