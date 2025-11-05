@@ -212,6 +212,7 @@ jobs:
       - name: Single Line (convert newlines to spaces)
         id: single-line
         run: |
+          # redhat/push-to-registry does NOT like multi-line tags
           tags="${{ steps.meta.outputs.tags }}"
           tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
@@ -264,7 +265,7 @@ jobs:
       - name: Push To GHCR
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: push
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         env:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_PASSWORD: ${{ github.token }}
@@ -282,13 +283,13 @@ jobs:
               --disable-content-trust
 
       - name: Echo push outputs
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         run: |
           echo "${{ toJSON(steps.push.outputs) }}"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -298,10 +299,10 @@ jobs:
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
         with:
           cosign-release: "v2.6.1"
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
 
       - name: Sign container image
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         run: |
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
