@@ -8,7 +8,6 @@ RELEASE="$(rpm -E %fedora)"
 pushd /tmp/rpms/kernel
 KERNEL_VERSION=$(find kernel-*.rpm | grep -P "kernel-(\d+\.\d+\.\d+)-.*\.fc${RELEASE}\.${ARCH}" | sed -E 's/kernel-//' | sed -E 's/\.rpm//')
 popd
-QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kernel-//')"
 
 #### PREPARE
 # enable testing repos if not enabled on testing stream
@@ -40,31 +39,31 @@ dnf -y install ublue-os-signing
 cp /usr/etc/containers/policy.json /etc/containers/policy.json
 rm -rf /usr/etc
 
-# Handle Kernel Skew with override replace
-if [[ "${KERNEL_VERSION}" == "${QUALIFIED_KERNEL}" ]]; then
-    echo "Installing signed kernel from kernel-cache."
-    cd /tmp
-    rpm2cpio /tmp/rpms/kernel/kernel-core-*.rpm | cpio -idmv
-    cp ./lib/modules/*/vmlinuz /usr/lib/modules/*/vmlinuz
-    cd /
-else
-    # Remove Existing Kernel
-    for pkg in kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra; do
-        if rpm -q $pkg >/dev/null 2>&1; then
-            rpm --erase $pkg --nodeps
-        fi
-    done
-    echo "Install kernel version ${KERNEL_VERSION} from kernel-cache."
-    dnf -y install \
-        /tmp/rpms/kernel/kernel-[0-9]*.rpm \
-        /tmp/rpms/kernel/kernel-core-*.rpm \
-        /tmp/rpms/kernel/kernel-modules-*.rpm
-fi
+# Replace Existing Kernel with packages from akmods cached kernel
+for pkg in kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra; do
+    if rpm -q $pkg >/dev/null 2>&1; then
+        rpm --erase $pkg --nodeps
+    fi
+done
+echo "Install kernel version ${KERNEL_VERSION} from kernel-cache."
+dnf -y install \
+    /tmp/rpms/kernel/kernel-[0-9]*.rpm \
+    /tmp/rpms/kernel/kernel-core-*.rpm \
+    /tmp/rpms/kernel/kernel-modules-*.rpm
+
+# Ensure kernel packages can't be updated by other dnf operations
+dnf versionlock add kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 
 ## ALWAYS: install ZFS (and sanoid deps)
 dnf -y install /tmp/rpms/akmods-zfs/kmods/zfs/*.rpm /tmp/rpms/akmods-zfs/kmods/zfs/other/zfs-dracut-*.rpm
 # for some reason depmod ran automatically with zfs 2.1 but not with 2.2
-depmod -a -v ${KERNEL_VERSION}
+echo "Update modules.dep, etc..."
+depmod -a "${KERNEL_VERSION}"
+
+# Regenerate initramfs, for new kernel and zfs; not including NVIDIA kmod
+QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kernel-//')"
+/usr/bin/dracut --no-hostonly --kver "$QUALIFIED_KERNEL" --reproducible -v --add ostree -f "/lib/modules/$QUALIFIED_KERNEL/initramfs.img"
+chmod 0600 "/lib/modules/$QUALIFIED_KERNEL/initramfs.img"
 
 ## CONDITIONAL: install NVIDIA
 if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
