@@ -237,7 +237,7 @@ jobs:
             PR_PREFIX=${{ env.PR_PREFIX }}
             NVIDIA_TAG=${{ matrix.nvidia_tag }}
           labels: ${{ steps.meta.outputs.labels }}
-          oci: false
+          oci: true
           extra-args: |
             --target=${{ env.IMAGE_NAME }}
 
