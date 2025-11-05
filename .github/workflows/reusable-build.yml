@@ -284,7 +284,7 @@ jobs:
       - name: Echo push outputs
         #if: github.event_name != 'pull_request'
         run: |
-          echo "${{ steps.push.outputs }}"
+          echo "${{ toJSON(steps.push.outputs) }}"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
