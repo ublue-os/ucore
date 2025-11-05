@@ -188,50 +188,6 @@ jobs:
               exit 1
           fi
 
-      - name: Generate tags
-        id: generate-tags
-        shell: bash
-        run: |
-          # Generate a timestamp for creating an image version history
-          TIMESTAMP="$(date +%Y%m%d)"
-          COREOS_VERSION="${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}"
-
-          COMMIT_TAGS=()
-          BUILD_TAGS=()
-
-          # Have tags for tracking builds during pull request
-          SHA_SHORT="${GITHUB_SHA::7}"
-          COMMIT_TAGS+=("pr-${{ github.event.number }}-${COREOS_VERSION}")
-          COMMIT_TAGS+=("${SHA_SHORT}-${COREOS_VERSION}")
-
-          BUILD_TAGS=("${COREOS_VERSION}" "${COREOS_VERSION}-${TIMESTAMP}")
-          # always add the '-zfs' tag to each image since we include ZFS with them all
-          # and we want users of the existing '-zfs' images to still get updates
-          BUILD_TAGS+=("${COREOS_VERSION}-zfs")
-          BUILD_TAGS+=("${COREOS_VERSION}-zfs-${TIMESTAMP}")
-
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              echo "Generated the following commit tags: "
-              for TAG in "${COMMIT_TAGS[@]}"; do
-                  echo "${TAG}"
-              done
-
-              alias_tags=("${COMMIT_TAGS[@]}")
-          else
-              if [[ "${COREOS_VERSION}" == "stable" ]]; then
-                  BUILD_TAGS+=("latest")
-              fi
-
-              alias_tags=("${BUILD_TAGS[@]}")
-          fi
-
-          echo "Generated the following build tags: "
-          for TAG in "${BUILD_TAGS[@]}"; do
-              echo "${TAG}"
-          done
-
-          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
-
       # Build metadata
       - name: Image Metadata
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
