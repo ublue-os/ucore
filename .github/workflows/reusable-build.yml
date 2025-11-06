@@ -104,8 +104,8 @@ jobs:
             stream-info.env
           retention-days: 7
 
-  build_ucore:
-    name: "ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
+  build:
+    name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     if: needs.workflow_info.result == 'success' && needs.stream_info.result == 'success' && !cancelled()
     needs: [workflow_info, stream_info]
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
@@ -312,7 +312,7 @@ jobs:
           retention-days: 7
 
   push_and_sign:
-    name: "Push manifests and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
+    name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
     if: needs.workflow_info.result == 'success' && needs.build_ucore.result == 'success' && !cancelled() #&& github.event_name != 'pull_request'
     needs: [workflow_info, build_ucore]
@@ -385,8 +385,8 @@ jobs:
 
           # Collect image references from all arches in artifacts
           IMAGE_REFS=()
-          for IMAGE_ENV in images/image${{ matrix.image_suffix }}*/image.env; do
-            source "$IMAGE_ENV"
+          for IMAGE_ENV in $(find images -type f -path "images/image${{ matrix.image_suffix }}*/image.env"); do
+            source "$IMAGE_ENV" # provides IMAGE_REF and IMAGE_ARCH
             IMAGE_REFS+=("$IMAGE_REF")
             echo "Importing ${IMAGE_REF:?} for architecture ${IMAGE_ARCH:?}"
             buildah pull --arch="${IMAGE_ARCH:?}" "${IMAGE_REF:?}"
@@ -395,7 +395,7 @@ jobs:
           echo
           echo "Creating manifest for $IMAGE_NAME"
           # Pick labels.txt from any of the arches in artifacts (identical for all images in each variant)
-          LABELS_FILE=$(ls images/image-${{ matrix.variant }}-*/labels.txt | head -n1)
+          LABELS FILE-$(find images -type f -path "images/image${{ matrix.image_suffix }}*/labels.txt" | head -n1)
           buildah manifest create --annotation="$(
             cat $LABELS_FILE | \
               head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
