@@ -357,11 +357,12 @@ jobs:
           pattern: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-*
           path: images
 
-      - name: Manifest Meta Primary Tag
+      - name: Manifest Singular Tag
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
-        id: primary
+        id: singular
         with:
           tags: |
+            # only this one tag for use as the singular manifest tag
             type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
 
       - name: Manifest Meta Tags
@@ -381,9 +382,6 @@ jobs:
         id: single-line
         run: |
           # redhat/push-to-registry does NOT like multi-line tags
-          primary="${{ steps.primary.outputs.tags }}"
-          primary_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
-          echo "primary=${primary_space}" >> $GITHUB_OUTPUT
           tags="${{ steps.meta.outputs.tags }}"
           tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
@@ -409,11 +407,11 @@ jobs:
           buildah manifest create --annotation="$(
             cat $LABELS_FILE | \
               head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
-          )" "${IMAGE_NAME:?}:${{ steps.single-line.outputs.primary }}"
+          )" "${IMAGE_NAME:?}:${{ steps.singular.outputs.tags }}"
 
           for IMAGE_REF in "${IMAGE_REFS[@]}"; do
             echo "Adding ${IMAGE_REF:?} to manifest"
-            buildah manifest add "${IMAGE_NAME:?}:${{ steps.single-line.outputs.primary }}" "$IMAGE_REF"
+            buildah manifest add "${IMAGE_NAME:?}:${{ steps.singular.outputs.tags }}" "$IMAGE_REF"
           done
 
           echo
