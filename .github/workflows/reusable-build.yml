@@ -320,9 +320,6 @@ jobs:
       actions: read
       contents: read
       packages: write
-    container:
-      image: "quay.io/fedora/fedora-toolbox:latest" # must have git pre-installed else could use bare fedora
-      options: "--privileged --volume /var/lib/containers:/var/lib/containers --security-opt seccomp=unconfined --security-opt label=disable --user 0:0"
     strategy:
       fail-fast: false
       matrix:
@@ -334,16 +331,6 @@ jobs:
           #- "-nvidia"
           - ""
     steps:
-      - name: Install build tools
-        shell: bash
-        run: |
-          set -x
-          dnf install -y --setopt=install_weak_deps=False \
-            buildah \
-            jq \
-            podman \
-            skopeo
-
       - name: Set matrix environment variables
         shell: bash
         run: |
@@ -377,6 +364,23 @@ jobs:
           tags="${{ steps.meta.outputs.tags }}"
           tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
+
+      - name: Update Buildah
+        run: |
+          set -euo pipefail
+
+          case "$(uname -m)" in
+            x86_64) IMAGE_ARCH='amd64' ;;
+            aarch64) IMAGE_ARCH='arm64' ;;
+            *) printf "Invalid architecture" >&2; exit 1 ;;
+          esac
+
+          echo "Installing up to date buildah for $IMAGE_ARCH"
+          curl -fsSL https://github.com/bsherman/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH:?}.tar.gz \
+            | tar -xzf - -C /usr/local/bin/
+
+          # Workaround issues between custom buildah installation and apparmor
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=
 
       - name: Create multi-arch manifest
         shell: bash
