@@ -104,7 +104,7 @@ jobs:
             stream-info.env
           retention-days: 7
 
-  build:
+  build_image:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     if: needs.workflow_info.result == 'success' && needs.stream_info.result == 'success' && !cancelled()
     needs: [workflow_info, stream_info]
@@ -314,8 +314,8 @@ jobs:
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
-    if: needs.workflow_info.result == 'success' && needs.build_ucore.result == 'success' && !cancelled() #&& github.event_name != 'pull_request'
-    needs: [workflow_info, build_ucore]
+    if: needs.workflow_info.result == 'success' && needs.build_image.result == 'success' && !cancelled() #&& github.event_name != 'pull_request'
+    needs: [workflow_info, build_image]
     permissions:
       actions: read
       contents: read
