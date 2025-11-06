@@ -47,18 +47,13 @@ jobs:
 
   stream_info:
     name: Stream Info ${{ matrix.arch }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
     permissions:
       actions: write
     strategy:
       fail-fast: false
       matrix:
         arch: ${{ fromJson(inputs.arch) }}
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
@@ -111,7 +106,7 @@ jobs:
     name: ucore${{ matrix.image_suffix }} ${{ matrix.arch }}
     if: needs.workflow_info.result == 'success' && needs.stream_info.result == 'success' && !cancelled()
     needs: [workflow_info, stream_info]
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
     permissions:
       contents: read
       packages: write
@@ -130,10 +125,6 @@ jobs:
           - "-nvidia"
           - ""
         include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
