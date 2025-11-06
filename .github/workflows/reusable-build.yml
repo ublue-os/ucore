@@ -321,7 +321,7 @@ jobs:
       contents: read
       packages: write
     container:
-      image: "quay.io/fedora/fedora-coreos:stable"
+      image: "quay.io/fedora/fedora:latest"
       options: "--privileged --volume /var/lib/containers:/var/lib/containers --security-opt seccomp=unconfined --security-opt label=disable --user 0:0"
     strategy:
       fail-fast: false
@@ -338,7 +338,11 @@ jobs:
         shell: bash
         run: |
           set -x
-          dnf install -y buildah jq skopeo
+          dnf install -y --setopt=install_weak_deps=False \
+            buildah \
+            jq \
+            podman \
+            skopeo
 
       - name: Set matrix environment variables
         shell: bash
@@ -401,7 +405,7 @@ jobs:
           echo
           echo "Creating manifest for $IMAGE_NAME"
           # Pick labels.txt from any of the arches in artifacts (identical for all images in each variant)
-          LABELS_FILE-$(find images -type f -path "images/image${{ matrix.image_suffix }}*/labels.txt" | head -n1)
+          LABELS_FILE=$(find images -type f -path "images/image${{ matrix.image_suffix }}*/labels.txt" | head -n1)
           buildah manifest create --annotation="$(
             cat $LABELS_FILE | \
               head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
