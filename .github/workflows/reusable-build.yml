@@ -395,7 +395,7 @@ jobs:
           echo
           echo "Creating manifest for $IMAGE_NAME"
           # Pick labels.txt from any of the arches in artifacts (identical for all images in each variant)
-          LABELS FILE-$(find images -type f -path "images/image${{ matrix.image_suffix }}*/labels.txt" | head -n1)
+          LABELS_FILE-$(find images -type f -path "images/image${{ matrix.image_suffix }}*/labels.txt" | head -n1)
           buildah manifest create --annotation="$(
             cat $LABELS_FILE | \
               head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
