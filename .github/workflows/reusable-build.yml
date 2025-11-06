@@ -272,7 +272,7 @@ jobs:
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
 
-      - name: Push to Registry
+      - name: Push Image to Registry
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: push
         #if: github.event_name != 'pull_request'
@@ -295,9 +295,11 @@ jobs:
       - name: Save image metadata
         #if: github.event_name != 'pull_request'
         run: |
-          echo "${{ steps.build_image.outputs.image-with-tag }}" > image.txt
+          set -x
+          echo "IMAGE_ARCH=${{ matrix.arch }}" >> image.env
+          echo "IMAGE_DIGEST=${{ fromJSON(steps.push.outputs.outputs).digest }}" >> image.env
+          echo "IMAGE_REF=${{ fromJSON(steps.push.outputs.outputs).registry-path }}" >> image.env
           echo "${{ steps.meta.outputs.labels }}" > labels.txt
-          echo "${{ steps.push.outputs.outputs }}" > push-output.json
 
       - name: Upload image metadata as artifact
         #if: github.event_name != 'pull_request'
@@ -305,13 +307,12 @@ jobs:
         with:
           name: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}
           path: |
-            image.txt
+            image.env
             labels.txt
-            push-output.json
           retention-days: 7
 
   push_and_sign:
-    name: "Push manifests and sign: (${{ matrix.poetry }}, ${{ matrix.variant }})"
+    name: "Push manifests and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
     if: needs.workflow_info.result == 'success' && needs.build_ucore.result == 'success' && !cancelled() #&& github.event_name != 'pull_request'
     needs: [workflow_info, build_ucore]
@@ -319,6 +320,9 @@ jobs:
       actions: read
       contents: read
       packages: write
+    container:
+      image: "ghcr.io/ublue-os/devcontainer:latest"
+      options: "--privileged --volume /var/lib/containers:/var/lib/containers --security-opt seccomp=unconfined --security-opt label=disable --user 0:0"
     strategy:
       fail-fast: false
       matrix:
@@ -334,15 +338,23 @@ jobs:
         shell: bash
         run: |
           set -x
+          echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
           echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
 
       - name: Download image artifacts
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          pattern: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}
-          path: .
+          pattern: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-*
+          path: images
 
-      - name: Manifest Metadata
+      - name: Manifest Meta Primary Tag
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
+        id: primary
+        with:
+          tags: |
+            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
+
+      - name: Manifest Meta Tags
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
         id: meta
         with:
@@ -350,21 +362,72 @@ jobs:
             type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
             type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
             # Tags only for push to main or workflow_dispatch on main
-            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
-
-      # TODO: create manifest and push
+            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=latest,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
 
       - name: Single Line (convert newlines to spaces)
         id: single-line
         run: |
           # redhat/push-to-registry does NOT like multi-line tags
+          primary="${{ steps.primary.outputs.tags }}"
+          primary_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
+          echo "primary=${primary_space}" >> $GITHUB_OUTPUT
           tags="${{ steps.meta.outputs.tags }}"
           tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
+
+      - name: Create multi-arch manifest
+        shell: bash
+        run: |
+          set -xeuo pipefail
+
+          # Collect image references from all arches in artifacts
+          IMAGE_REFS=()
+          for IMAGE_ENV in images/image${{ matrix.image_suffix }}*/image.env; do
+            source "$IMAGE_ENV"
+            IMAGE_REFS+=("$IMAGE_REF")
+            echo "Importing ${IMAGE_REF:?} for architecture ${IMAGE_ARCH:?}"
+            buildah pull --arch="${IMAGE_ARCH:?}" "${IMAGE_REF:?}"
+          done
+
+          echo
+          echo "Creating manifest for $IMAGE_NAME"
+          # Pick labels.txt from any of the arches in artifacts (identical for all images in each variant)
+          LABELS_FILE=$(ls images/image-${{ matrix.variant }}-*/labels.txt | head -n1)
+          buildah manifest create --annotation="$(
+            cat $LABELS_FILE | \
+              head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
+          )" "${IMAGE_NAME:?}:${{ steps.single-line.outputs.primary }}"
+
+          for IMAGE_REF in "${IMAGE_REFS[@]}"; do
+            echo "Adding ${IMAGE_REF:?} to manifest"
+            buildah manifest add "${IMAGE_NAME:?}:${{ steps.single-line.outputs.primary }}" "$IMAGE_REF"
+          done
+
+          echo
+          echo 'Final manifest contents:'
+          buildah manifest inspect "${IMAGE_NAME:?}"
+
+      - name: Push Manifest to GHCR
+        if: github.event_name != 'pull_request'
+        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        id: push
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+        with:
+          action: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
+          attempt_limit: 3
+          attempt_delay: 15000
+          with: |
+            image:
+            tags:  ${{ steps.single-line.outputs.tags }}
+            registry: ${{ env.IMAGE_REGISTRY }}
+            username: ${{ env.REGISTRY_USER }}
+            password: ${{ env.REGISTRY_PASSWORD }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
