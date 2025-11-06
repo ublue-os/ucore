@@ -308,7 +308,7 @@ jobs:
         #if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: image${{ matrix.image_suffix }}${{ nvidia_tag }}-${{ matrix.arch }}
+          name: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}
           path: |
             image.txt
             labels.txt
