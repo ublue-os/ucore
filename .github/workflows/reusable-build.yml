@@ -380,7 +380,7 @@ jobs:
             | tar -xzf - -C /usr/local/bin/
 
           # Workaround issues between custom buildah installation and apparmor
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Create multi-arch manifest
         shell: bash
