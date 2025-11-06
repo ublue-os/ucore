@@ -357,14 +357,6 @@ jobs:
           pattern: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-*
           path: images
 
-      - name: Manifest Singular Tag
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
-        id: singular
-        with:
-          tags: |
-            # only this one tag for use as the singular manifest tag
-            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
-
       - name: Manifest Meta Tags
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
         id: meta
@@ -407,11 +399,11 @@ jobs:
           buildah manifest create --annotation="$(
             cat $LABELS_FILE | \
               head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
-          )" "${IMAGE_NAME:?}:${{ steps.singular.outputs.tags }}"
+          )" "${IMAGE_NAME:?}"
 
           for IMAGE_REF in "${IMAGE_REFS[@]}"; do
             echo "Adding ${IMAGE_REF:?} to manifest"
-            buildah manifest add "${IMAGE_NAME:?}:${{ steps.singular.outputs.tags }}" "$IMAGE_REF"
+            buildah manifest add "${IMAGE_NAME:?}" "$IMAGE_REF"
           done
 
           echo
@@ -430,7 +422,7 @@ jobs:
           attempt_limit: 3
           attempt_delay: 15000
           with: |
-            image:
+            image: ${{ env.IMAGE_NAME }}
             tags:  ${{ steps.single-line.outputs.tags }}
             registry: ${{ env.IMAGE_REGISTRY }}
             username: ${{ env.REGISTRY_USER }}
