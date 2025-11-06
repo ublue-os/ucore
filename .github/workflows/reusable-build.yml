@@ -23,6 +23,8 @@ jobs:
   workflow_info:
     name: Workflow Info
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     outputs:
       date: ${{ steps.date.outputs.date }}
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
@@ -46,7 +48,7 @@ jobs:
           echo "${{ toJSON(steps.pr_prefix.outputs) }}"
 
   stream_info:
-    name: Stream Info ${{ matrix.arch }}
+    name: "Stream Info: ${{ matrix.arch }}"
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
     permissions:
       actions: write
@@ -103,11 +105,12 @@ jobs:
           retention-days: 7
 
   build_ucore:
-    name: ucore${{ matrix.image_suffix }} ${{ matrix.arch }}
+    name: "ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     if: needs.workflow_info.result == 'success' && needs.stream_info.result == 'success' && !cancelled()
     needs: [workflow_info, stream_info]
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
     permissions:
+      actions: write
       contents: read
       packages: write
     env:
@@ -119,19 +122,18 @@ jobs:
         arch: ${{ fromJson(inputs.arch) }}
         image_suffix:
           - "-minimal"
-          - ""
-          - "-hci"
+          #- ""
+          #- "-hci"
         nvidia_tag:
-          - "-nvidia"
+          #- "-nvidia"
           - ""
         include:
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
-          - image_suffix: ""
-            description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
-          - image_suffix: "-hci"
-            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
-
+          #- image_suffix: ""
+          #  description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
+          #- image_suffix: "-hci"
+          #  description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
@@ -273,7 +275,7 @@ jobs:
       - name: Push to Registry
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: push
-        if: github.event_name != 'pull_request'
+        #if: github.event_name != 'pull_request'
         env:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_PASSWORD: ${{ github.token }}
@@ -291,35 +293,83 @@ jobs:
               --disable-content-trust
 
       - name: Echo push outputs
-        if: github.event_name != 'pull_request'
+        #if: github.event_name != 'pull_request'
         run: |
-          echo "${{ toJSON(steps.push.outputs) }}"
+          echo "${{ fromJSON(steps.push.outputs) }}"
 
-      # TODO: add conditional publish of image meta as artifact
-      # TODO: add manifest combine and publish
+      - name: Save image metadata
+        #if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ steps.build.outputs.image-with-tag }}" > image.txt
+          echo "${{ steps.meta.outputs.labels }}" > labels.txt
+          echo "${{ fromJSON(steps.push.outputs) }}" > push-output.json
 
-      # TODO use later for manifest
-      # - name: Manifest Metadata
-      #   uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
-      #   id: meta
-      #   with:
-      #     tags: |
-      #       type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
-      #       type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
-      #       # Tags only for push to main or workflow_dispatch on main
-      #       type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-      #       type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-      #       type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-      #       type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-      #       type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
-      #
-      # - name: Single Line (convert newlines to spaces)
-      #   id: single-line
-      #   run: |
-      #     # redhat/push-to-registry does NOT like multi-line tags
-      #     tags="${{ steps.meta.outputs.tags }}"
-      #     tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
-      #     echo "tags=${tags_space}" >> $GITHUB_OUTPUT
+      - name: Upload image metadata as artifact
+        #if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: image${{ matrix.image_suffix }}${{ nvidia_tag }}-${{ matrix.arch }}
+          path: |
+            image.txt
+            labels.txt
+            push-output.json
+          retention-days: 7
+
+  push_and_sign:
+    name: "Push manifests and sign: (${{ matrix.poetry }}, ${{ matrix.variant }})"
+    runs-on: ubuntu-24.04
+    if: needs.workflow_info.result == 'success' && needs.build_ucore.result == 'success' && !cancelled() #&& github.event_name != 'pull_request'
+    needs: [workflow_info, build_ucore]
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image_suffix:
+          - "-minimal"
+          #- ""
+          #- "-hci"
+        nvidia_tag:
+          #- "-nvidia"
+          - ""
+    steps:
+      - name: Set matrix environment variables
+        shell: bash
+        run: |
+          set -x
+          echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
+
+      - name: Download image artifacts
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          pattern: image${{ matrix.image_suffix }}${{ nvidia_tag }}-${{ matrix.arch }}
+          path: .
+
+      - name: Manifest Metadata
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
+        id: meta
+        with:
+          tags: |
+            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
+            type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
+            # Tags only for push to main or workflow_dispatch on main
+            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
+
+      # TODO: create manifest and push
+
+      - name: Single Line (convert newlines to spaces)
+        id: single-line
+        run: |
+          # redhat/push-to-registry does NOT like multi-line tags
+          tags="${{ steps.meta.outputs.tags }}"
+          tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
+          echo "tags=${tags_space}" >> $GITHUB_OUTPUT
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
@@ -347,7 +397,8 @@ jobs:
   check:
     name: Check all successful
     runs-on: ubuntu-latest
-    needs: [build_ucore]
+    needs: [push_and_sign]
+    permissions: {}
     steps:
       - name: Exit
         shell: bash
