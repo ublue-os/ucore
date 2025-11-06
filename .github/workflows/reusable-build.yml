@@ -55,9 +55,9 @@ jobs:
       matrix:
         arch: ${{ fromJson(inputs.arch) }}
         include:
-          - arch: amd64
+          - arch: x86_64
             runner: ubuntu-24.04
-          - arch: arm64
+          - arch: aarch64
             runner: ubuntu-24.04-arm
     steps:
       - name: Fetch CoreOS stream versions
@@ -130,9 +130,9 @@ jobs:
           - "-nvidia"
           - ""
         include:
-          - arch: amd64
+          - arch: x86_64
             runner: ubuntu-24.04
-          - arch: arm64
+          - arch: aarch64
             runner: ubuntu-24.04-arm
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
