@@ -6,6 +6,12 @@ on:
         description: "The CoreOS stream: stable or testing"
         required: true
         type: string
+      arch:
+        description: "JSON string of architectures to build, '[aarch64, x86_64]'"
+        default: "['x86_64']"
+        required: false
+        type: string
+
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
@@ -15,11 +21,15 @@ concurrency:
 
 jobs:
   workflow_info:
-    name: Get Workflow Info
+    name: Workflow Info
     runs-on: ubuntu-24.04
     outputs:
+      date: ${{ steps.date.outputs.date }}
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
       - name: Set PR Prefix
         id: pr_prefix
         shell: bash
@@ -32,15 +42,23 @@ jobs:
           echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
+          echo "${{ toJSON(steps.date.outputs) }}"
           echo "${{ toJSON(steps.pr_prefix.outputs) }}"
 
   stream_info:
-    name: Get Stream Info
-    runs-on: ubuntu-24.04
-    outputs:
-      fedora: ${{ fromJSON(steps.fetch.outputs.outputs).fedora}}
-      image: ${{ fromJSON(steps.fetch.outputs.outputs).image}}
-      kernel: ${{ fromJSON(steps.fetch.outputs.outputs).kernel}}
+    name: Stream Info ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJson(inputs.arch) }}
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
@@ -55,54 +73,55 @@ jobs:
 
             image=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
             if [ -z "$image" ] || [ "null" = "$image" ]; then
-                echo "inspected image version must not be empty or null"
-                exit 1
+              echo "inspected image version must not be empty or null" >&2
+              exit 1
             fi
 
             if [[ "${image}" =~ "42.20250410.3" ]]; then
-                echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.* to 41.20250331.3.0"
-                image="41.20250331.3.0"
+              echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.* to 41.20250331.3.0" >&2
+              image="41.20250331.3.0"
             fi
 
             fedora=$(echo "$image" | cut -f1 -d.)
             if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
-                echo "fedora version must not be empty or null"
-                exit 1
+              echo "fedora version must not be empty or null" >&2
+              exit 1
             fi
 
             kernel=$(skopeo inspect docker://ghcr.io/ublue-os/akmods:coreos-${{ inputs.coreos_version }}-${fedora} | jq -r '.["Labels"]["ostree.linux"]')
             if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
-                echo "inspected linux (kernel) version must not be empty or null"
-                exit 1
+              echo "inspected linux (kernel) version must not be empty or null" >&2
+              exit 1
             fi
 
+            echo "FEDORA_VERSION=${fedora}" > stream-info.env
+            echo "IMAGE_VERSION=${image}" >> stream-info.env
+            echo "KERNEL_VERSION=${kernel}" >> stream-info.env
 
-            echo "kernel=$kernel" >> $GITHUB_OUTPUT
-            echo "image=$image" >> $GITHUB_OUTPUT
-            echo "fedora=$fedora" >> $GITHUB_OUTPUT
-      - name: Echo outputs
-        run: |
-          echo "${{ steps.fetch.outputs.outputs }}"
+            cat stream-info.env
+      - name: Upload stream info as artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: stream-info-${{ matrix.arch }}
+          path: |
+            stream-info.env
+          retention-days: 7
 
   build_ucore:
-    name: ucore
-    runs-on: ubuntu-24.04
-    if: always() && !cancelled()
+    name: ucore${{ matrix.image_suffix }} ${{ matrix.arch }}
+    if: needs.workflow_info.result == 'success' && needs.stream_info.result == 'success' && !cancelled()
     needs: [workflow_info, stream_info]
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
-      id-token: write
     env:
-      FEDORA_VERSION: ${{ needs.stream_info.outputs.fedora}}
-      IMAGE_VERSION: ${{ needs.stream_info.outputs.image}}
       KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
-      KERNEL_VERSION: ${{ needs.stream_info.outputs.kernel}}
       PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
-
     strategy:
       fail-fast: false
       matrix:
+        arch: ${{ fromJson(inputs.arch) }}
         image_suffix:
           - "-minimal"
           - ""
@@ -111,6 +130,10 @@ jobs:
           - "-nvidia"
           - ""
         include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
@@ -119,19 +142,22 @@ jobs:
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
 
     steps:
-      # Checkout push-to-registry action GitHub repository
-      - name: Checkout Push to Registry action
+      - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
-      # sent env variables which depend on the matrix
-      - name: Matrix variables
+      - name: Download stream info artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: stream-info-${{ matrix.arch }}
+          path: .
+
+      - name: Set matrix environment variables
         shell: bash
         run: |
           set -x
-          IMAGE_NAME=ucore${{ matrix.image_suffix }}
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
           echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
-          echo "TIMESTAMP=$(date +%Y%m%d)" >> $GITHUB_ENV
+          cat stream-info.env >> $GITHUB_ENV
 
       - name: Pull base and kmod images
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
@@ -148,31 +174,30 @@ jobs:
             podman pull ${{ env.IMAGE_REGISTRY }}/config:latest
 
       - name: Verify versions (image, kernel, zfs)
-        shell: bash
         run: |
           set -x
           if [ -z "${{ env.FEDORA_VERSION }}" ] || [ "null" = "${{ env.FEDORA_VERSION }}" ]; then
-              echo "env.FEDORA_VERSION must not be empty or null"
+              echo "env.FEDORA_VERSION must not be empty or null" >&2
               exit 1
           fi
           if [ -z "${{ env.IMAGE_VERSION }}" ] || [ "null" = "${{ env.IMAGE_VERSION }}" ]; then
-              echo "env.IMAGE_VERSION must not be empty or null"
+              echo "env.IMAGE_VERSION must not be empty or null" >&2
               exit 1
           fi
           if [ -z "${{ env.KERNEL_VERSION }}" ] || [ "null" = "${{ env.KERNEL_VERSION }}" ]; then
-              echo "env.KERNEL_VERSION must not be empty or null"
+              echo "env.KERNEL_VERSION must not be empty or null" >&2
               exit 1
           fi
           podman inspect ${{ env.IMAGE_REGISTRY }}/akmods:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              echo "pulled akmods image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})" >&2
               exit 1
           fi
           podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})" >&2
               exit 1
           fi
 
@@ -188,7 +213,6 @@ jobs:
               exit 1
           fi
 
-      # Build metadata
       - name: Image Metadata
         uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
         id: meta
@@ -200,14 +224,9 @@ jobs:
             org.opencontainers.image.title=${{ env.IMAGE_NAME }}
             org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
           tags: |
-            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
-            type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
-            # Tags only for push to main or workflow_dispatch on main
-            type=raw,value=${{ env.TAG_VERSION }}-${{ env.TIMESTAMP }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ env.TIMESTAMP }},priority=700,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
-            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
+            # multi-arch build must have only the single tag here
+            # other tags are added to manifest later
+            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}-${{ matrix.arch }}
 
       - name: Single Line (convert newlines to spaces)
         id: single-line
@@ -217,7 +236,6 @@ jobs:
           tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
 
-      # Build image using Buildah action
       - name: Build Image
         id: build_image
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
@@ -261,8 +279,7 @@ jobs:
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
 
-      # Push the image to GHCR (Image Registry)
-      - name: Push To GHCR
+      - name: Push to Registry
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: push
         if: github.event_name != 'pull_request'
@@ -286,6 +303,32 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           echo "${{ toJSON(steps.push.outputs) }}"
+
+      # TODO: add conditional publish of image meta as artifact
+      # TODO: add manifest combine and publish
+
+      # TODO use later for manifest
+      # - name: Manifest Metadata
+      #   uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
+      #   id: meta
+      #   with:
+      #     tags: |
+      #       type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
+      #       type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
+      #       # Tags only for push to main or workflow_dispatch on main
+      #       type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+      #       type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+      #       type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+      #       type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+      #       type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && env.TAG_VERSION == 'stable' }}
+      #
+      # - name: Single Line (convert newlines to spaces)
+      #   id: single-line
+      #   run: |
+      #     # redhat/push-to-registry does NOT like multi-line tags
+      #     tags="${{ steps.meta.outputs.tags }}"
+      #     tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
+      #     echo "tags=${tags_space}" >> $GITHUB_OUTPUT
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
