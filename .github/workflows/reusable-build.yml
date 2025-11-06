@@ -361,12 +361,11 @@ jobs:
           tags: |
             type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
             type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
-            # Tags only for push to main or workflow_dispatch on main
-            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=latest,enable=${{ contains(['push','workflow_dispatch','schedule'], github.event_name) && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
+            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
 
       - name: Single Line (convert newlines to spaces)
         id: single-line
