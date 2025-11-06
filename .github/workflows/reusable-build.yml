@@ -292,15 +292,10 @@ jobs:
             extra-args: |
               --disable-content-trust
 
-      - name: Echo push outputs
-        #if: github.event_name != 'pull_request'
-        run: |
-          echo "${{ fromJSON(steps.push.outputs.outputs) }}"
-
       - name: Save image metadata
         #if: github.event_name != 'pull_request'
         run: |
-          echo "${{ steps.build.outputs.image-with-tag }}" > image.txt
+          echo "${{ steps.build_image.outputs.image-with-tag }}" > image.txt
           echo "${{ steps.meta.outputs.labels }}" > labels.txt
           echo "${{ steps.push.outputs.outputs }}" > push-output.json
 
