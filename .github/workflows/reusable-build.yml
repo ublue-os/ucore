@@ -334,6 +334,12 @@ jobs:
           #- "-nvidia"
           - ""
     steps:
+      - name: Install build tools
+        shell: bash
+        run: |
+          set -x
+          dnf install -y buildah jq skopeo
+
       - name: Set matrix environment variables
         shell: bash
         run: |
