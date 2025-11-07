@@ -413,13 +413,13 @@ jobs:
           echo
           echo 'Final manifest contents:'
           buildah manifest inspect "${IMAGE_NAME:?}"
+          echo
+          echo 'Podman image state:'
+          podman images
 
       - name: Push Manifest to GHCR
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: push
-        env:
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_PASSWORD: ${{ github.token }}
         with:
           action: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
           attempt_limit: 3
@@ -428,8 +428,8 @@ jobs:
             image: ${{ env.IMAGE_NAME }}
             tags:  ${{ steps.single-line.outputs.tags }}
             registry: ${{ env.IMAGE_REGISTRY }}
-            username: ${{ env.REGISTRY_USER }}
-            password: ${{ env.REGISTRY_PASSWORD }}
+            username: ${{ github.actor }}
+            password: ${{ github.token }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
