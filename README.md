@@ -45,7 +45,7 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Announcements
 
-### 2025.11.08 - uCore aarch64(ARM64) is Available!
+### 2025.11.08 - uCore aarch64(ARM64) is Available
 
 It's been [over two years](https://github.com/ublue-os/ucore/issues/15) since originally requested, but ARM64 is finally available in uCore builds!
 
@@ -54,6 +54,7 @@ The container image build process has been updated to publish multi-arch manifes
 Known differences between architectures will include different firmwares and a lack of Intel specific packages on `aarch64` (eg, `intel-compute-runtime` is obviously not available).
 
 Caveats:
+
 - minimal testing has been done with these images (they've been installed & lightly used in VMs), though upstream `aarch64` has been available for a long time, so concern is low.
 - `mergerfs` is not yet available for `aarch64`; its next release will include both Fedora 43 and `aarch64` packages.
 
