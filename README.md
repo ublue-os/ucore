@@ -238,7 +238,7 @@ To rebase an existing CoreOS machine to the latest uCore:
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 ```
 
-#### Verified Image Updates
+**Verified Image Updates**
 
 The `ucore*` images include container policies to support image verification for improved trust of upgrades. Once running one of the `ucore*` images, the following command will rebase to the verified image reference:
 
@@ -468,7 +468,7 @@ sudo setsebool -P samba_export_all_rw 1
 
 There is [much to read](https://linux.die.net/man/8/samba_selinux) on this topic.
 
-##### Shares: Samba
+**Shares - Samba**
 
 Samba shares can be manually configured in `/etc/samba/smb.conf` (see docs), but user shares are also a good option.
 
