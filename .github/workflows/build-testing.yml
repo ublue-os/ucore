@@ -16,3 +16,4 @@ jobs:
     secrets: inherit
     with:
       coreos_version: testing
+      arch: "['aarch64','x86_64']"

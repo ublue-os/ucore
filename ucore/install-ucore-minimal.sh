@@ -79,6 +79,11 @@ if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
         nvidia-container-toolkit
 fi
 
+## CONDITIONAL: install packages specific to x86_64
+if [[ "x86_64" == "${ARCH}" ]]; then
+    dnf -y install intel-compute-runtime
+fi
+
 ## ALWAYS: install regular packages
 
 # add tailscale repo
