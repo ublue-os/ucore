@@ -311,27 +311,11 @@ jobs:
             labels.txt
           retention-days: 7
 
-  check_builds:
-    name: Check builds successful
-    runs-on: ubuntu-latest
-    needs: [build_image]
-    permissions: {}
-    steps:
-      - name: Exit
-        env:
-          RESULT: ${{ needs.build_image.result }}
-        run: |
-          if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
-            exit 0
-          else
-            exit 1
-          fi
-
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
-    if: needs.check_builds.result == 'success' && !cancelled() && github.event_name != 'pull_request'
-    needs: [workflow_info, check_builds, build_image]
+    if: needs.build_image.result == 'success' && !cancelled() && github.event_name != 'pull_request'
+    needs: [workflow_info, build_image]
     permissions:
       actions: read
       contents: read
