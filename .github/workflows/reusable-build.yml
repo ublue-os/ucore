@@ -122,18 +122,18 @@ jobs:
         arch: ${{ fromJson(inputs.arch) }}
         image_suffix:
           - "-minimal"
-          #- ""
-          #- "-hci"
+          - ""
+          - "-hci"
         nvidia_tag:
-          #- "-nvidia"
+          - "-nvidia"
           - ""
         include:
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
-          #- image_suffix: ""
-          #  description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
-          #- image_suffix: "-hci"
-          #  description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
+          - image_suffix: ""
+            description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
+          - image_suffix: "-hci"
+            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
@@ -311,11 +311,21 @@ jobs:
             labels.txt
           retention-days: 7
 
+  check_builds:
+    name: Check builds successful
+    runs-on: ubuntu-latest
+    needs: [build_image]
+    permissions: {}
+    steps:
+      - name: Exit
+        shell: bash
+        run: exit 0
+
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
-    if: needs.workflow_info.result == 'success' && needs.build_image.result == 'success' && !cancelled() && github.event_name != 'pull_request'
-    needs: [workflow_info, build_image]
+    if: needs.check_builds.result == 'success' && !cancelled() && github.event_name != 'pull_request'
+    needs: [workflow_info, check_builds, build_image]
     permissions:
       actions: read
       contents: read
@@ -325,10 +335,10 @@ jobs:
       matrix:
         image_suffix:
           - "-minimal"
-          #- ""
-          #- "-hci"
+          - ""
+          - "-hci"
         nvidia_tag:
-          #- "-nvidia"
+          - "-nvidia"
           - ""
     steps:
       - name: Set matrix environment variables
