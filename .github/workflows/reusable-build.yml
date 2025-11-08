@@ -331,6 +331,9 @@ jobs:
           - "-nvidia"
           - ""
     steps:
+      - name: Mount BTRFS for podman storage
+        uses: ublue-os/container-storage-action@main
+
       - name: Set matrix environment variables
         shell: bash
         run: |
