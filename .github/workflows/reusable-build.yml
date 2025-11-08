@@ -452,7 +452,7 @@ jobs:
       - name: Sign container image
         #if: github.event_name != 'pull_request'
         run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${ env.DIGEST }}
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
         env:
           REGISTRY_PATH: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).registry-path }}
           DIGEST: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
