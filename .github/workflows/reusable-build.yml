@@ -22,7 +22,7 @@ concurrency:
 jobs:
   workflow_info:
     name: Workflow Info
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
@@ -318,8 +318,14 @@ jobs:
     permissions: {}
     steps:
       - name: Exit
-        shell: bash
-        run: exit 0
+        env:
+          RESULT: ${{ needs.build_image.result }}
+        run: |
+          if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
+            exit 0
+          else
+            exit 1
+          fi
 
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
@@ -476,5 +482,11 @@ jobs:
     permissions: {}
     steps:
       - name: Exit
-        shell: bash
-        run: exit 0
+        env:
+          RESULT: ${{ needs.push_and_sign.result }}
+        run: |
+          if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
+            exit 0
+          else
+            exit 1
+          fi
