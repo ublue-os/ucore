@@ -45,6 +45,20 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Announcements
 
+### 2025.11.08 - uCore aarch64(ARM64) is Available!
+
+It's been [over two years](https://github.com/ublue-os/ucore/issues/15) since originally requested, but ARM64 is finally available in uCore builds!
+
+The container image build process has been updated to publish multi-arch manifests. Simply put, whether you `podman pull` or `bootc switch`  `ghcr.io/ublue-os/ucore:stable` (or any of our images starting as of `20251108`), the proper architecture will be pulled, assuming it's one of the two available: `aarch64` and `x86_64`.
+
+Known differences between architectures will include different firmwares and a lack of Intel specific packages on `aarch64` (eg, `intel-compute-runtime` is obviously not available).
+
+Caveats:
+- minimal testing has been done with these images (they've been installed & lightly used in VMs), though upstream `aarch64` has been available for a long time, so concern is low.
+- `mergerfs` is not yet available for `aarch64`; its next release will include both Fedora 43 and `aarch64` packages.
+
+Please enjoy and report any issues or missing packages!
+
 ### 2025.06.12 - uCore Build Streamlining
 
 In general, the Universal Blue project has been working to streamline various aspects of our builds. In several areas
@@ -181,7 +195,7 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 ## Installation
 
 > [!IMPORTANT]
-> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; it does not provide its own custom or GUI installer.
+> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; **it does not provide its own custom or GUI installer**.
 
 There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
 
@@ -263,7 +277,7 @@ As of [netavark v1.9.0](https://blog.podman.io/2023/11/new-netavark-firewalld-re
 
 By default, UCore does not automatically start `restart: always` containers on system boot, however this can be easily enabled:
 
-##### For containers running under the `core` user
+##### For containers running under the `core` user <!-- omit in toc -->
 
 ```bash
 # Copy the system's podman-restart service to the user location
@@ -287,7 +301,7 @@ loginctl enable-linger $UID
 
 You can find more information regarding this on the [Podman troubleshooting page](https://github.com/containers/podman/blob/main/troubleshooting.md#21-a-rootless-container-running-in-detached-mode-is-closed-at-logout).
 
-##### For containers running under the root user (rootful containers)
+##### For containers running under the root user (rootful containers) <!-- omit in toc -->
 
 You just need to enable the built-in service:
 
@@ -354,7 +368,7 @@ But two others are included, which though common, warrant some explanation:
 
 It's suggested to read Fedora's [NFS Server docs](https://docs.fedoraproject.org/en-US/fedora-server/services/filesharing-nfs-installation/) plus other documentation to understand how to setup this service. But here's a few quick tips...
 
-##### Firewall - NFS <!-- omit in toc -->
+##### Firewall: NFS <!-- omit in toc -->
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
@@ -363,7 +377,7 @@ sudo firewall-cmd --permanent --zone=FedoraServer --add-service=nfs
 sudo firewall-cmd --reload
 ```
 
-##### SELinux - NFS <!-- omit in toc -->
+##### SELinux: NFS <!-- omit in toc -->
 
 By default, nfs-server is blocked from sharing directories unless the context is set. So, generically to enable NFS sharing in SELinux run:
 
@@ -404,11 +418,11 @@ sudo setsebool -P nfs_export_all_rw 1
 
 There is [more to read](https://linux.die.net/man/8/nfs_selinux) on this topic.
 
-##### Shares - NFS <!-- omit in toc -->
+##### Shares: NFS <!-- omit in toc -->
 
 NFS shares are configured in `/etc/exports` or `/etc/exports.d/*` (see docs).
 
-##### Run It - NFS <!-- omit in toc -->
+##### Run It: NFS <!-- omit in toc -->
 
 Like all services, NFS needs to be enabled and started:
 
@@ -421,7 +435,7 @@ sudo systemctl status nfs-server.service
 
 It's suggested to read Fedora's [Samba docs](https://docs.fedoraproject.org/en-US/quick-docs/samba/) plus other documentation to understand how to setup this service. But here's a few quick tips...
 
-##### Firewall - Samba <!-- omit in toc -->
+##### Firewall: Samba <!-- omit in toc -->
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
@@ -430,7 +444,7 @@ sudo firewall-cmd --permanent --zone=FedoraServer --add-service=samba
 sudo firewall-cmd --reload
 ```
 
-##### SELinux - Samba <!-- omit in toc -->
+##### SELinux: Samba <!-- omit in toc -->
 
 By default, samba is blocked from sharing directories unless the context is set. So, generically to enable samba sharing in SELinux run:
 
@@ -454,7 +468,7 @@ sudo setsebool -P samba_export_all_rw 1
 
 There is [much to read](https://linux.die.net/man/8/samba_selinux) on this topic.
 
-##### Shares - Samba <!-- omit in toc -->
+##### Shares: Samba <!-- omit in toc -->
 
 Samba shares can be manually configured in `/etc/samba/smb.conf` (see docs), but user shares are also a good option.
 
@@ -464,7 +478,7 @@ An example follows, but you'll probably want to read some docs on this, too:
 net usershare add sharename /path/to/share [comment] [user:{R|D|F}] [guest_ok={y|n}]
 ```
 
-##### Run It - Samba <!-- omit in toc -->
+##### Run It: Samba <!-- omit in toc -->
 
 Like all services, Samba needs to be enabled and started:
 
