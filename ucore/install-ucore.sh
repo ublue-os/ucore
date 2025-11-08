@@ -2,6 +2,7 @@
 
 set -ouex pipefail
 
+ARCH="$(rpm -E %_arch)"
 RELEASE="$(rpm -E %fedora)"
 
 # install packages.json stuffs
@@ -28,7 +29,12 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 rm -rf /tmp/cockpit-zfs-manager*
 
 # install packages direct from github
-/ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.x86_64"
+if [[ "${RELEASE}" -ge "43" ]]; then
+  /ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.${ARCH}"
+elif [[ "${ARCH}" == "x86_64" ]]; then
+  # before F43, mergerfs only available for x86_64
+  /ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.x86_64"
+fi
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
