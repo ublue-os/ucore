@@ -410,6 +410,11 @@ jobs:
             buildah manifest add "${IMAGE_NAME:?}" "$IMAGE_REF"
           done
 
+          MANIFEST_TAGS='${{ steps.meta.outputs.tags }}'
+          while IFS= read -r TAG; do
+            buildah tag "${IMAGE_NAME:?}" "${IMAGE_NAME:?}:${TAG:?}"
+          done <<< "$MANIFEST_TAGS"
+
           echo
           echo 'Final manifest contents:'
           buildah manifest inspect "${IMAGE_NAME:?}"
