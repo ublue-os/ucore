@@ -357,6 +357,18 @@ jobs:
             type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
             type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
 
+      - name: Single SHA Tag
+        id: single-sha
+        run: |
+          tags="${{ steps.meta.outputs.tags }}"
+          sha_tag=$(printf '%s' "$tags" | grep -m1 '^sha' || true)
+
+          if [[ -z "$sha_tag" ]]; then
+            echo "'sha' tag not found" >&2
+            exit 1
+          fi
+          echo "tag=${sha_tag}" >> $GITHUB_OUTPUT
+
       - name: Single Line (convert newlines to spaces)
         id: single-line
         run: |
@@ -403,16 +415,16 @@ jobs:
           buildah manifest create --annotation="$(
             cat $LABELS_FILE | \
               head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
-          )" "${IMAGE_NAME:?}"
+          )" "${IMAGE_NAME:?}":${{ steps.single-sha.outputs.tag }}
 
           for IMAGE_REF in "${IMAGE_REFS[@]}"; do
             echo "Adding ${IMAGE_REF:?} to manifest"
-            buildah manifest add "${IMAGE_NAME:?}" "$IMAGE_REF"
+            buildah manifest add "${IMAGE_NAME:?}":${{ steps.single-sha.outputs.tag }} "$IMAGE_REF"
           done
 
           echo
           echo 'Final manifest contents:'
-          buildah manifest inspect "${IMAGE_NAME:?}"
+          buildah manifest inspect "${IMAGE_NAME:?}":${{ steps.single-sha.outputs.tag }}
           echo
           echo 'Podman image state:'
           podman images
