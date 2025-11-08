@@ -239,7 +239,7 @@ To rebase an existing CoreOS machine to the latest uCore:
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 ```
 
-**Verified Image Updates**
+#### Verified Image Updates
 
 The `ucore*` images include container policies to support image verification for improved trust of upgrades. Once running one of the `ucore*` images, the following command will rebase to the verified image reference:
 
@@ -278,7 +278,7 @@ As of [netavark v1.9.0](https://blog.podman.io/2023/11/new-netavark-firewalld-re
 
 By default, UCore does not automatically start `restart: always` containers on system boot, however this can be easily enabled:
 
-**For containers running under the `core` user**
+##### Containers running under the `core` user
 
 ```bash
 # Copy the system's podman-restart service to the user location
@@ -302,7 +302,7 @@ loginctl enable-linger $UID
 
 You can find more information regarding this on the [Podman troubleshooting page](https://github.com/containers/podman/blob/main/troubleshooting.md#21-a-rootless-container-running-in-detached-mode-is-closed-at-logout).
 
-**For containers running under the root user (rootful containers)***
+##### Containers running under the root user (rootful containers)
 
 You just need to enable the built-in service:
 
@@ -369,7 +369,7 @@ But two others are included, which though common, warrant some explanation:
 
 It's suggested to read Fedora's [NFS Server docs](https://docs.fedoraproject.org/en-US/fedora-server/services/filesharing-nfs-installation/) plus other documentation to understand how to setup this service. But here's a few quick tips...
 
-**Firewall - NFS**
+##### Firewall - NFS
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
@@ -378,7 +378,7 @@ sudo firewall-cmd --permanent --zone=FedoraServer --add-service=nfs
 sudo firewall-cmd --reload
 ```
 
-**SELinux - NFS**
+##### SELinux - NFS
 
 By default, nfs-server is blocked from sharing directories unless the context is set. So, generically to enable NFS sharing in SELinux run:
 
@@ -419,11 +419,11 @@ sudo setsebool -P nfs_export_all_rw 1
 
 There is [more to read](https://linux.die.net/man/8/nfs_selinux) on this topic.
 
-**Shares - NFS**
+##### Shares - NFS
 
 NFS shares are configured in `/etc/exports` or `/etc/exports.d/*` (see docs).
 
-**Run It: NFS**
+##### Run It - NFS
 
 Like all services, NFS needs to be enabled and started:
 
@@ -436,7 +436,7 @@ sudo systemctl status nfs-server.service
 
 It's suggested to read Fedora's [Samba docs](https://docs.fedoraproject.org/en-US/quick-docs/samba/) plus other documentation to understand how to setup this service. But here's a few quick tips...
 
-**Firewall - Samba**
+##### Firewall - Samba
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
@@ -445,7 +445,7 @@ sudo firewall-cmd --permanent --zone=FedoraServer --add-service=samba
 sudo firewall-cmd --reload
 ```
 
-**SELinux - Samba**
+##### SELinux - Samba
 
 By default, samba is blocked from sharing directories unless the context is set. So, generically to enable samba sharing in SELinux run:
 
@@ -469,7 +469,7 @@ sudo setsebool -P samba_export_all_rw 1
 
 There is [much to read](https://linux.die.net/man/8/samba_selinux) on this topic.
 
-**Shares - Samba**
+##### Shares - Samba
 
 Samba shares can be manually configured in `/etc/samba/smb.conf` (see docs), but user shares are also a good option.
 
@@ -479,7 +479,7 @@ An example follows, but you'll probably want to read some docs on this, too:
 net usershare add sharename /path/to/share [comment] [user:{R|D|F}] [guest_ok={y|n}]
 ```
 
-**Run It - Samba**
+##### Run It - Samba
 
 Like all services, Samba needs to be enabled and started:
 
