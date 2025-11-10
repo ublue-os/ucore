@@ -408,7 +408,7 @@ jobs:
 
           # Collect image references from all arches in artifacts
           IMAGE_REFS=()
-          for IMAGE_ENV in $(find images -type f -path "images/image${{ matrix.image_suffix }}*/image.env"); do
+          for IMAGE_ENV in $(find images -type f -path "images/image-ucore${{ matrix.image_suffix }}*/image.env"); do
             source "$IMAGE_ENV" # provides IMAGE_REF and IMAGE_ARCH
             IMAGE_REFS+=("$IMAGE_REF")
             echo "Importing ${IMAGE_REF:?} for architecture ${IMAGE_ARCH:?}"
@@ -418,7 +418,7 @@ jobs:
           echo
           echo "Creating manifest for $IMAGE_NAME"
           # Pick labels.txt from any of the arches in artifacts (identical for all images in each variant)
-          LABELS_FILE=$(find images -type f -path "images/image${{ matrix.image_suffix }}*/labels.txt" | head -n1)
+          LABELS_FILE=$(find images -type f -path "images/image-ucore${{ matrix.image_suffix }}*/labels.txt" | head -n1)
           buildah manifest create --annotation="$(
             cat $LABELS_FILE | \
               head -c -1 | sed -e 's/, \{0,1\}/ /g' | tr '\n' ','
