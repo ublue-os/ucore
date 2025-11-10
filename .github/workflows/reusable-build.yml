@@ -305,7 +305,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}
+          name: image-ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag != '' && matrix.nvidia_tag || '-default' }}-${{ matrix.arch }}
           path: |
             image.env
             labels.txt
@@ -344,7 +344,7 @@ jobs:
       - name: Download image artifacts
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
-          pattern: image${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}-*
+          pattern: image-ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag != '' && matrix.nvidia_tag || '-default' }}-*
           path: images
 
       - name: Manifest Meta Tags
