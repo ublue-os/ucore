@@ -114,7 +114,7 @@ jobs:
       contents: read
       packages: write
     env:
-      KERNEL_FLAVOR: coreos-${{ inputs.coreos_version }}
+      KERNEL_FLAVOR: ${{ inputs.coreos_version == 'stable' && 'longterm-6.12' || 'coreos-'inputs.coreos_version }}
       PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
       fail-fast: false

@@ -1,12 +1,21 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -ouex pipefail
 
 ARCH="$(rpm -E %{_arch})"
 RELEASE="$(rpm -E %fedora)"
 
+case "${KERNEL_FLAVOR}" in
+"longterm"*)
+  KERNEL_NAME="kernel-longterm"
+  ;;
+*)
+  KERNEL_NAME="kernel"
+  ;;
+esac
+
 pushd /tmp/rpms/kernel
-KERNEL_VERSION=$(find kernel-*.rpm | grep -P "kernel-(\d+\.\d+\.\d+)-.*\.fc${RELEASE}\.${ARCH}" | sed -E 's/kernel-//' | sed -E 's/\.rpm//')
+KERNEL_VERSION=$(find "$KERNEL_NAME"-*.rpm | grep -P "$KERNEL_NAME-(\d+\.\d+\.\d+)-.*\.fc${RELEASE}\.${ARCH}" | sed -E "s/$KERNEL_NAME-//" | sed -E 's/\.rpm//')
 popd
 
 #### PREPARE
@@ -23,7 +32,7 @@ fi
 # enable ublue-os repos
 dnf -y install dnf5-plugins
 dnf -y copr enable ublue-os/packages
-dnf -y copr enable ublue-os/ucore
+dnf -y copr enable ublue-os/staging
 
 # always disable cisco-open264 repo
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
@@ -32,7 +41,14 @@ sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
 
-dnf -y install /tmp/rpms/akmods-common/ublue-os-ucore-addons*.rpm
+# provide ublue-akmods public_key for MOK enroll if desired
+mkdir -p /etc/pki/akmods/certs/ /usr/share/ublue-os/etc/pki/akmods/certs/
+curl --fail --retry 15 --retry-all-errors -sSL \
+  -o /usr/share/ublue-os/etc/pki/akmods/certs/akmods-ublue.der \
+  https://github.com/ublue-os/akmods/raw/refs/heads/main/certs/public_key.der
+cp -a /usr/share/ublue-os/etc/pki/akmods/certs/akmods-ublue.der \
+  /etc/pki/akmods/certs/
+
 dnf -y install ublue-os-signing
 
 # Put the policy file in the correct place and cleanup /usr/etc
@@ -45,17 +61,17 @@ for pkg in kernel kernel-core kernel-modules kernel-modules-core kernel-modules-
         rpm --erase $pkg --nodeps
     fi
 done
-echo "Install kernel version ${KERNEL_VERSION} from kernel-cache."
+echo "Install $KERNEL_NAME version ${KERNEL_VERSION} from kernel-cache."
 dnf -y install \
-    /tmp/rpms/kernel/kernel-[0-9]*.rpm \
-    /tmp/rpms/kernel/kernel-core-*.rpm \
-    /tmp/rpms/kernel/kernel-modules-*.rpm
+    /tmp/rpms/kernel/"$KERNEL_NAME"-[0-9]*.rpm \
+    /tmp/rpms/kernel/"$KERNEL_NAME"-core-*.rpm \
+    /tmp/rpms/kernel/"$KERNEL_NAME"-modules-*.rpm
 
 # Ensure kernel packages can't be updated by other dnf operations
-dnf versionlock add kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
+dnf versionlock add "$KERNEL_NAME" "$KERNEL_NAME"-core "$KERNEL_NAME"-modules "$KERNEL_NAME"-modules-core "$KERNEL_NAME"-modules-extra
 
 # Regenerate initramfs, for new kernel; not including NVIDIA or ZFS kmods
-QUALIFIED_KERNEL="$(rpm -qa | grep -P 'kernel-(\d+\.\d+\.\d+)' | sed -E 's/kernel-//')"
+QUALIFIED_KERNEL="$(rpm -qa | grep -P "$KERNEL_NAME-(\d+\.\d+\.\d+)" | sed -E "s/$KERNEL_NAME-//")"
 /usr/bin/dracut --no-hostonly --kver "$QUALIFIED_KERNEL" --reproducible -v --add ostree -f "/lib/modules/$QUALIFIED_KERNEL/initramfs.img"
 chmod 0600 "/lib/modules/$QUALIFIED_KERNEL/initramfs.img"
 
