@@ -26,7 +26,7 @@ build:
     #!/usr/bin/env bash
     set -euxo pipefail
     IMAGE_VERSION=$(just get-image-version)
-    podman build -f ucore/Containerfile \
+    podman build -f Containerfile \
         --build-arg COREOS_VERSION={{ COREOS_VERSION }} \
         --build-arg FEDORA_VERSION={{ FEDORA_VERSION }} \
         --build-arg IMAGE_VERSION=$IMAGE_VERSION \
@@ -35,4 +35,4 @@ build:
         --build-arg PR_PREFIX={{ PR_PREFIX }} \
         --build-arg NVIDIA_TAG={{ NVIDIA_TAG }} \
         --target {{ TARGET_IMAGE }} \
-        -t "{{ TARGET_IMAGE }}:{{ COREOS_VERSION }}{{ NVIDIA_TAG }}" ucore/
+        -t "{{ TARGET_IMAGE }}:{{ COREOS_VERSION }}{{ NVIDIA_TAG }}" .
