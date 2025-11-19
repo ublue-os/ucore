@@ -49,13 +49,8 @@ if [[ "$(rpm -E %fedora)" -gt 41 ]]; then
     dnf5 versionlock add rpm-ostree
 fi
 
-# provide ublue-akmods public_key for MOK enroll if desired
-mkdir -p /etc/pki/akmods/certs/ /usr/share/ublue-os/etc/pki/akmods/certs/
-curl --fail --retry 15 --retry-all-errors -sSL \
-  -o /usr/share/ublue-os/etc/pki/akmods/certs/akmods-ublue.der \
-  https://github.com/ublue-os/akmods/raw/refs/heads/main/certs/public_key.der
-cp -a /usr/share/ublue-os/etc/pki/akmods/certs/akmods-ublue.der \
-  /etc/pki/akmods/certs/
+# provide ublue-akmods public_key for MOK enroll
+dnf -y install /tmp/rpms/akmods-zfs/ublue-os-ucore-addons*.rpm
 
 dnf -y install ublue-os-signing
 
