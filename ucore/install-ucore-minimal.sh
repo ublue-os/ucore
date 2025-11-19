@@ -50,7 +50,7 @@ if [[ "$(rpm -E %fedora)" -gt 41 ]]; then
 fi
 
 # provide ublue-akmods public_key for MOK enroll
-dnf -y install /tmp/rpms/akmods-zfs/ublue-os-ucore-addons*.rpm
+dnf -y install /tmp/rpms/akmods-zfs/ucore/ublue-os-ucore-addons*.rpm
 
 dnf -y install ublue-os-signing
 
