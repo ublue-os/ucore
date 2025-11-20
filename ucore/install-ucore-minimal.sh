@@ -58,17 +58,19 @@ dnf -y install ublue-os-signing
 cp /usr/etc/containers/policy.json /etc/containers/policy.json
 rm -rf /usr/etc
 
-# migigate problem on F43 where during kernel install, dracut errors and fails
-# a shim to bypass all of kernel-install... maybe not safe?
+# mitigate problem on F43 where during kernel install, dracut errors and fails
+# create a shim to bypass all of kernel-install... maybe not safe?
 #mv /usr/sbin/kernel-install /usr/sbin/kernel-install.bak
 #printf '%s\n' '#!/bin/sh' 'exit 0' > /usr/sbin/kernel-install
 #mv -f /usr/sbin/kernel-install.bak /usr/sbin/kernel-install
 #
-# create a shims to bypass kernel install triggering dracut/rpm-ostree
+# create a shim to bypass kernel install triggering dracut/rpm-ostree
 # seems to be minimal impact, but allows progress on build
+# NOTE: these shims are left in place permanently to support downstream
+# builds, original files kept for reference
 cd /usr/lib/kernel/install.d \
-&& mv 05-rpmostree.install 05-rpmostree.install.bak \
-&& mv 50-dracut.install 50-dracut.install.bak \
+&& mv 05-rpmostree.install 05-rpmostree.install.original \
+&& mv 50-dracut.install 50-dracut.install.original \
 && printf '%s\n' '#!/bin/sh' 'exit 0' > 05-rpmostree.install \
 && printf '%s\n' '#!/bin/sh' 'exit 0' > 50-dracut.install \
 && chmod +x  05-rpmostree.install 50-dracut.install
