@@ -50,12 +50,14 @@ Please take a look at the included modifications, and help us improve uCore if t
 Thank you to all for being patient as this update was a bit delayed beyond CoreOS' normal cadence.
 
 What's new:
+
 - Based on [Fedora CoreOS 43.20251024.3.0](https://fedoraproject.org/coreos/release-notes?stream=stable)
 - uCore stable now uses an [LTS(longterm) 6.12 kernel](https://github.com/ublue-os/ucore/issues/317)
 - uCore testing continues to use the upstream kernel
 - mergerfs and snapraid have been updated to latest releases and are available for both aarch64/x86_64
 
 LTS Kernel Impact:
+
 - the primary goal is to provide more consistent behavior for servers between updates, thus it is not
   the latest (6.17) which could mean some recent hardware is not well supported.
 - the primary concern is for users with [SecureBoot enabled](#secureboot); the ublue-os MOK must be
@@ -535,11 +537,11 @@ Press any key to continue...
 ```
 
 You can either:
+
 1. rollback to previous deployment of uCore to run the import command above
 2. if there is no previous uCore deployment, enter UEFI firmware setup by:
     - pressing `ESC`
-    - at the `grub> ` prompt, type `fwsetup`
-
+    - at the `grub>` prompt, type `fwsetup`
 
 ### NVIDIA
 
