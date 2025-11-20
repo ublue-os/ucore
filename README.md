@@ -33,7 +33,7 @@ Please take a look at the included modifications, and help us improve uCore if t
   - [NAS - Storage](#nas---storage)
     - [NFS](#nfs)
     - [Samba](#samba)
-  - [SecureBoot w/ kmods](#secureboot-w-kmods)
+  - [SecureBoot](#secureboot)
   - [NVIDIA](#nvidia)
     - [Included Drivers](#included-drivers)
     - [Other Drivers](#other-drivers)
@@ -44,6 +44,28 @@ Please take a look at the included modifications, and help us improve uCore if t
 - [Metrics](#metrics)
 
 ## Announcements
+
+### 2025.11.20 - uCore (Fedora 43) Available with LTS Kernel
+
+Thank you to all for being patient as this update was a bit delayed beyond CoreOS' normal cadence.
+
+What's new:
+
+- Based on [Fedora CoreOS 43.20251024.3.0](https://fedoraproject.org/coreos/release-notes?stream=stable)
+- uCore stable now uses an [LTS(longterm) 6.12 kernel](https://github.com/ublue-os/ucore/issues/317)
+- uCore testing continues to use the upstream kernel
+- mergerfs and snapraid have been updated to latest releases and are available for both aarch64/x86_64
+
+LTS Kernel Impact:
+
+- the primary goal is to provide more consistent behavior for servers between updates, thus it is not
+  the latest (6.17) which could mean some recent hardware is not well supported.
+- the primary concern is for users with [SecureBoot enabled](#secureboot); the ublue-os MOK must be
+  imported before rebooting else the first boot will fail. See the [SecureBoot section](#secureboot)
+  of this README
+- if the LTS kernel is a problem for your use case, we suggest using `ucore:testing`
+
+Enjoy, and as always if any bugs or problems are found, please [file an issue](https://github.com/ublue-os/ucore/issues)!
 
 ### 2025.11.08 - uCore aarch64(ARM64) is Available
 
@@ -488,17 +510,38 @@ sudo systemctl enable --now smb.service
 sudo systemctl status smb.service
 ```
 
-### SecureBoot w/ kmods
+### SecureBoot
 
-For those wishing to use `nvidia` or `zfs` images with pre-built kmods AND run SecureBoot, the kernel will not load those kmods until the public signing key has been imported as a MOK (Machine-Owner Key).
+Those wishing to run SecureBoot for a `stable` image, will need to first import the ublue-os public signing key as a MOK (Machine-Owner Key).
 
-Do so like this:
+1. before installing, disable SecureBoot in the system UEFI firmware
+2. after confirming ucore is the running image, import the key:
 
 ```bash
 sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der
 ```
 
-The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the UEFI MOK import utility.
+The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the system's UEFI MOK import utility.
+
+Note: this import process is also required for users of the `testing` image if using nvidia or zfs, though instead of failing to boot only the respective drivers will fail to load.
+
+#### SecureBoot failure to boot recovery / troubleshooting
+
+If your system fails to boot with an error like:
+
+```
+error: ../../grub-core/kern/efi/sb.sc:102:bad shim_signature.
+error: ../../grub-core/loader/i386/efi/linux.c:250:you need to load the kernel first.
+
+Press any key to continue...
+```
+
+You can either:
+
+1. rollback to previous deployment of uCore to run the import command above
+2. if there is no previous uCore deployment, enter UEFI firmware setup by:
+    - pressing `ESC`
+    - at the `grub>` prompt, type `fwsetup`
 
 ### NVIDIA
 

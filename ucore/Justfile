@@ -1,0 +1,38 @@
+set dotenv-load := true
+
+COREOS_VERSION := env("COREOS_VERSION", "stable")
+FEDORA_VERSION := env("FEDORA_VERSION", "43")
+IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
+KERNEL_FLAVOR := env("KERNEL_FLAVOR", if COREOS_VERSION == 'stable' { "longterm-6.12" } else { 'coreos-' + COREOS_VERSION })
+NVIDIA_TAG := env("NVIDIA_TAG", "")
+PR_PREFIX := env("PR_PREFIX", "")
+SELINUX := path_exists('/sys/fs/selinux')
+TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
+
+_default:
+    @just --list --unsorted
+
+get-image-version:
+    #!/usr/bin/env bash
+    image=$(skopeo inspect docker://quay.io/fedora/fedora-coreos:{{ COREOS_VERSION }} | \
+            jq -r '.["Labels"]["org.opencontainers.image.version"]')
+    if [ -z "$image" ] || [ "null" = "$image" ]; then
+      echo "inspected image version must not be empty or null" >&2
+      exit 1
+    fi
+    echo "$image"
+
+build:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    IMAGE_VERSION=$(just get-image-version)
+    podman build -f Containerfile \
+        --build-arg COREOS_VERSION={{ COREOS_VERSION }} \
+        --build-arg FEDORA_VERSION={{ FEDORA_VERSION }} \
+        --build-arg IMAGE_VERSION=$IMAGE_VERSION \
+        --build-arg IMAGE_REGISTRY={{ IMAGE_REGISTRY }} \
+        --build-arg KERNEL_FLAVOR={{ KERNEL_FLAVOR }} \
+        --build-arg PR_PREFIX={{ PR_PREFIX }} \
+        --build-arg NVIDIA_TAG={{ NVIDIA_TAG }} \
+        --target {{ TARGET_IMAGE }} \
+        -t "{{ TARGET_IMAGE }}:{{ COREOS_VERSION }}{{ NVIDIA_TAG }}" .

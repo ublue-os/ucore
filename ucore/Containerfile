@@ -1,14 +1,12 @@
-ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
-ARG FEDORA_VERSION="${FEDORA_VERSION:-42}"
-ARG IMAGE_VERSION="${IMAGE_VERSION:-stable}"
-ARG IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/ublue-os}"
-ARG KERNEL_FLAVOR="${KERNEL_FLAVOR:-coreos-stable}"
+ARG COREOS_VERSION
+ARG FEDORA_VERSION
+ARG IMAGE_VERSION
+ARG IMAGE_REGISTRY
+ARG KERNEL_FLAVOR
 
 # FROMs for copying
-ARG AKMODS_COMMON="${IMAGE_REGISTRY}/akmods:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
 ARG AKMODS_ZFS="${IMAGE_REGISTRY}/akmods-zfs:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
-FROM ${AKMODS_COMMON} AS akmods-common
 FROM ${AKMODS_NVIDIA} AS akmods-nvidia
 FROM ${AKMODS_ZFS} AS akmods-zfs
 
@@ -18,9 +16,10 @@ COPY / /
 # ucore-minimal image section
 FROM quay.io/fedora/fedora-coreos:${IMAGE_VERSION} AS ucore-minimal
 
-ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
-# build with --build-arg NVIDA_TAG="-nvidia" to install nvidia
-ARG NVIDIA_TAG="${NVIDIA_TAG}"
+ARG COREOS_VERSION
+ARG KERNEL_FLAVOR
+# build with --build-arg NVIDIA_TAG="-nvidia" to install nvidia
+ARG NVIDIA_TAG
 
 COPY system_files/etc /etc
 COPY system_files/usr/lib /usr/lib/
@@ -29,10 +28,9 @@ COPY system_files/usr/sbin /usr/sbin/
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
-    --mount=type=bind,from=akmods-common,src=/rpms/ucore,dst=/tmp/rpms/akmods-common \
     --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
     --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
-    --mount=type=bind,from=akmods-common,src=/kernel-rpms,dst=/tmp/rpms/kernel \
+    --mount=type=bind,from=akmods-zfs,src=/kernel-rpms,dst=/tmp/rpms/kernel \
     /ctx/install-ucore-minimal.sh \
     && /ctx/post-install-ucore-minimal.sh \
     && /ctx/cleanup.sh
@@ -42,8 +40,8 @@ RUN ["bootc", "container", "lint"]
 # ucore image section
 FROM ucore-minimal AS ucore
 
-ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
-ARG NVIDIA_TAG="${NVIDIA_TAG}"
+ARG COREOS_VERSION
+ARG NVIDIA_TAG
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
@@ -56,8 +54,8 @@ RUN ["bootc", "container", "lint"]
 # ucore-hci image section
 FROM ucore AS ucore-hci
 
-ARG COREOS_VERSION="${COREOS_VERSION:-stable}"
-ARG NVIDIA_TAG="${NVIDIA_TAG}"
+ARG COREOS_VERSION
+ARG NVIDIA_TAG
 
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \

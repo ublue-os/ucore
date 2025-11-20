@@ -13,7 +13,8 @@ fi
 
 
 ## ALWAYS: regular post-install
-systemctl disable coreos-oci-migration-motd.service
+systemctl mask coreos-container-signing-migration-motd.service
+systemctl mask coreos-oci-migration-motd.service
 systemctl disable docker.socket
 systemctl disable zincati.service
 
