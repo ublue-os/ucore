@@ -17,7 +17,7 @@ env:
   KERNEL_FLAVOR: ${{ inputs.coreos_version == 'stable' && 'longterm-6.12' || format('coreos-{0}', inputs.coreos_version) }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.coreos_version }}
   cancel-in-progress: true
 
 jobs:
