@@ -28,6 +28,9 @@ chmod +x /tmp/cockpit-zfs-manager-font-fix.sh
 
 rm -rf /tmp/cockpit-zfs-manager*
 
+# work around rpm %post script calling systemctl
+dnf -y --setopt=tsflags=noscripts install sanoid
+
 # install packages direct from github
 if [[ "${RELEASE}" -ge "43" ]]; then
   /ctx/github-release-install.sh trapexit/mergerfs "fc${RELEASE}.${ARCH}"
