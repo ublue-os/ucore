@@ -460,15 +460,46 @@ jobs:
         if: github.event_name != 'pull_request'
         with:
           cosign-release: "v2.6.1"
-      - name: Sign container image
+
+      - name: Sign member images
         if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
+          # Sign each member image (IMAGE_REF@IMAGE_DIGEST) from the build artifacts.
+          set -xeuo pipefail
+
+          shopt -s nullglob
+          ENVFILES=(images/*/image.env)
+          if [ ${#ENVFILES[@]} -eq 0 ]; then
+            echo "No image.env files found under images/; nothing to sign"
+            exit 0
+          fi
+
+          for f in "${ENVFILES[@]}"; do
+            echo "Sourcing $f"
+            # shellcheck disable=SC1090
+            source "$f"   # sets IMAGE_REF and IMAGE_DIGEST
+            if [ -z "${IMAGE_REF:-}" ] || [ -z "${IMAGE_DIGEST:-}" ]; then
+              echo "Missing IMAGE_REF or IMAGE_DIGEST in $f" >&2
+              exit 1
+            fi
+            echo "Signing ${IMAGE_REF}@${IMAGE_DIGEST}"
+            cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE_REF}@${IMAGE_DIGEST}"
+          done
+
+      - name: Sign container manifest
+        if: github.event_name != 'pull_request'
         env:
           REGISTRY_PATH: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).registry-path }}
           DIGEST: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+        run: |
+          echo "Signing ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
 
   check:
     name: Check all successful
