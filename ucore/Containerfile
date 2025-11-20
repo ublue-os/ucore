@@ -18,7 +18,7 @@ FROM quay.io/fedora/fedora-coreos:${IMAGE_VERSION} AS ucore-minimal
 
 ARG COREOS_VERSION
 ARG KERNEL_FLAVOR
-# build with --build-arg NVIDA_TAG="-nvidia" to install nvidia
+# build with --build-arg NVIDIA_TAG="-nvidia" to install nvidia
 ARG NVIDIA_TAG
 
 COPY system_files/etc /etc
