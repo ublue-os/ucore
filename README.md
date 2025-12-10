@@ -45,6 +45,28 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Announcements
 
+### 2025.12.09 - defining NVIDIA LTS, preparing for 590
+
+Our NVIDIA upstream recently released an [NVIDIA 580 LTS repository](https://negativo17.org/nvidia-driver-580-lts-repository/)
+alongside an update to the standard NVIDIA repo such that open driver 590 is now the default.
+
+However, for uCore, this update does not bring NVIDIA 590 due to some issues compiling on aarch64.
+
+NVIDIA 590 will be released for uCore as soon as possible, but until then...
+
+New tags have been created for the NVIDIA 580 LTS images:
+`:stable-nvidia-lts` and `:testing-nvidia-lts`.
+580 LTS will also continue to ship in the old tags:
+`:stable-nvidia` and `:testing-nvidia`.
+
+When NVIDIA 590 does release, it will take over the old tags:
+`:stable-nvidia` and `:testing-nvidia`.
+
+One more change: to keep the tag matrix from being to complex, the `-zfs` variant tags are no longer
+being published. These have been redundant since the 2025.06.12 update when ZFS was added to base
+builds. If you are still running on one of these older tags, you'll notice no updates are available.
+Run a `bootc switch` to move to the proper tag.
+
 ### 2025.11.20 - uCore (Fedora 43) Available with LTS Kernel
 
 Thank you to all for being patient as this update was a bit delayed beyond CoreOS' normal cadence.

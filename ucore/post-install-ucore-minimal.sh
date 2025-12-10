@@ -2,16 +2,6 @@
 
 set -ouex pipefail
 
-## CONDITIONAL: post-install NVIDIA
-if [[ "-nvidia" == "${NVIDIA_TAG}" ]]; then
-    sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/nvidia-container-toolkit.repo
-
-    semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
-
-    systemctl enable ublue-nvctk-cdi.service
-fi
-
-
 ## ALWAYS: regular post-install
 systemctl mask coreos-container-signing-migration-motd.service
 systemctl mask coreos-oci-migration-motd.service
