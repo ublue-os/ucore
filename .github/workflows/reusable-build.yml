@@ -230,6 +230,11 @@ jobs:
         id: create-containerfile
         run: |
           pushd ucore
+          COREOS_VERSION=${{ inputs.coreos_version }} \
+          FEDORA_VERSION=${{ env.FEDORA_VERSION }} \
+          IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }} \
+          KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }} \
+          NVIDIA_TAG=${{ matrix.nvidia_tag }} \
           just containerfile "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
 
       - name: Build Image
