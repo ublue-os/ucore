@@ -227,6 +227,7 @@ jobs:
       - name: Create Containerfile
         id: create-containerfile
         run: |
+          pushd ucore
           just containerfile "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
 
       - name: Build Image
