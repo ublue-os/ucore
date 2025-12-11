@@ -125,8 +125,9 @@ jobs:
           - ""
           - "-hci"
         nvidia_tag:
-          - "-nvidia-lts"
           - ""
+          - "-nvidia-lts"
+          - "-nvidia-open"
         include:
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
@@ -345,8 +346,9 @@ jobs:
           - ""
           - "-hci"
         nvidia_tag:
-          - "-nvidia-lts"
           - ""
+          - "-nvidia-lts"
+          - "-nvidia-open"
     steps:
       - name: Mount BTRFS for podman storage
         uses: ublue-os/container-storage-action@main
@@ -356,13 +358,8 @@ jobs:
         run: |
           set -x
           echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
-          echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
-          NVIDIA_ONLY=""
-          if [[ "${{ matrix.nvidia_tag }}" =~ lts ]]; then
-              NV="${{ matrix.nvidia_tag }}"
-              NVIDIA_ONLY="${{ inputs.coreos_version }}${NV%-lts}"
-          fi
-          echo "TAG_NVIDIA=${NVIDIA_ONLY}" >> $GITHUB_ENV
+          NVIDIA_TAG="${{ matrix.nvidia_tag }}"
+          echo "TAG_VERSION=${{ inputs.coreos_version }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
 
       - name: Download image artifacts
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
@@ -379,8 +376,6 @@ jobs:
             type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
             type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
             type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_NVIDIA }}-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ env.TAG_NVIDIA != '' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_NVIDIA }},priority=300,enable=${{ env.TAG_NVIDIA != '' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
             type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
 
       - name: Single Line (convert newlines to spaces)
