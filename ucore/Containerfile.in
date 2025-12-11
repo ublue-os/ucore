@@ -1,66 +1,55 @@
-ARG COREOS_VERSION
-ARG FEDORA_VERSION
-ARG IMAGE_VERSION
-ARG IMAGE_REGISTRY
-ARG KERNEL_FLAVOR
-
-# FROMs for copying
-ARG AKMODS_NVIDIA="${IMAGE_REGISTRY}/akmods-nvidia:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
-ARG AKMODS_ZFS="${IMAGE_REGISTRY}/akmods-zfs:${KERNEL_FLAVOR}-${FEDORA_VERSION}"
-FROM ${AKMODS_NVIDIA} AS akmods-nvidia
-FROM ${AKMODS_ZFS} AS akmods-zfs
-
+# /* FROMs for copying */
+FROM IMAGE_REGISTRY/akmods-zfs:AKMODS_TAG AS akmods-zfs
+# ifdef NVIDIA
+FROM IMAGE_REGISTRY/akmods-NVIDIA:AKMODS_TAG AS akmods-nvidia
+# endif /* NVIDIA */
 FROM scratch AS ctx
 COPY / /
 
-# ucore-minimal image section
-FROM quay.io/fedora/fedora-coreos:${IMAGE_VERSION} AS ucore-minimal
-
-ARG COREOS_VERSION
-ARG KERNEL_FLAVOR
-# build with --build-arg NVIDIA_TAG="-nvidia" to install nvidia
-ARG NVIDIA_TAG
-
+# /* ucore-minimal image section */
+FROM UPSTREAM_IMAGE AS ucore-minimal
 COPY system_files/etc /etc
 COPY system_files/usr/lib /usr/lib/
 COPY system_files/usr/sbin /usr/sbin/
-
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
+    --mount=type=bind,from=akmods-zfs,src=/kernel-rpms,dst=/tmp/rpms/kernel \
+    COREOS_VERSION=COREOS \
+    KERNEL_FLAVOR=KERNEL \
+    /ctx/install-ucore-minimal.sh
+# ifdef NVIDIA
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
     --mount=type=bind,from=akmods-nvidia,src=/rpms,dst=/tmp/rpms/akmods-nvidia \
-    --mount=type=bind,from=akmods-zfs,src=/rpms,dst=/tmp/rpms/akmods-zfs \
-    --mount=type=bind,from=akmods-zfs,src=/kernel-rpms,dst=/tmp/rpms/kernel \
-    /ctx/install-ucore-minimal.sh \
-    && /ctx/post-install-ucore-minimal.sh \
-    && /ctx/cleanup.sh
-
-RUN ["bootc", "container", "lint"]
-
-# ucore image section
-FROM ucore-minimal AS ucore
-
-ARG COREOS_VERSION
-ARG NVIDIA_TAG
-
+    NVIDIA_FLAVOR=NVIDIA \
+    /ctx/install-ucore-minimal-nvidia.sh
+# endif /* NVIDIA */
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    /ctx/post-install-ucore-minimal.sh \
+    && /ctx/cleanup.sh
+RUN ["bootc", "container", "lint"]
+
+# /* ucore image section */
+FROM ucore-minimal AS ucore
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    COREOS_VERSION=COREOS \
     /ctx/install-ucore.sh \
     && /ctx/cleanup.sh
-
 RUN ["bootc", "container", "lint"]
 
-# ucore-hci image section
+# /* ucore-hci image section */
 FROM ucore AS ucore-hci
-
-ARG COREOS_VERSION
-ARG NVIDIA_TAG
-
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    COREOS_VERSION=COREOS \
     /ctx/install-ucore-hci.sh \
     && /ctx/cleanup.sh
-
 RUN ["bootc", "container", "lint"]

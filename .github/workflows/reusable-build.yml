@@ -125,8 +125,9 @@ jobs:
           - ""
           - "-hci"
         nvidia_tag:
-          - "-nvidia"
           - ""
+          - "-nvidia-lts"
+          - "-nvidia-open"
         include:
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
@@ -137,6 +138,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Setup Just
+        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Download stream info artifact
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
@@ -161,8 +165,10 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
             podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            if [ -n "${{ matrix.nvidia_tag }}" ]; then
+                podman pull ${{ env.IMAGE_REGISTRY }}/akmods${{ matrix.nvidia_tag }}:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            fi
 
       - name: Verify versions (image, kernel, zfs)
         run: |
@@ -187,14 +193,14 @@ jobs:
           fi
 
       - name: Verify versions (nvidia)
-        if: matrix.nvidia_tag == '-nvidia'
+        if: matrix.nvidia_tag != ''
         shell: bash
         run: |
           set -x
-          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-nvidia:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods${{ matrix.nvidia_tag }}:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
-              echo "pulled akmods-nvidia image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
+              echo "pulled akmods${{ matrix.nvidia_tag }} image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
               exit 1
           fi
 
@@ -221,6 +227,17 @@ jobs:
           tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
 
+      - name: Create Containerfile
+        id: create-containerfile
+        run: |
+          pushd ucore
+          COREOS_VERSION=${{ inputs.coreos_version }} \
+          FEDORA_VERSION=${{ env.FEDORA_VERSION }} \
+          IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }} \
+          KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }} \
+          NVIDIA_TAG=${{ matrix.nvidia_tag }} \
+          just containerfile "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
+
       - name: Build Image
         id: build_image
         uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
@@ -232,13 +249,6 @@ jobs:
           tags: |
             ${{ steps.single-line.outputs.tags }}
           build-args: |
-            COREOS_VERSION=${{ inputs.coreos_version }}
-            FEDORA_VERSION=${{ env.FEDORA_VERSION }}
-            IMAGE_VERSION=${{ env.IMAGE_VERSION }}
-            IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }}
-            KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }}
-            PR_PREFIX=${{ env.PR_PREFIX }}
-            NVIDIA_TAG=${{ matrix.nvidia_tag }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: true
           extra-args: |
@@ -336,8 +346,9 @@ jobs:
           - ""
           - "-hci"
         nvidia_tag:
-          - "-nvidia"
           - ""
+          - "-nvidia-lts"
+          - "-nvidia-open"
     steps:
       - name: Mount BTRFS for podman storage
         uses: ublue-os/container-storage-action@main
@@ -347,7 +358,8 @@ jobs:
         run: |
           set -x
           echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
-          echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
+          NVIDIA_TAG="${{ matrix.nvidia_tag }}"
+          echo "TAG_VERSION=${{ inputs.coreos_version }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
 
       - name: Download image artifacts
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
@@ -364,8 +376,6 @@ jobs:
             type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
             type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
             type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs-${{ needs.workflow_info.outputs.date }},priority=700,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_VERSION }}-zfs,priority=300,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
             type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
 
       - name: Single Line (convert newlines to spaces)
