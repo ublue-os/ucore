@@ -205,7 +205,7 @@ jobs:
           fi
 
       - name: Image Metadata
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         id: meta
         with:
           labels: |
@@ -368,7 +368,7 @@ jobs:
           path: images
 
       - name: Manifest Meta Tags
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         id: meta
         with:
           tags: |
