@@ -45,26 +45,25 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Announcements
 
-### 2025.12.09 - defining NVIDIA LTS, preparing for 590
+### 2025.12.10 - NVIDIA 580 LTS and NVIDIA 590 Open
 
 Our NVIDIA upstream recently released an [NVIDIA 580 LTS repository](https://negativo17.org/nvidia-driver-580-lts-repository/)
-alongside an update to the standard NVIDIA repo such that open driver 590 is now the default.
+alongside an update to the standard NVIDIA repo such that open version 590 is now the default.
 
-However, for uCore, this update does not bring NVIDIA 590 due to some issues compiling on aarch64.
-
-NVIDIA 590 will be released for uCore as soon as possible, but until then...
+This brings uCore long awaited support for newer NVIDIA hardware without
+abandoning support for users of Maxwell and Pascal devices.
 
 New tags have been created for the NVIDIA 580 LTS images:
 `:stable-nvidia-lts` and `:testing-nvidia-lts`.
-580 LTS will also continue to ship in the old tags:
+
+While the latest open driver will ship in the old tags:
 `:stable-nvidia` and `:testing-nvidia`.
 
-When NVIDIA 590 does release, it will take over the old tags:
-`:stable-nvidia` and `:testing-nvidia`.
+One more change: to keep the tag matrix from growing too complex, the `-zfs` variant tags will no
+longer be published. These have been redundant since the 2025.06.12 update when ZFS was added to
+base builds. If you are still running on one of these older tags, you'll notice no updates are
+available.
 
-One more change: to keep the tag matrix from being to complex, the `-zfs` variant tags are no longer
-being published. These have been redundant since the 2025.06.12 update when ZFS was added to base
-builds. If you are still running on one of these older tags, you'll notice no updates are available.
 Run a `bootc switch` to move to the proper tag.
 
 ### 2025.11.20 - uCore (Fedora 43) Available with LTS Kernel
@@ -156,7 +155,8 @@ The [tag matrix](#tag-matrix) includes combinations of the following:
 
 - `stable` - images based on Fedora CoreOS stable stream including zfs driver and tools
 - `testing` - images based on Fedora CoreOS testing stream including zfs driver and tools
-- `nvidia-lts` - images which include nvidia driver and container runtime (version 580 LTS)
+- `nvidia` - images which include latest nvidia driver and container runtime
+- `nvidia-lts` - images which include LTS nvidia driver and container runtime
 
 ### Images
 
@@ -230,12 +230,12 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 
 | IMAGE | TAG |
 |-|-|
-| [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia-lts` |
-| [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia-lts` |
-| [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia-lts` |
-| [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia-lts` |
-| [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia-lts` |
-| [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia-lts` |
+| [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
+| [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
+| [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
+| [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
 
 ## Installation
 
