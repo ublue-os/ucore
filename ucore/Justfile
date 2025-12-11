@@ -50,12 +50,6 @@ containerfile upstream_image='':
     # direct cpp joins lines and does not work as expected
     cpp -E -P "${CPP_FLAGS[@]}" Containerfile.in -o Containerfile
     cat Containerfile
-#    exit 0
-#    declare -a CPP_FLAGS_BUILDAH=()
-#    for f in "${CPP_FLAGS[@]}"; do
-#      CPP_FLAGS_BUILDAH+=("--cpp-flag=${f}")
-#    done
-#        "${CPP_FLAGS_BUILDAH[@]}" \
 
 build upstream_image='':
     #!/usr/bin/env bash
