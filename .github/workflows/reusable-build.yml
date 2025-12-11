@@ -277,7 +277,7 @@ jobs:
       - name: Push Image to Registry
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
         id: push
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         env:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_PASSWORD: ${{ github.token }}
@@ -295,7 +295,7 @@ jobs:
               --disable-content-trust
 
       - name: Save image metadata
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         run: |
           set -x
           echo "IMAGE_ARCH=${{ matrix.arch }}" >> image.env
@@ -304,7 +304,7 @@ jobs:
           echo "${{ steps.meta.outputs.labels }}" > labels.txt
 
       - name: Upload image metadata as artifact
-        #if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: image-ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag != '' && matrix.nvidia_tag || '-default' }}-${{ matrix.arch }}
@@ -332,7 +332,7 @@ jobs:
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
-    #if: needs.check_builds.result == 'success' && !cancelled() && github.event_name != 'pull_request'
+    if: needs.check_builds.result == 'success' && !cancelled() && github.event_name != 'pull_request'
     needs: [workflow_info, check_builds, build_image]
     permissions:
       actions: read
