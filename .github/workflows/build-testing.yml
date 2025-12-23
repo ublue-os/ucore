@@ -7,7 +7,7 @@ on:
     paths-ignore:
       - "**.md"
   schedule:
-    - cron: '55 2 * * *'  # 2:55am-ish UTC everyday (approx 50 minutes after akmods images run)
+    - cron: "55 2 * * *" # 2:55am-ish UTC everyday (approx 50 minutes after akmods images run)
   workflow_dispatch:
 
 jobs:
@@ -16,3 +16,4 @@ jobs:
     secrets: inherit
     with:
       coreos_version: testing
+      arch: "['aarch64','x86_64']"

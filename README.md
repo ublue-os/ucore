@@ -33,7 +33,7 @@ Please take a look at the included modifications, and help us improve uCore if t
   - [NAS - Storage](#nas---storage)
     - [NFS](#nfs)
     - [Samba](#samba)
-  - [SecureBoot w/ kmods](#secureboot-w-kmods)
+  - [SecureBoot](#secureboot)
   - [NVIDIA](#nvidia)
     - [Included Drivers](#included-drivers)
     - [Other Drivers](#other-drivers)
@@ -44,6 +44,64 @@ Please take a look at the included modifications, and help us improve uCore if t
 - [Metrics](#metrics)
 
 ## Announcements
+
+### 2025.12.10 - NVIDIA 580 LTS and NVIDIA 590 Open
+
+Our NVIDIA upstream recently released an [NVIDIA 580 LTS repository](https://negativo17.org/nvidia-driver-580-lts-repository/)
+alongside an update to the standard NVIDIA repo such that open version 590 is now the default.
+
+This brings uCore long awaited support for newer NVIDIA hardware without
+abandoning support for users of Maxwell and Pascal devices.
+
+New tags have been created for the NVIDIA 580 LTS images:
+`:stable-nvidia-lts` and `:testing-nvidia-lts`.
+
+While the latest open driver will ship in the old tags:
+`:stable-nvidia` and `:testing-nvidia`.
+
+One more change: to keep the tag matrix from growing too complex, the `-zfs` variant tags will no
+longer be published. These have been redundant since the 2025.06.12 update when ZFS was added to
+base builds. If you are still running on one of these older tags, you'll notice no updates are
+available.
+
+Run a `bootc switch` to move to the proper tag.
+
+### 2025.11.20 - uCore (Fedora 43) Available with LTS Kernel
+
+Thank you to all for being patient as this update was a bit delayed beyond CoreOS' normal cadence.
+
+What's new:
+
+- Based on [Fedora CoreOS 43.20251024.3.0](https://fedoraproject.org/coreos/release-notes?stream=stable)
+- uCore stable now uses an [LTS(longterm) 6.12 kernel](https://github.com/ublue-os/ucore/issues/317)
+- uCore testing continues to use the upstream kernel
+- mergerfs and snapraid have been updated to latest releases and are available for both aarch64/x86_64
+
+LTS Kernel Impact:
+
+- the primary goal is to provide more consistent behavior for servers between updates, thus it is not
+  the latest (6.17) which could mean some recent hardware is not well supported.
+- the primary concern is for users with [SecureBoot enabled](#secureboot); the ublue-os MOK must be
+  imported before rebooting else the first boot will fail. See the [SecureBoot section](#secureboot)
+  of this README
+- if the LTS kernel is a problem for your use case, we suggest using `ucore:testing`
+
+Enjoy, and as always if any bugs or problems are found, please [file an issue](https://github.com/ublue-os/ucore/issues)!
+
+### 2025.11.08 - uCore aarch64(ARM64) is Available
+
+It's been [over two years](https://github.com/ublue-os/ucore/issues/15) since originally requested, but ARM64 is finally available in uCore builds!
+
+The container image build process has been updated to publish multi-arch manifests. Simply put, whether you `podman pull` or `bootc switch`  `ghcr.io/ublue-os/ucore:stable` (or any of our images starting as of `20251108`), the proper architecture will be pulled, assuming it's one of the two available: `aarch64` and `x86_64`.
+
+Known differences between architectures will include different firmwares and a lack of Intel specific packages on `aarch64` (eg, `intel-compute-runtime` is obviously not available).
+
+Caveats:
+
+- minimal testing has been done with these images (they've been installed & lightly used in VMs), though upstream `aarch64` has been available for a long time, so concern is low.
+- `mergerfs` is not yet available for `aarch64`; its next release will include both Fedora 43 and `aarch64` packages.
+
+Please enjoy and report any issues or missing packages!
 
 ### 2025.06.12 - uCore Build Streamlining
 
@@ -97,7 +155,8 @@ The [tag matrix](#tag-matrix) includes combinations of the following:
 
 - `stable` - images based on Fedora CoreOS stable stream including zfs driver and tools
 - `testing` - images based on Fedora CoreOS testing stream including zfs driver and tools
-- `nvidia` - images which include nvidia driver and container runtime
+- `nvidia` - images which include latest nvidia driver and container runtime
+- `nvidia-lts` - images which include LTS nvidia driver and container runtime
 
 ### Images
 
@@ -171,17 +230,17 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 
 | IMAGE | TAG |
 |-|-|
-| [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia` |
-| [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia` |
-| [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia` |
-| [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia` |
-| [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia` |
-| [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia` |
+| [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
+| [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
+| [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
+| [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
 
 ## Installation
 
 > [!IMPORTANT]
-> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; it does not provide its own custom or GUI installer.
+> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; **it does not provide its own custom or GUI installer**.
 
 There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
 
@@ -224,7 +283,7 @@ To rebase an existing CoreOS machine to the latest uCore:
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
 ```
 
-#### Verified Image Updates <!-- omit in toc -->
+#### Verified Image Updates
 
 The `ucore*` images include container policies to support image verification for improved trust of upgrades. Once running one of the `ucore*` images, the following command will rebase to the verified image reference:
 
@@ -263,7 +322,7 @@ As of [netavark v1.9.0](https://blog.podman.io/2023/11/new-netavark-firewalld-re
 
 By default, UCore does not automatically start `restart: always` containers on system boot, however this can be easily enabled:
 
-##### For containers running under the `core` user
+##### Containers running under the `core` user
 
 ```bash
 # Copy the system's podman-restart service to the user location
@@ -287,7 +346,7 @@ loginctl enable-linger $UID
 
 You can find more information regarding this on the [Podman troubleshooting page](https://github.com/containers/podman/blob/main/troubleshooting.md#21-a-rootless-container-running-in-detached-mode-is-closed-at-logout).
 
-##### For containers running under the root user (rootful containers)
+##### Containers running under the root user (rootful containers)
 
 You just need to enable the built-in service:
 
@@ -354,7 +413,7 @@ But two others are included, which though common, warrant some explanation:
 
 It's suggested to read Fedora's [NFS Server docs](https://docs.fedoraproject.org/en-US/fedora-server/services/filesharing-nfs-installation/) plus other documentation to understand how to setup this service. But here's a few quick tips...
 
-##### Firewall - NFS <!-- omit in toc -->
+##### Firewall - NFS
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
@@ -363,7 +422,7 @@ sudo firewall-cmd --permanent --zone=FedoraServer --add-service=nfs
 sudo firewall-cmd --reload
 ```
 
-##### SELinux - NFS <!-- omit in toc -->
+##### SELinux - NFS
 
 By default, nfs-server is blocked from sharing directories unless the context is set. So, generically to enable NFS sharing in SELinux run:
 
@@ -404,11 +463,11 @@ sudo setsebool -P nfs_export_all_rw 1
 
 There is [more to read](https://linux.die.net/man/8/nfs_selinux) on this topic.
 
-##### Shares - NFS <!-- omit in toc -->
+##### Shares - NFS
 
 NFS shares are configured in `/etc/exports` or `/etc/exports.d/*` (see docs).
 
-##### Run It - NFS <!-- omit in toc -->
+##### Run It - NFS
 
 Like all services, NFS needs to be enabled and started:
 
@@ -421,7 +480,7 @@ sudo systemctl status nfs-server.service
 
 It's suggested to read Fedora's [Samba docs](https://docs.fedoraproject.org/en-US/quick-docs/samba/) plus other documentation to understand how to setup this service. But here's a few quick tips...
 
-##### Firewall - Samba <!-- omit in toc -->
+##### Firewall - Samba
 
 Unless you've disabled `firewalld`, you'll need to do this:
 
@@ -430,7 +489,7 @@ sudo firewall-cmd --permanent --zone=FedoraServer --add-service=samba
 sudo firewall-cmd --reload
 ```
 
-##### SELinux - Samba <!-- omit in toc -->
+##### SELinux - Samba
 
 By default, samba is blocked from sharing directories unless the context is set. So, generically to enable samba sharing in SELinux run:
 
@@ -454,7 +513,7 @@ sudo setsebool -P samba_export_all_rw 1
 
 There is [much to read](https://linux.die.net/man/8/samba_selinux) on this topic.
 
-##### Shares - Samba <!-- omit in toc -->
+##### Shares - Samba
 
 Samba shares can be manually configured in `/etc/samba/smb.conf` (see docs), but user shares are also a good option.
 
@@ -464,7 +523,7 @@ An example follows, but you'll probably want to read some docs on this, too:
 net usershare add sharename /path/to/share [comment] [user:{R|D|F}] [guest_ok={y|n}]
 ```
 
-##### Run It - Samba <!-- omit in toc -->
+##### Run It - Samba
 
 Like all services, Samba needs to be enabled and started:
 
@@ -473,17 +532,38 @@ sudo systemctl enable --now smb.service
 sudo systemctl status smb.service
 ```
 
-### SecureBoot w/ kmods
+### SecureBoot
 
-For those wishing to use `nvidia` or `zfs` images with pre-built kmods AND run SecureBoot, the kernel will not load those kmods until the public signing key has been imported as a MOK (Machine-Owner Key).
+Those wishing to run SecureBoot for a `stable` image, will need to first import the ublue-os public signing key as a MOK (Machine-Owner Key).
 
-Do so like this:
+1. before installing, disable SecureBoot in the system UEFI firmware
+2. after confirming ucore is the running image, import the key:
 
 ```bash
 sudo mokutil --import /etc/pki/akmods/certs/akmods-ublue.der
 ```
 
-The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the UEFI MOK import utility.
+The utility will prompt for a password. The password will be used to verify this key is the one you meant to import, after rebooting and entering the system's UEFI MOK import utility.
+
+Note: this import process is also required for users of the `testing` image if using nvidia or zfs, though instead of failing to boot only the respective drivers will fail to load.
+
+#### SecureBoot failure to boot recovery / troubleshooting
+
+If your system fails to boot with an error like:
+
+```
+error: ../../grub-core/kern/efi/sb.sc:102:bad shim_signature.
+error: ../../grub-core/loader/i386/efi/linux.c:250:you need to load the kernel first.
+
+Press any key to continue...
+```
+
+You can either:
+
+1. rollback to previous deployment of uCore to run the import command above
+2. if there is no previous uCore deployment, enter UEFI firmware setup by:
+    - pressing `ESC`
+    - at the `grub>` prompt, type `fwsetup`
 
 ### NVIDIA
 

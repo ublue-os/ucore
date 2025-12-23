@@ -1,5 +1,7 @@
 #!/bin/sh
-
+#
+# Packages installed via packages.json must be available on all architectures.
+#
 set -ouex pipefail
 
 RELEASE="$(rpm -E %fedora)"
