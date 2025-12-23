@@ -111,6 +111,11 @@ fi
 
 ## ALWAYS: install regular packages
 
+# install tuned without weak deps (kernel-tools and python3-perf)
+dnf -y install --setopt=install_weak_deps=False \
+    tuned \
+    tuned-profiles-atomic
+
 # add tailscale repo
 curl --fail --retry 15 --retry-all-errors -sSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
