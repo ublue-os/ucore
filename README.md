@@ -39,7 +39,7 @@ Please take a look at the included modifications, and help us improve uCore if t
     - [Other Drivers](#other-drivers)
   - [ZFS](#zfs)
     - [ZFS and immutable root filesystem](#zfs-and-immutable-root-filesystem)
-    - [Sanoid/Syncoid](#sanoidsyncoid)
+    - [Backups with Sanoid/Syncoid](#backups-with-sanoidsyncoid)
 - [DIY](#diy)
 - [Metrics](#metrics)
 
@@ -630,11 +630,41 @@ systemctl enable --now zfs-scrub-monthly@<pool>.timer
 
 This can be enabled for multiple storage pools by enabling and starting a timer for each.
 
-#### Sanoid/Syncoid
+#### Backups with Sanoid/Syncoid
 
-sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#centos).
+sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#RHEL/CentOS/AlmaLinux) that are worth reading for those who want to enable them in a ucore install.
 
-`ucore` has pre-install all the (lightweight) required dependencies (perl-Config-IniFiles perl-Data-Dumper perl-Capture-Tiny perl-Getopt-Long lzop mbuffer mhash pv), such that a user wishing to use sanoid/syncoid only need install the "sbin" files and create configuration/systemd units for it.
+`ucore` comes with sanoid and syncoid pre-installed. Sanoid already has both a systemd service and timer setup that can be enabled after the user creates a `sanoid.conf` file and places it in `/etc/sanoid`. The easiest way to create a `sanoid.conf` file is by copying the [template](https://github.com/jimsalterjrs/sanoid/blob/master/sanoid.conf) provided in the sanoid repo and altering it to reference the zfs pools/datasets to snapshot. The service & timer can then be enabled with `systemctl enable sanoid.timer`.
+
+For backups you will need to create a simple systemd service and timer that triggers syncoid to perform the zfs replication. This setup will vary depending on where the backups are going, but the syncoid job can be setup on the "source" (push backups), or the backup target (pull backups). There are [guides](https://discourse.practicalzfs.com/t/setting-up-syncoid-for-offsite-backup/1611/3) online that can help users navigate what they need to do for their setup.
+
+Bellow is a simple example of `syncoid.service` and `syncoid.timer` files in a "pull" configuration:
+
+```
+syncoid.service
+[Unit]
+Description=Call syncoid to pull backups from source to target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -c "syncoid -r core@<remote_source>:<pool/dataset> local pool/dataset"
+# You can put another ExecStart here if you have other pool/datasets to move
+```
+
+```
+syncoid.timer
+[Unit]
+Description=Call syncoid to pull backups from source to target
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+```
+
+These files can be placed wherever the user defines user-owned systemd units (commonly `~/.config/systemd/user/`) and enabled with `systemctl --user enable syncoid.timer`.
 
 ## DIY
 
