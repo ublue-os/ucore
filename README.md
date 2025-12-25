@@ -39,7 +39,7 @@ Please take a look at the included modifications, and help us improve uCore if t
     - [Other Drivers](#other-drivers)
   - [ZFS](#zfs)
     - [ZFS and immutable root filesystem](#zfs-and-immutable-root-filesystem)
-    - [Sanoid/Syncoid](#sanoidsyncoid)
+    - [Backups with Sanoid/Syncoid](#backups-with-sanoidsyncoid)
 - [DIY](#diy)
 - [Metrics](#metrics)
 
@@ -630,7 +630,7 @@ systemctl enable --now zfs-scrub-monthly@<pool>.timer
 
 This can be enabled for multiple storage pools by enabling and starting a timer for each.
 
-#### Sanoid/Syncoid
+#### Backups with Sanoid/Syncoid
 
 sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#RHEL/CentOS/AlmaLinux) that are worth reading for those who want to enable them in a ucore install.
 
