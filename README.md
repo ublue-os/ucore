@@ -632,11 +632,11 @@ This can be enabled for multiple storage pools by enabling and starting a timer 
 
 #### Backups with Sanoid/Syncoid
 
-sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets. However, there is not a current stable RPM, rather they provide [instructions on installing via git](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#RHEL/CentOS/AlmaLinux) that are worth reading for those who want to enable them in a ucore install.
+sanoid/syncoid is a great tool for manual and automated snapshot/transfer of ZFS datasets.
 
 `ucore` comes with sanoid and syncoid pre-installed. Sanoid already has both a systemd service and timer setup that can be enabled after the user creates a `sanoid.conf` file and places it in `/etc/sanoid`. The easiest way to create a `sanoid.conf` file is by copying the [template](https://github.com/jimsalterjrs/sanoid/blob/master/sanoid.conf) provided in the sanoid repo and altering it to reference the zfs pools/datasets to snapshot. The service & timer can then be enabled with `systemctl enable sanoid.timer`.
 
-For backups you will need to create a simple systemd service and timer that triggers syncoid to perform the zfs replication. This setup will vary depending on where the backups are going, but the syncoid job can be setup on the "source" (push backups), or the backup target (pull backups). There are [guides](https://discourse.practicalzfs.com/t/setting-up-syncoid-for-offsite-backup/1611/3) online that can help users navigate what they need to do for their setup.
+For backups you will need to create a simple systemd service and timer that triggers syncoid to perform the zfs replication. This setup will vary depending on where the backups are going, but the syncoid job can be setup on the "source" (push backups), or the backup "target" (pull backups). There are [guides](https://discourse.practicalzfs.com/t/setting-up-syncoid-for-offsite-backup/1611/3) online, as well as the [sanoid repo](https://github.com/jimsalterjrs/sanoid/blob/master/INSTALL.md#RHEL/CentOS/AlmaLinux), that can help users navigate what they need to do for their setup.
 
 Bellow is a simple example of `syncoid.service` and `syncoid.timer` files in a "pull" configuration:
 
