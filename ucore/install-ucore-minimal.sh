@@ -115,7 +115,6 @@ fi
 curl --fail --retry 15 --retry-all-errors -sSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
 # install packages
-export IMAGE_NAME=ucore-minimal
 dnf -y install \
     bootc \
     cockpit-files \

@@ -2,8 +2,7 @@
 
 set -ouex pipefail
 
-# install packages.json stuffs
-export IMAGE_NAME=ucore-hci
+# install packages
 dnf -y install \
     cockpit-machines \
     libvirt-client \

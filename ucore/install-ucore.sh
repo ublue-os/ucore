@@ -6,7 +6,6 @@ ARCH="$(rpm -E %_arch)"
 RELEASE="$(rpm -E %fedora)"
 
 # install packages
-export IMAGE_NAME=ucore
 dnf -y swap nfs-utils-coreos nfs-utils
 dnf -y install \
     NetworkManager-wifi \
