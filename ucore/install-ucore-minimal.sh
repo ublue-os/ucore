@@ -111,17 +111,35 @@ fi
 
 ## ALWAYS: install regular packages
 
-# install tuned without weak deps (kernel-tools and python3-perf)
-dnf -y install --setopt=install_weak_deps=False \
-    tuned \
-    tuned-profiles-atomic
-
 # add tailscale repo
 curl --fail --retry 15 --retry-all-errors -sSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
-# install packages.json stuffs
+# install packages
 export IMAGE_NAME=ucore-minimal
-/ctx/packages.sh
+dnf -y install \
+    bootc \
+    cockpit-files \
+    cockpit-networkmanager \
+    cockpit-podman \
+    cockpit-selinux \
+    cockpit-system \
+    docker-buildx \
+    docker-compose \
+    firewalld \
+    fwupd-efi \
+    open-vm-tools \
+    podman \
+    podman-compose \
+    pv \
+    qemu-guest-agent \
+    tailscale \
+    tmux \
+    wireguard-tools
+
+# install tuned without weak deps (skip kernel-tools and python3-perf)
+dnf -y install --setopt=install_weak_deps=False \
+    tuned \
+    tuned-profiles-atomic
 
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
