@@ -20,7 +20,7 @@ popd
 
 #### PREPARE
 # enable testing repos if not enabled on testing stream
-if [[ "testing" == "${COREOS_VERSION}" ]]; then
+if [[ "testing" == "${UCORE_STREAM}" ]]; then
 for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing.repo); do
   if [[ "$(grep enabled=1 ${REPO} > /dev/null; echo $?)" == "1" ]]; then
     echo "enabling $REPO" &&

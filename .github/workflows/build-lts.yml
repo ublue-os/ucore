@@ -1,4 +1,4 @@
-name: stable
+name: lts
 on:
   merge_group:
   pull_request:
@@ -7,13 +7,13 @@ on:
     paths-ignore:
       - "**.md"
   schedule:
-    - cron: "50 2 * * *" # 2:50am-ish UTC everyday (approx 45 minutes after akmods images run)
+    - cron: "45 2 * * *" # 2:45am-ish UTC everyday (approx 40 minutes after akmods images run)
   workflow_dispatch:
 
 jobs:
-  build-stable:
+  build-lts:
     uses: ./.github/workflows/reusable-build.yml
     secrets: inherit
     with:
-      ucore_stream: stable
+      ucore_stream: lts
       arch: "['aarch64','x86_64']"

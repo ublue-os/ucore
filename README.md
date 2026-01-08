@@ -1,5 +1,6 @@
 # uCore <!-- omit in toc -->
 
+[![lts](https://github.com/ublue-os/ucore/actions/workflows/build-lts.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-lts.yml)
 [![stable](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml)
 [![testing](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml)
 
@@ -155,7 +156,8 @@ The [tag matrix](#tag-matrix) includes combinations of the following:
 
 - `stable` - images based on Fedora CoreOS stable stream including zfs driver and tools
 - `testing` - images based on Fedora CoreOS testing stream including zfs driver and tools
-- `nvidia` - images which include latest nvidia driver and container runtime
+- `lts` - images based on Fedora CoreOS stable stream with longterm kernel, zfs driver and tools
+- `nvidia` - images which include latest open nvidia driver and container runtime
 - `nvidia-lts` - images which include LTS nvidia driver and container runtime
 
 ### Images
@@ -230,10 +232,13 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 
 | IMAGE | TAG |
 |-|-|
+| [`ucore-minimal`](#ucore-minimal) - *lts* | `lts`, `lts-nvidia`, `lts-nvidia-lts` |
 | [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore`](#ucore) - *lts* | `lts`, `lts-nvidia`, `lts-nvidia-lts` |
 | [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore-hci`](#ucore-hci) - *lts* | `lts`, `lts-nvidia`, `lts-nvidia-lts` |
 | [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
 
