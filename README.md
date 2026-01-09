@@ -66,7 +66,7 @@ The breaking change occurred in uCore's `20251220` build which included the `6.1
 
 As far as we have seen, the LTS kernel is working fine for other use cases.
 
-The issue is being tracked: https://github.com/ublue-os/ucore/issues/339
+The issue is [being tracked](https://github.com/ublue-os/ucore/issues/339).
 
 For now, the workaround will be to run uCore `stable` stream images. The decision has been made to restore the standard upstream kernel to `stable` stream builds and move LTS kernel to a new `lts` stream. For the forseeable future, we will keep `lts` stream builds for the "stable with LTS kernel" experience, and `stable` builds will retain the standard kernel.
 
