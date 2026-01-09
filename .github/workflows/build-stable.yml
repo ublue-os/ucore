@@ -10,9 +10,6 @@ on:
     - cron: "50 2 * * *" # 2:50am-ish UTC everyday (approx 45 minutes after akmods images run)
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   build-stable:
     uses: ./.github/workflows/reusable-build.yml
