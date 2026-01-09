@@ -1,5 +1,6 @@
 # uCore <!-- omit in toc -->
 
+[![lts](https://github.com/ublue-os/ucore/actions/workflows/build-lts.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-lts.yml)
 [![stable](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml)
 [![testing](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml)
 
@@ -44,6 +45,30 @@ Please take a look at the included modifications, and help us improve uCore if t
 - [Metrics](#metrics)
 
 ## Announcements
+
+### 2026.01.08 - uCore LTS Stream and LTS kernel sysext issue
+
+It's come to our attention that the most recent 6.12 LTS kernel, used in uCore stable builds, has broken sysext functionality.
+
+The issue is, when trying to run [system extensions](https://www.freedesktop.org/software/systemd/man/latest/systemd-sysext.html), the [overlayfs](https://www.kernel.org/doc/html/latest/filesystems/overlayfs.html) mount fails.
+
+After attempting to start `systemd-sysext.service` you will see logs like these in dmesg, journal or service status outputs:
+```
+[   17.227606] overlayfs: maximum fs stacking depth exceeded
+```
+
+```
+Jan 07 10:06:17 localhost (sd-merge)[1191]: Failed to mount sysext (type overlay) on /run/systemd/sysext/overlay/usr (MS_RDONLY|MS_NODEV "lowerdir=/run/sy>
+Jan 07 10:06:17 localhost systemd-sysext[1177]: Failed to merge hierarchies
+```
+
+The breaking change occurred in uCore's `20251220` build which included the `6.12.63` kernel. LTS kernel `6.12.62`, last available in uCore's `20251218` build (and earlier patch revisions), did not exhibit this issue. It is unclear what causes the issue as no obvious changes in the kernel changelogs stand out as directly related.
+
+As far as we have seen, the LTS kernel is working fine for other use cases.
+
+The issue is [being tracked](https://github.com/ublue-os/ucore/issues/339).
+
+For now, the workaround will be to run uCore `stable` stream images. The decision has been made to restore the standard upstream kernel to `stable` stream builds and move LTS kernel to a new `lts` stream. For the forseeable future, we will keep `lts` stream builds for the "stable with LTS kernel" experience, and `stable` builds will retain the standard kernel.
 
 ### 2025.12.10 - NVIDIA 580 LTS and NVIDIA 590 Open
 
@@ -155,7 +180,8 @@ The [tag matrix](#tag-matrix) includes combinations of the following:
 
 - `stable` - images based on Fedora CoreOS stable stream including zfs driver and tools
 - `testing` - images based on Fedora CoreOS testing stream including zfs driver and tools
-- `nvidia` - images which include latest nvidia driver and container runtime
+- `lts` - images based on Fedora CoreOS stable stream with longterm kernel, zfs driver and tools
+- `nvidia` - images which include latest open nvidia driver and container runtime
 - `nvidia-lts` - images which include LTS nvidia driver and container runtime
 
 ### Images
@@ -230,10 +256,13 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 
 | IMAGE | TAG |
 |-|-|
+| [`ucore-minimal`](#ucore-minimal) - *lts* | `lts`, `lts-nvidia`, `lts-nvidia-lts` |
 | [`ucore-minimal`](#ucore-minimal) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore-minimal`](#ucore-minimal) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore`](#ucore) - *lts* | `lts`, `lts-nvidia`, `lts-nvidia-lts` |
 | [`ucore`](#ucore) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore`](#ucore) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
+| [`ucore-hci`](#ucore-hci) - *lts* | `lts`, `lts-nvidia`, `lts-nvidia-lts` |
 | [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
 

@@ -2,8 +2,8 @@ name: build-ucore
 on:
   workflow_call:
     inputs:
-      coreos_version:
-        description: "The CoreOS stream: stable or testing"
+      ucore_stream:
+        description: "The uCore stream: stable, testing, or lts"
         required: true
         type: string
       arch:
@@ -14,10 +14,12 @@ on:
 
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  KERNEL_FLAVOR: ${{ inputs.coreos_version == 'stable' && 'longterm-6.12' || format('coreos-{0}', inputs.coreos_version) }}
+  # lts uses the stable CoreOS base image but with the longterm kernel
+  COREOS_STREAM: ${{ inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream }}
+  KERNEL_FLAVOR: ${{ inputs.ucore_stream == 'lts' && 'longterm-6.12' || format('coreos-{0}', inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream) }}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.coreos_version }}
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
   cancel-in-progress: true
 
 jobs:
@@ -67,7 +69,7 @@ jobs:
           command: |
             set -eo pipefail
 
-            skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ inputs.coreos_version }} > inspect.json
+            skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ env.COREOS_STREAM }} > inspect.json
 
             image=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
             if [ -z "$image" ] || [ "null" = "$image" ]; then
@@ -153,7 +155,7 @@ jobs:
         run: |
           set -x
           echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
-          echo "TAG_VERSION=${{ inputs.coreos_version }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
+          echo "TAG_VERSION=${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
 
       - name: Pull base and kmod images
@@ -231,7 +233,7 @@ jobs:
         id: create-containerfile
         run: |
           pushd ucore
-          COREOS_VERSION=${{ inputs.coreos_version }} \
+          UCORE_STREAM=${{ inputs.ucore_stream }} \
           FEDORA_VERSION=${{ env.FEDORA_VERSION }} \
           IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }} \
           KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }} \
@@ -359,7 +361,7 @@ jobs:
           set -x
           echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
           NVIDIA_TAG="${{ matrix.nvidia_tag }}"
-          echo "TAG_VERSION=${{ inputs.coreos_version }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
+          echo "TAG_VERSION=${{ inputs.ucore_stream }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
 
       - name: Download image artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7

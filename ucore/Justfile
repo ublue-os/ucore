@@ -1,10 +1,12 @@
 set dotenv-load := true
 
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
-COREOS_VERSION := env("COREOS_VERSION", "stable")
+UCORE_STREAM := env("UCORE_STREAM", "stable")
 FEDORA_VERSION := env("FEDORA_VERSION", "43")
 IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
-KERNEL_FLAVOR := env("KERNEL_FLAVOR", if COREOS_VERSION == 'stable' { "longterm-6.12" } else { 'coreos-' + COREOS_VERSION })
+# lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
+COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
+KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.12" } else { 'coreos-' + COREOS_STREAM })
 NVIDIA_TAG := env("NVIDIA_TAG", "")
 SELINUX := path_exists('/sys/fs/selinux')
 TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
@@ -14,7 +16,7 @@ _default:
 
 upstream-version image:
     #!/usr/bin/env bash
-    version=$(skopeo inspect docker://"{{ image }}":{{ COREOS_VERSION }} | \
+    version=$(skopeo inspect docker://"{{ image }}":{{ COREOS_STREAM }} | \
             jq -r '.["Labels"]["org.opencontainers.image.version"]')
     if [ -z "$version" ] || [ "null" = "$version" ]; then
       echo "inspected image ({{ image }}) version must not be empty or null" >&2
@@ -34,7 +36,7 @@ containerfile upstream_image='':
     declare -a CPP_FLAGS
     CPP_FLAGS+=(
       "-DAKMODS_TAG={{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}"
-      "-DCOREOS={{ COREOS_VERSION }}"
+      "-DUCORE={{ UCORE_STREAM }}"
       "-DIMAGE_REGISTRY={{ IMAGE_REGISTRY }}"
       "-DKERNEL={{ KERNEL_FLAVOR }}"
       "-DUPSTREAM_IMAGE={{ if upstream_image == '' { shell('just upstream-image') } else { upstream_image } }}"
@@ -57,7 +59,7 @@ build upstream_image='':
     # TODO: use LABELS_FILE to include labels in image
     BUILD_TAG={{ CI_BUILD_TAG }}
     if [ -z "$BUILD_TAG" ]; then
-        BUILD_TAG={{ COREOS_VERSION }}{{ NVIDIA_TAG }}
+        BUILD_TAG={{ UCORE_STREAM }}{{ NVIDIA_TAG }}
     fi
     podman build -f Containerfile \
         --target {{ TARGET_IMAGE }} \
