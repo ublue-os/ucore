@@ -676,6 +676,9 @@ Description=Call syncoid to pull backups from source to target
 
 [Service]
 Type=oneshot
+# Ids of user/group that has access to the ssh credentials needed to pull backups, usually 1000(core)
+User=1000
+Group=1000
 ExecStart=/usr/bin/bash -c "syncoid -r core@<remote_source>:<pool/dataset> local pool/dataset"
 # You can put another ExecStart here if you have other pool/datasets to move
 ```
@@ -693,7 +696,7 @@ OnUnitActiveSec=6h
 WantedBy=timers.target
 ```
 
-These files can be placed wherever the user defines user-owned systemd units (commonly `~/.config/systemd/user/`) and enabled with `systemctl --user enable syncoid.timer`.
+These files should be placed in `/etc/systemd/system/` and enabled with `systemctl enable syncoid.timer`.
 
 ## DIY
 
