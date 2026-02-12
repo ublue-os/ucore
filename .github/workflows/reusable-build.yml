@@ -167,9 +167,9 @@ jobs:
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
             podman pull quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}
-            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+            podman pull ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}-${{ env.KERNEL_VERSION }}
             if [ -n "${{ matrix.nvidia_tag }}" ]; then
-                podman pull ${{ env.IMAGE_REGISTRY }}/akmods${{ matrix.nvidia_tag }}:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}
+                podman pull ${{ env.IMAGE_REGISTRY }}/akmods${{ matrix.nvidia_tag }}:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}-${{ env.KERNEL_VERSION }}
             fi
 
       - name: Verify versions (image, kernel, zfs)
@@ -187,7 +187,7 @@ jobs:
               echo "env.KERNEL_VERSION must not be empty or null" >&2
               exit 1
           fi
-          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}-${{ env.KERNEL_VERSION }} > inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled akmods-zfs image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})" >&2
@@ -199,7 +199,7 @@ jobs:
         shell: bash
         run: |
           set -x
-          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods${{ matrix.nvidia_tag }}:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }} > inspect.json
+          podman inspect ${{ env.IMAGE_REGISTRY }}/akmods${{ matrix.nvidia_tag }}:${{ env.KERNEL_FLAVOR }}-${{ env.FEDORA_VERSION }}-${{ env.KERNEL_VERSION }} > inspect.json
           kernel=$(jq -r '.[]["Config"]["Labels"]["ostree.linux"]' inspect.json)
           if [[ "${{ env.KERNEL_VERSION }}" != "$kernel"*  ]]; then
               echo "pulled akmods${{ matrix.nvidia_tag }} image kernel ($kernel) does not match expected kernel (${{ env.KERNEL_VERSION }})"
@@ -237,6 +237,7 @@ jobs:
           FEDORA_VERSION=${{ env.FEDORA_VERSION }} \
           IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }} \
           KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }} \
+          KERNEL_VERSION=${{ env.KERNEL_VERSION }} \
           NVIDIA_TAG=${{ matrix.nvidia_tag }} \
           just containerfile "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
 
