@@ -7,6 +7,7 @@ IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
 KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.12" } else { 'coreos-' + COREOS_STREAM })
+KERNEL_VERSION := env("KERNEL_VERSION", "")
 NVIDIA_TAG := env("NVIDIA_TAG", "")
 SELINUX := path_exists('/sys/fs/selinux')
 TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
@@ -33,9 +34,13 @@ upstream-image:
 containerfile upstream_image='':
     #!/usr/bin/env bash
     set -x
+    KERNEL_VERSION=""
+    if [ -n "{{ KERNEL_VERSION }}" ]; then
+        KERNEL_VERSION="-{{ KERNEL_VERSION }}"
+    fi
     declare -a CPP_FLAGS
     CPP_FLAGS+=(
-      "-DAKMODS_TAG={{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}"
+      "-DAKMODS_TAG={{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}${KERNEL_VERSION}"
       "-DUCORE={{ UCORE_STREAM }}"
       "-DIMAGE_REGISTRY={{ IMAGE_REGISTRY }}"
       "-DKERNEL={{ KERNEL_FLAVOR }}"
