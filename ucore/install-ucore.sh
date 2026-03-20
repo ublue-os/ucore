@@ -18,6 +18,7 @@ dnf -y install \
     iwlegacy-firmware \
     iwlwifi-dvm-firmware \
     iwlwifi-mvm-firmware \
+    lm_sensors \
     man-db \
     mt7xxx-firmware \
     nxpwireless-firmware \
