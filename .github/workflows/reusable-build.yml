@@ -354,7 +354,7 @@ jobs:
           - "-nvidia-open"
     steps:
       - name: Mount BTRFS for podman storage
-        uses: ublue-os/container-storage-action@main
+        uses: ublue-os/container-storage-action@dc1f4c8f17b672069e921f001132f7cf98a423a6 # main
 
       - name: Set matrix environment variables
         shell: bash
