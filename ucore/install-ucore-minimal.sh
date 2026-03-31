@@ -41,14 +41,6 @@ sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
 
-# mitigate upstream bug with rpm-ostree failing to layer packages in F43.
-# can be removed when rpm-ostree's libdnf submodule is 8eadf440 or newer
-if [[ "$(rpm -E %fedora)" -gt 41 ]]; then
-    dnf5 -y swap --repo='copr:copr.fedorainfracloud.org:ublue-os:staging' \
-        rpm-ostree rpm-ostree
-    dnf5 versionlock add rpm-ostree
-fi
-
 # provide ublue-akmods public_key for MOK enroll
 dnf -y install /tmp/rpms/akmods-zfs/ucore/ublue-os-ucore-addons*.rpm
 
