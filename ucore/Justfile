@@ -69,3 +69,49 @@ build upstream_image='':
     podman build -f Containerfile \
         --target {{ TARGET_IMAGE }} \
         -t "{{ TARGET_IMAGE }}:${BUILD_TAG}" .
+
+package-provenance image='' output='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    IMAGE='{{ image }}'
+    BUILD_TAG='{{ CI_BUILD_TAG }}'
+    if [ -z "$IMAGE" ]; then
+        if [ -z "$BUILD_TAG" ]; then
+            BUILD_TAG='{{ UCORE_STREAM }}{{ NVIDIA_TAG }}'
+        fi
+        IMAGE='{{ TARGET_IMAGE }}:'"$BUILD_TAG"
+    fi
+
+    OUTPUT='{{ output }}'
+    if [ -z "$OUTPUT" ]; then
+        NVIDIA_SEGMENT='{{ NVIDIA_TAG }}'
+        if [ -n "$NVIDIA_SEGMENT" ]; then
+            NVIDIA_SEGMENT="-${NVIDIA_SEGMENT#-}"
+        fi
+        OUTPUT="audit/{{ TARGET_IMAGE }}-{{ UCORE_STREAM }}${NVIDIA_SEGMENT}-package-provenance.txt"
+    fi
+
+    if ! podman image exists "$IMAGE"; then
+        printf 'Local image not found: %s\n' "$IMAGE" >&2
+        printf 'Build it first with the matching environment, for example:\n' >&2
+        printf '  TARGET_IMAGE=%s UCORE_STREAM=%s NVIDIA_TAG=%s just build\n' \
+            '{{ TARGET_IMAGE }}' '{{ UCORE_STREAM }}' '{{ NVIDIA_TAG }}' >&2
+        exit 1
+    fi
+
+    mkdir -p "$(dirname "$OUTPUT")"
+    podman run --rm --entrypoint /usr/bin/bash "$IMAGE" -lc \
+        "dnf repoquery --installed --qf '%{name}|%{evr}|%{arch}|%{from_repo}\n' | sort" \
+        > "$OUTPUT"
+
+    printf 'Wrote package provenance to %s\n' "$OUTPUT"
+    printf 'Repo counts:\n'
+    cut -d '|' -f4 "$OUTPUT" | sort | uniq -c | sort -nr
+
+    if grep -Fq 'copr:' "$OUTPUT"; then
+        printf '\nCOPR-installed packages:\n'
+        grep -F 'copr:' "$OUTPUT"
+    else
+        printf '\nNo installed packages are currently attributed to COPR repos.\n'
+    fi
