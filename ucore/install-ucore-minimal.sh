@@ -29,10 +29,10 @@ for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing.repo); do
 done
 fi
 
-# enable ublue-os repos
+# keep ublue-os COPR repos scoped to the packages that explicitly need them
 dnf -y install dnf5-plugins
-dnf -y copr enable ublue-os/packages
-dnf -y copr enable ublue-os/staging
+dnf -y copr enable ublue-os/packages && dnf -y copr disable ublue-os/packages
+dnf -y copr enable ublue-os/staging && dnf -y copr disable ublue-os/staging
 
 # always disable cisco-open264 repo
 sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
@@ -44,7 +44,7 @@ find /tmp/rpms/
 # provide ublue-akmods public_key for MOK enroll
 dnf -y install /tmp/rpms/akmods-zfs/ucore/ublue-os-ucore-addons*.rpm
 
-dnf -y install ublue-os-signing
+dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' install ublue-os-signing
 
 # Put the policy file in the correct place and cleanup /usr/etc
 cp /usr/etc/containers/policy.json /etc/containers/policy.json

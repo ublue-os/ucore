@@ -27,13 +27,15 @@ dnf -y install \
     realtek-firmware \
     samba \
     samba-usershares \
-    sanoid \
     smartctl \
     snapraid \
     tiwilink-firmware \
     usbutils \
     xdg-dbus-proxy \
     xdg-user-dirs
+
+# sanoid currently comes from ublue-os staging COPR
+dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:staging' install sanoid
 
 # install packages direct from github
 if [[ "${RELEASE}" -ge "43" ]]; then
