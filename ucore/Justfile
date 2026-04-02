@@ -70,6 +70,91 @@ build upstream_image='':
         --target {{ TARGET_IMAGE }} \
         -t "{{ TARGET_IMAGE }}:${BUILD_TAG}" .
 
+# Verify one package, or all effective entries, match the manifest checksum.
+verify-checksum package='' release='{{ FEDORA_VERSION }}' arch='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    package='{{ package }}'
+    release='{{ release }}'
+    arch='{{ arch }}'
+    failed=0
+
+    if [ -z "$arch" ]; then
+        arch="$(uname -m)"
+    fi
+
+    if [ -n "$package" ]; then
+        ./github-pkgs.sh verify-checksum "$package" --release "$release" --arch "$arch"
+    else
+        mapfile -t entries < <(./github-pkgs.sh list --arch "$arch")
+        for entry in "${entries[@]}"; do
+            name=$(jq -r '.name' <<<"$entry")
+            release_arg=$(jq -r '.release // empty' <<<"$entry")
+
+            if [ -z "$release_arg" ]; then
+                release_arg="$release"
+            fi
+
+            if ! ./github-pkgs.sh verify-checksum "$name" --release "$release_arg" --arch "$arch"; then
+                failed=1
+            fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+            printf 'One or more package entries failed checksum verification\n' >&2
+            exit 1
+        fi
+    fi
+
+# Check that one package, or all effective entries, can be downloaded successfully.
+verify-download package='' release='{{ FEDORA_VERSION }}' arch='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    package='{{ package }}'
+    release='{{ release }}'
+    arch='{{ arch }}'
+    failed=0
+    error_file=$(mktemp)
+    trap 'rm -f "$error_file"' EXIT
+
+    if [ -z "$arch" ]; then
+        arch="$(uname -m)"
+    fi
+
+    if [ -n "$package" ]; then
+        if ! ./github-pkgs.sh verify-download "$package" --release "$release" --arch "$arch" 2>"$error_file"; then
+            sed 's/^/  /' "$error_file" >&2
+            exit 1
+        fi
+    else
+        mapfile -t entries < <(./github-pkgs.sh list --arch "$arch")
+
+        for entry in "${entries[@]}"; do
+            name=$(jq -r '.name' <<<"$entry")
+            version=$(jq -r '.version // empty' <<<"$entry")
+            commit=$(jq -r '.commit // empty' <<<"$entry")
+            release_arg=$(jq -r '.release // empty' <<<"$entry")
+
+            if [ -z "$release_arg" ]; then
+                release_arg="$release"
+            fi
+
+            if ! ./github-pkgs.sh verify-download "$name" --release "$release_arg" --arch "$arch" 2>"$error_file"; then
+                printf 'ERROR: %s version=%s commit=%s release=%s\n' \
+                    "$name" "$version" "$commit" "$(jq -r '.release // empty' <<<"$entry")" >&2
+                sed 's/^/  /' "$error_file" >&2
+                failed=1
+            fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+            printf 'One or more package entries failed to resolve uniquely\n' >&2
+            exit 1
+        fi
+    fi
+
 package-provenance image='' output='':
     #!/usr/bin/env bash
     set -euo pipefail
