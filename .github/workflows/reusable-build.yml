@@ -186,7 +186,6 @@ jobs:
         if: matrix.image_suffix != '-minimal'
         run: |
           pushd ucore
-          just verify-download
           just verify-checksum
 
       - name: Pull base and kmod images

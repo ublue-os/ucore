@@ -9,8 +9,7 @@ TEMP_FILE=''
 usage() {
 	echo "Usage:"
 	echo "  $0 download NAME [--manifest PATH] [--release RELEASE] [--arch ARCH]    # download and verify manifest checksum"
-	echo "  $0 verify-checksum NAME [--manifest PATH] [--release RELEASE] [--arch ARCH] # verify manifest checksum matches download"
-	echo "  $0 verify-download NAME [--manifest PATH] [--release RELEASE] [--arch ARCH] # verify URL fetch succeeds only"
+	echo "  $0 verify-checksum NAME [--manifest PATH] [--release RELEASE] [--arch ARCH] # verify URL and manifest checksum matches download"
 	echo "  $0 entry NAME [--manifest PATH] [--release RELEASE] [--arch ARCH]       # print selected manifest row"
 	echo "  $0 list [--manifest PATH] [--arch ARCH]                                 # print effective manifest entries"
 	echo "  $0 resolve NAME [--manifest PATH] [--release RELEASE] [--arch ARCH]     # print resolved URL"
@@ -261,7 +260,7 @@ verify_download_checksum_for_entry() {
 		fail "sha256 mismatch for ${name}: expected ${expected_sha256}, got ${actual_sha256}"
 	fi
 	trap - EXIT
-	printf '%s\n' "${actual_sha256}"
+	printf '{"sha256":"%s","url":"%s"}\n' "$actual_sha256" "$url"
 }
 
 verify_checksum_named_entry() {
@@ -274,49 +273,24 @@ verify_checksum_named_entry() {
 	parse_common_args "$@"
 	manifest_json=$(load_manifest_json)
 	entry=$(select_manifest_entry "${manifest_json}" "${name}" "${RELEASE}")
-	sha256=$(verify_download_checksum_for_entry "${name}" "$@")
+  result=$(verify_download_checksum_for_entry "${name}" "$@")
+  sha256=$(jq -r '.sha256' <<<"$result")
+  url=$(jq -r '.url' <<<"$result")
 
 	if jq -e 'has("commit")' >/dev/null <<<"${entry}"; then
-		printf 'OK: %s commit=%s sha256=%s\n' \
+		printf 'OK: %s commit=%s sha256=%s url=%s\n' \
 			"${name}" \
 			"$(jq -r '.commit' <<<"${entry}")" \
-			"${sha256}"
+			"${sha256}" \
+			"${url}"
 	else
-		printf 'OK: %s version=%s release=%s sha256=%s\n' \
+		printf 'OK: %s version=%s release=%s sha256=%s url=%s\n' \
 			"${name}" \
 			"$(jq -r '.version' <<<"${entry}")" \
 			"$(jq -r '.release // empty' <<<"${entry}")" \
-			"${sha256}"
+			"${sha256}" \
+			"${url}"
 	fi
-}
-
-verify_download_named_entry() {
-	local name=${1}
-	shift
-	local manifest_json
-	local entry
-	local url
-	local curl_auth_args=()
-
-	parse_common_args "$@"
-	manifest_json=$(load_manifest_json)
-	entry=$(select_manifest_entry "${manifest_json}" "${name}" "${RELEASE}")
-	url=$(jq -r '.url' <<<"${entry}")
-
-	while IFS= read -r line; do
-		curl_auth_args+=("${line}")
-	done < <(get_curl_auth_args)
-
-	if ! curl --fail --retry 5 --retry-delay 5 --retry-all-errors -sI -L \
-		"${curl_auth_args[@]}" \
-		"${url}" >/dev/null; then
-		curl --fail --retry 5 --retry-delay 5 --retry-all-errors -sSL \
-			"${curl_auth_args[@]}" \
-			-o /dev/null \
-			"${url}" >/dev/null
-	fi
-
-	printf 'OK: %s -> %s\n' "${name}" "${url}"
 }
 
 list_entries() {
@@ -342,15 +316,6 @@ verify-checksum)
 	fi
 	shift 2
 	verify_checksum_named_entry "${NAME}" "$@"
-	;;
-verify-download)
-	NAME=${2:-}
-	if [[ -z "${NAME}" ]]; then
-		usage
-		exit 2
-	fi
-	shift 2
-	verify_download_named_entry "${NAME}" "$@"
 	;;
 list)
 	shift 1

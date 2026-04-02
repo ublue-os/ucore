@@ -35,9 +35,6 @@ dnf -y install \
 dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:staging' install sanoid
 
 # install packages direct from github
-UPDEX_RPM="$(/ctx/github-pkgs.sh download updex)"
-dnf -y install "${UPDEX_RPM}"
-
 MERGERFS_RPM="$(/ctx/github-pkgs.sh download mergerfs)"
 dnf -y install "${MERGERFS_RPM}"
 
