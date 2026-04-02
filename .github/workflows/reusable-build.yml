@@ -261,7 +261,9 @@ jobs:
       - name: Package Provenance
         run: |
           pushd ucore
-          just package-provenance "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" package-provenance.txt
+          just package-provenance \
+              "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
+              ../package-provenance.txt
 
       - name: Check Secureboot
         shell: bash
