@@ -5,31 +5,31 @@ set -ouex pipefail
 # install packages
 dnf -y swap nfs-utils-coreos nfs-utils
 dnf -y install \
-	NetworkManager-wifi \
-	atheros-firmware \
-	brcmfmac-firmware \
-	cockpit-storaged \
-	distrobox \
-	duperemove \
-	hdparm \
-	iwlegacy-firmware \
-	iwlwifi-dvm-firmware \
-	iwlwifi-mvm-firmware \
-	man-db \
-	mt7xxx-firmware \
-	nxpwireless-firmware \
-	pciutils \
-	pcp-zeroconf \
-	rclone \
-	realtek-firmware \
-	samba \
-	samba-usershares \
-	smartctl \
-	snapraid \
-	tiwilink-firmware \
-	usbutils \
-	xdg-dbus-proxy \
-	xdg-user-dirs
+    NetworkManager-wifi \
+    atheros-firmware \
+    brcmfmac-firmware \
+    cockpit-storaged \
+    distrobox \
+    duperemove \
+    hdparm \
+    iwlegacy-firmware \
+    iwlwifi-dvm-firmware \
+    iwlwifi-mvm-firmware \
+    man-db \
+    mt7xxx-firmware \
+    nxpwireless-firmware \
+    pciutils \
+    pcp-zeroconf \
+    rclone \
+    realtek-firmware \
+    samba \
+    samba-usershares \
+    smartctl \
+    snapraid \
+    tiwilink-firmware \
+    usbutils \
+    xdg-dbus-proxy \
+    xdg-user-dirs
 
 # sanoid currently comes from ublue-os staging COPR
 dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:staging' install sanoid
