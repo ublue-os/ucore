@@ -158,6 +158,30 @@ jobs:
           echo "TAG_VERSION=${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
 
+      - name: Image Metadata
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        id: meta
+        with:
+          labels: |
+            io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
+            org.opencontainers.image.description=${{ matrix.description }}
+            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
+          tags: |
+            # multi-arch build must have only the single tag here
+            # other tags are added to manifest later
+            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}-${{ matrix.arch }}
+
+      - name: Set version arch tag
+        shell: bash
+        run: |
+          set -x
+          tags="${{ steps.meta.outputs.tags }}"
+          tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
+          TAG=$(echo "${tags_space}" | cut -d " " -f 1)
+          echo "TAG_VERSION_ARCH=${TAG}" >> $GITHUB_ENV
+
       - name: Verify GitHub package downloads
         if: matrix.image_suffix != '-minimal'
         run: |
@@ -212,29 +236,6 @@ jobs:
               exit 1
           fi
 
-      - name: Image Metadata
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
-        id: meta
-        with:
-          labels: |
-            io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/120078124?s=200&v=4
-            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/ublue-os/ucore/main/README.md
-            org.opencontainers.image.description=${{ matrix.description }}
-            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
-            org.opencontainers.image.version=${{ env.IMAGE_VERSION }}
-          tags: |
-            # multi-arch build must have only the single tag here
-            # other tags are added to manifest later
-            type=sha,format=short,suffix=-${{ env.TAG_VERSION }}-${{ matrix.arch }}
-
-      - name: Single Line (convert newlines to spaces)
-        id: single-line
-        run: |
-          # redhat/push-to-registry does NOT like multi-line tags
-          tags="${{ steps.meta.outputs.tags }}"
-          tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
-          echo "tags=${tags_space}" >> $GITHUB_OUTPUT
-
       - name: Create Containerfile
         id: create-containerfile
         run: |
@@ -256,12 +257,19 @@ jobs:
           context: ./ucore
           image: ${{ env.IMAGE_NAME }}
           tags: |
-            ${{ steps.single-line.outputs.tags }}
+            ${{ env.TAG_VERSION_ARCH }}
           build-args: |
           labels: ${{ steps.meta.outputs.labels }}
           oci: true
           extra-args: |
             --target=${{ env.IMAGE_NAME }}
+
+      - name: Package Provenance
+        run: |
+          pushd ucore
+          just package-provenance \
+              "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
+              ../package-provenance.txt
 
       - name: Check Secureboot
         shell: bash
@@ -271,8 +279,7 @@ jobs:
             sudo apt update
             sudo apt install sbsigntool curl openssl
           fi
-          TAG=$(echo "${{ steps.single-line.outputs.tags }}" | cut -d " " -f 1)
-          podman run -d --rm --name checksb "${{ env.IMAGE_NAME }}:${TAG}" sleep 1000
+          podman run -d --rm --name checksb "${{ env.IMAGE_NAME }}:${{ env.TAG_VERSION_ARCH }}" sleep 1000
           podman cp checksb:/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
           podman rm -f  checksb
           sbverify --list vmlinuz
@@ -320,6 +327,7 @@ jobs:
           path: |
             image.env
             labels.txt
+            package-provenance.txt
           retention-days: 7
 
   check_builds:
