@@ -257,6 +257,17 @@ jobs:
           extra-args: |
             --target=${{ env.IMAGE_NAME }}
 
+      - name: Package Provenance
+        run: |
+          pushd ucore
+          UCORE_STREAM=${{ inputs.ucore_stream }} \
+          FEDORA_VERSION=${{ env.FEDORA_VERSION }} \
+          IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }} \
+          KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }} \
+          KERNEL_VERSION=${{ env.KERNEL_VERSION }} \
+          NVIDIA_TAG=${{ matrix.nvidia_tag }} \
+          just package-provenance
+
       - name: Check Secureboot
         shell: bash
         run: |
@@ -276,11 +287,6 @@ jobs:
           openssl x509 -in akmods.der -out akmods.crt
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
-
-      - name: Package Provenance
-        run: |
-          pushd ucore
-          just package-provenance
 
       - name: Push Image to Registry
         uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
