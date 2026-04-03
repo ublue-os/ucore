@@ -70,6 +70,43 @@ build upstream_image='':
         --target {{ TARGET_IMAGE }} \
         -t "{{ TARGET_IMAGE }}:${BUILD_TAG}" .
 
+# Verify one package, or all effective entries, download succssfully and  match the manifest checksum.
+verify-checksum package='' release='{{ FEDORA_VERSION }}' arch='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    package='{{ package }}'
+    release='{{ release }}'
+    arch='{{ arch }}'
+    failed=0
+
+    if [ -z "$arch" ]; then
+        arch="$(uname -m)"
+    fi
+
+    if [ -n "$package" ]; then
+        ./github-pkgs.sh verify-checksum "$package" --release "$release" --arch "$arch"
+    else
+        mapfile -t entries < <(./github-pkgs.sh list --arch "$arch")
+        for entry in "${entries[@]}"; do
+            name=$(jq -r '.name' <<<"$entry")
+            release_arg=$(jq -r '.release // empty' <<<"$entry")
+
+            if [ -z "$release_arg" ]; then
+                release_arg="$release"
+            fi
+
+            if ! ./github-pkgs.sh verify-checksum "$name" --release "$release_arg" --arch "$arch"; then
+                failed=1
+            fi
+        done
+
+        if [ "$failed" -ne 0 ]; then
+            printf 'One or more package entries failed checksum verification\n' >&2
+            exit 1
+        fi
+    fi
+
 package-provenance image='' output='':
     #!/usr/bin/env bash
     set -euo pipefail

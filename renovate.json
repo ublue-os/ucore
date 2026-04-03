@@ -1,4 +1,34 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"]
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^ucore/github-pkgs-(x86_64|aarch64|noarch)\\.json$/"],
+      "matchStrings": [
+        "\"repo\":\\s*\"(?<depName>[^\"]+)\"[^}]*?\"version\":\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-tags"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^ucore/github-pkgs-noarch\\.json$/"],
+      "matchStrings": [
+        "\"repo\":\\s*\"(?<depName>[^\"]+)\"[^}]*?\"branch\":\\s*\"(?<currentValue>[^\"]+)\"[^}]*?\"commit\":\\s*\"(?<currentDigest>[0-9a-f]+)\""
+      ],
+      "datasourceTemplate": "git-refs",
+      "packageNameTemplate": "https://github.com/{{{depName}}}"
+    }
+  ],
+  "postUpgradeTasks": {
+    "commands": [
+      "bash ucore/ci/renovate-refresh-github-pkgs.sh"
+    ],
+    "fileFilters": [
+      "ucore/github-pkgs-x86_64.json",
+      "ucore/github-pkgs-aarch64.json",
+      "ucore/github-pkgs-noarch.json"
+    ],
+    "executionMode": "update"
+  }
 }

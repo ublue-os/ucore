@@ -1,0 +1,19 @@
+[
+  {
+    "name": "cockpit-zfs-manager",
+    "repo": "45Drives/cockpit-zfs-manager",
+    "version": "v1.3.1",
+    "release": "",
+    "url": "https://codeload.github.com/45Drives/cockpit-zfs-manager/tar.gz/refs/tags/v1.3.1",
+    "sha256": "859bb2b3d459ef959d1ef85f4eab21354a92edbabcf0932f04523d972fccc6bf"
+  },
+  {
+    "name": "cockpit-font-fix",
+    "repo": "45Drives/scripts",
+    "branch": "main",
+    "commit": "3c26aa5ea9feccd8c080816c3d52506442e2d17d",
+    "release": "",
+    "url": "https://raw.githubusercontent.com/45Drives/scripts/3c26aa5ea9feccd8c080816c3d52506442e2d17d/cockpit_font_fix/fix-cockpit.sh",
+    "sha256": "78e0049e21a1b141402647d9b229b24004e5ecf8608fe110bf7feb32fec300aa"
+  }
+]
