@@ -102,9 +102,7 @@ if [[ "x86_64" == "${ARCH}" ]]; then
 fi
 
 ## ALWAYS: install regular packages
-
-# add tailscale repo
-curl --fail --retry 15 --retry-all-errors -sSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
+dnf -y --enable-repo=tailscale-stable install tailscale
 
 # install packages
 dnf -y install \
@@ -123,7 +121,6 @@ dnf -y install \
     podman-compose \
     pv \
     qemu-guest-agent \
-    tailscale \
     tmux \
     wireguard-tools
 
