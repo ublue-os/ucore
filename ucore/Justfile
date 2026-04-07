@@ -146,9 +146,9 @@ package-provenance image='' output='':
     printf 'Repo counts:\n'
     cut -d '|' -f4 "$OUTPUT" | sort | uniq -c | sort -nr
 
-    if grep -Fq 'copr:' "$OUTPUT"; then
-        printf '\nCOPR-installed packages:\n'
-        grep -F 'copr:' "$OUTPUT"
-    else
-        printf '\nNo installed packages are currently attributed to COPR repos.\n'
-    fi
+    printf '\nNon-Fedora packages...\n'
+    for NON_FED_REPO in $(cat "$OUTPUT" | rev | cut -f1 -d\| | rev |sort -u | grep -v -E "^fedora$|^updates$|^updates-archive$|^<unknown>$");
+    do
+        printf "\n$NON_FED_REPO packages:\n"
+        grep "$NON_FED_REPO$" "$OUTPUT"
+    done
