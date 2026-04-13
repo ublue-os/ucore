@@ -264,6 +264,33 @@ jobs:
           extra-args: |
             --target=${{ env.IMAGE_NAME }}
 
+      - name: Setup Syft
+        id: setup-syft
+        if: github.event_name != 'pull_request'
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          syft-version: v1.39.0
+
+      - name: Generate SBOM
+        if: github.event_name != 'pull_request'
+        id: generate-sbom
+        env:
+          IMAGE: ${{ env.IMAGE_NAME }}
+          TAG: ${{ env.TAG_VERSION_ARCH }}
+          SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
+          OCI_DIR: "/tmp/image-oci-dir"
+        run: |
+          mkdir -p ${OCI_DIR}/rootfs
+          sudo podman container create --replace --name "${IMAGE}" "localhost/${IMAGE}:${TAG}"
+          sudo podman export "${IMAGE}" | sudo tar -C ${OCI_DIR}/rootfs -xf -
+          sudo podman container rm "${IMAGE}"
+          SBOM="$(mktemp -d)/sbom.json"
+          export SYFT_PARALLELISM=$(($(nproc)*2))
+          sudo $SYFT_CMD --source-name "${IMAGE}-${{ env.TAG_VERSION }}" ${OCI_DIR} -o syft-json=${SBOM}
+          du -sh ${SBOM}
+          cp ${SBOM} sbom.json
+          sudo rm -rf ${OCI_DIR}
+
       - name: Package Provenance
         run: |
           pushd ucore
@@ -328,6 +355,7 @@ jobs:
             image.env
             labels.txt
             package-provenance.txt
+            sbom.json
           retention-days: 7
 
   check_builds:
@@ -527,6 +555,44 @@ jobs:
         run: |
           echo "Signing ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}"
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
+
+      - name: Install ORAS
+        if: github.event_name != 'pull_request'
+        uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+
+      - name: Login to GitHub Container Registry with ORAS
+        if: github.event_name != 'pull_request'
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Upload SBOMs
+        if: github.event_name != 'pull_request'
+        id: upload-sbom
+        env:
+          IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
+          DIGEST: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
+        run: |
+          set -xeuo pipefail
+          for SBOM_FILE in $(find images -type f -name "sbom.json"); do
+            cd "$(dirname "${SBOM_FILE}")"
+            oras attach \
+              --artifact-type application/vnd.syft+json \
+              "${IMAGE}@${DIGEST}" \
+              sbom.json
+            cd -
+          done
+          sbom_digest=$(oras discover --format json "${IMAGE}@${DIGEST}" | jq -r '.referrers[] | select(.artifactType == "application/vnd.syft+json") | .digest' | head -n1)
+          echo "sbom_digest=${sbom_digest}" >> $GITHUB_OUTPUT
+
+      - name: Sign SBOM OCI Artifact
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
+          SBOM_DIGEST: ${{ steps.upload-sbom.outputs.sbom_digest }}
+        run: |
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${SBOM_DIGEST}"
 
   check:
     name: Check all successful
