@@ -573,6 +573,10 @@ jobs:
           DIGEST: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
         run: |
           set -xeuo pipefail
+          if [[ -z "${DIGEST}" || "${DIGEST}" == "false" ]]; then
+            echo "::error::Manifest digest is missing or invalid"
+            exit 1
+          fi
           for SBOM_FILE in $(find images -type f -name "sbom.json"); do
             cd "$(dirname "${SBOM_FILE}")"
             oras attach \
@@ -581,18 +585,27 @@ jobs:
               sbom.json
             cd -
           done
-          sbom_digest=$(oras discover --format json "${IMAGE}@${DIGEST}" | jq -r '.referrers[] | select(.artifactType == "application/vnd.syft+json") | .digest' | head -n1)
-          echo "sbom_digest=${sbom_digest}" >> $GITHUB_OUTPUT
+          sbom_digests=$(oras discover --format json "${IMAGE}@${DIGEST}" | jq -r '.referrers[]? | select(.artifactType == "application/vnd.syft+json") | .digest')
+          if [[ -z "${sbom_digests}" ]]; then
+            echo "::error::No SBOM artifacts discovered for ${IMAGE}@${DIGEST}"
+            exit 1
+          fi
+          echo "sbom_digests<<EOF" >> $GITHUB_OUTPUT
+          echo "${sbom_digests}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Sign SBOM OCI Artifact
+      - name: Sign SBOM OCI Artifacts
         if: github.event_name != 'pull_request'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
-          SBOM_DIGEST: ${{ steps.upload-sbom.outputs.sbom_digest }}
         run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${SBOM_DIGEST}"
+          set -xeuo pipefail
+          while IFS= read -r sbom_digest; do
+            echo "Signing SBOM artifact: ${IMAGE}@${sbom_digest}"
+            cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${sbom_digest}"
+          done <<< "${{ steps.upload-sbom.outputs.sbom_digests }}"
 
   check:
     name: Check all successful
