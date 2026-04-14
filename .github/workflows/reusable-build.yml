@@ -280,16 +280,17 @@ jobs:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
           OCI_DIR: "/tmp/image-oci-dir"
         run: |
+          SBOM_DIR="$(mktemp -d)"
+          SBOM="${SBOM_DIR}/sbom.json"
+          trap 'rm -rf "${OCI_DIR}" "${SBOM_DIR}"' EXIT
           mkdir -p ${OCI_DIR}/rootfs
-          sudo podman container create --replace --name "${IMAGE}" "localhost/${IMAGE}:${TAG}"
-          sudo podman export "${IMAGE}" | sudo tar -C ${OCI_DIR}/rootfs -xf -
-          sudo podman container rm "${IMAGE}"
-          SBOM="$(mktemp -d)/sbom.json"
+          podman container create --replace --name "${IMAGE}" "localhost/${IMAGE}:${TAG}"
+          podman export "${IMAGE}" | tar --no-same-owner -C ${OCI_DIR}/rootfs -xf -
+          podman container rm "${IMAGE}"
           export SYFT_PARALLELISM=$(($(nproc)*2))
-          sudo $SYFT_CMD --source-name "${IMAGE}-${{ env.TAG_VERSION }}" ${OCI_DIR} -o syft-json=${SBOM}
+          $SYFT_CMD --source-name "${IMAGE}-${{ env.TAG_VERSION }}" ${OCI_DIR} -o syft-json=${SBOM}
           du -sh ${SBOM}
           cp ${SBOM} sbom.json
-          sudo rm -rf ${OCI_DIR}
 
       - name: Package Provenance
         run: |
@@ -577,14 +578,15 @@ jobs:
             echo "::error::Manifest digest is missing or invalid"
             exit 1
           fi
-          for SBOM_FILE in $(find images -type f -name "sbom.json"); do
+          CURRENT_DIR="$(pwd)"
+          while IFS= read -r -d '' SBOM_FILE; do
             cd "$(dirname "${SBOM_FILE}")"
             oras attach \
               --artifact-type application/vnd.syft+json \
               "${IMAGE}@${DIGEST}" \
               sbom.json
-            cd -
-          done
+            cd "${CURRENT_DIR}"
+          done < <(find images -type f -name "sbom.json" -print0)
           sbom_digests=$(oras discover --format json "${IMAGE}@${DIGEST}" | jq -r '.referrers[]? | select(.artifactType == "application/vnd.syft+json") | .digest')
           if [[ -z "${sbom_digests}" ]]; then
             echo "::error::No SBOM artifacts discovered for ${IMAGE}@${DIGEST}"
