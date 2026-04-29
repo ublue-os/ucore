@@ -11,6 +11,7 @@ FROM UPSTREAM_IMAGE AS ucore-minimal
 COPY system_files/etc /etc
 COPY system_files/usr/lib /usr/lib/
 COPY system_files/usr/sbin /usr/sbin/
+COPY system_files/usr/share /usr/share/
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
