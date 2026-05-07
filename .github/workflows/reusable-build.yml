@@ -62,10 +62,11 @@ jobs:
     steps:
       - name: Fetch CoreOS stream versions
         id: fetch
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
-          attempt_limit: 3
-          attempt_delay: 15000
+          max_attempts: 3
+          retry_wait_seconds: 15
+          timeout_minutes: 5
           command: |
             set -eo pipefail
 
@@ -139,13 +140,13 @@ jobs:
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Download stream info artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: stream-info-${{ matrix.arch }}
           path: .
@@ -159,7 +160,7 @@ jobs:
           cat stream-info.env >> $GITHUB_ENV
 
       - name: Image Metadata
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         id: meta
         with:
           labels: |
@@ -189,10 +190,11 @@ jobs:
           just verify-checksum
 
       - name: Pull base and kmod images
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
-          attempt_limit: 3
-          attempt_delay: 15000
+          max_attempts: 3
+          retry_wait_seconds: 15
+          timeout_minutes: 15
           command: |
             # pull the base image used for FROM in containerfile so
             # we can retry on that unfortunately common failure case
@@ -250,7 +252,7 @@ jobs:
 
       - name: Build Image
         id: build_image
-        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
+        uses: redhat-actions/buildah-build@061ffd31bb5c3f8733a6f9bbdf00a9fb02eb708c # main
         with:
           containerfiles: |
             ./ucore/Containerfile
@@ -290,33 +292,35 @@ jobs:
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
           sbverify --cert akmods.crt vmlinuz || exit 1
 
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        run: |
+          echo ${{ github.token }} | podman login ${{ env.IMAGE_REGISTRY }} -u ${{ github.actor }} --password-stdin
+
       - name: Push Image to Registry
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         id: push
         if: github.event_name != 'pull_request'
-        env:
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_PASSWORD: ${{ github.token }}
         with:
-          action: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
-          attempt_limit: 3
-          attempt_delay: 15000
-          with: |
-            image: ${{ steps.build_image.outputs.image }}
-            tags: ${{ steps.build_image.outputs.tags }}
-            registry: ${{ env.IMAGE_REGISTRY }}
-            username: ${{ env.REGISTRY_USER }}
-            password: ${{ env.REGISTRY_PASSWORD }}
-            extra-args: |
-              --disable-content-trust
+          max_attempts: 3
+          retry_wait_seconds: 15
+          timeout_minutes: 15
+          command: |
+            set -ex
+            for tag in ${{ steps.build_image.outputs.tags }}; do
+              podman push --disable-content-trust "${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${tag}"
+            done
+            # Set outputs for subsequent steps
+            echo "digest=$(skopeo inspect --format '{{.Digest}}' "docker://${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${{ steps.build_image.outputs.tags }}" | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${{ steps.build_image.outputs.tags }}" >> $GITHUB_OUTPUT
 
       - name: Save image metadata
         if: github.event_name != 'pull_request'
         run: |
           set -x
           echo "IMAGE_ARCH=${{ matrix.arch }}" >> image.env
-          echo "IMAGE_DIGEST=${{ fromJSON(steps.push.outputs.outputs).digest }}" >> image.env
-          echo "IMAGE_REF=${{ fromJSON(steps.push.outputs.outputs).registry-path }}" >> image.env
+          echo "IMAGE_DIGEST=${{ steps.push.outputs.digest }}" >> image.env
+          echo "IMAGE_REF=${{ steps.push.outputs.registry-path }}" >> image.env
           echo "${{ steps.meta.outputs.labels }}" > labels.txt
 
       - name: Upload image metadata as artifact
@@ -370,6 +374,10 @@ jobs:
       - name: Mount BTRFS for podman storage
         uses: ublue-os/container-storage-action@dc1f4c8f17b672069e921f001132f7cf98a423a6 # main
 
+      - name: Login to GitHub Container Registry
+        run: |
+          echo ${{ github.token }} | podman login ${{ env.IMAGE_REGISTRY }} -u ${{ github.actor }} --password-stdin
+
       - name: Set matrix environment variables
         shell: bash
         run: |
@@ -379,13 +387,13 @@ jobs:
           echo "TAG_VERSION=${{ inputs.ucore_stream }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
 
       - name: Download image artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: image-ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag != '' && matrix.nvidia_tag || '-default' }}-*
           path: images
 
       - name: Manifest Meta Tags
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         id: meta
         with:
           tags: |
@@ -461,26 +469,20 @@ jobs:
           podman images
 
       - name: Push Manifest to GHCR
-        uses: Wandalen/wretry.action@e68c23e6309f2871ca8ae4763e7629b9c258e1ea # v3.8.0
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         id: push
         with:
-          action: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
-          attempt_limit: 3
-          attempt_delay: 15000
-          with: |
-            image: ${{ env.IMAGE_NAME }}
-            tags:  ${{ steps.single-line.outputs.tags }}
-            registry: ${{ env.IMAGE_REGISTRY }}
-            username: ${{ github.actor }}
-            password: ${{ github.token }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
-        if: github.event_name != 'pull_request'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          max_attempts: 3
+          retry_wait_seconds: 15
+          timeout_minutes: 15
+          command: |
+            set -ex
+            for tag in ${{ steps.single-line.outputs.tags }}; do
+              podman manifest push --tls-verify=false --all "${{ env.IMAGE_NAME }}:${tag}" "docker://${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}"
+            done
+            # Set outputs for subsequent steps
+            echo "digest=$(podman manifest inspect "${{ env.IMAGE_NAME }}" | jq -r '.manifests[0].digest')" >> $GITHUB_OUTPUT
+            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_OUTPUT
 
       # Sign container
       - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
@@ -520,8 +522,8 @@ jobs:
       - name: Sign container manifest
         if: github.event_name != 'pull_request'
         env:
-          REGISTRY_PATH: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).registry-path }}
-          DIGEST: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
+          REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
+          DIGEST: ${{ steps.push.outputs.digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
