@@ -279,7 +279,7 @@ There are varying methods of installation for bare metal, cloud providers, and v
 
 ### Image Verification
 
-These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by running the following command:
+These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/signing/overview/). You can verify the signature by running the following command:
 
 ```bash
 cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
