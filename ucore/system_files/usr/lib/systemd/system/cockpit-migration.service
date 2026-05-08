@@ -1,0 +1,13 @@
+[Unit]
+Description=Migrate Cockpit service to Quadlet
+DefaultDependencies=no
+After=local-fs.target
+Before=auditd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/cockpit-migration.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=auditd.service

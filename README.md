@@ -213,7 +213,7 @@ Suitable for running containerized workloads on either bare metal or virtual mac
 - Provides public key allowing [SecureBoot](#secureboot) (for ucore signed `nvidia` or `zfs` drivers)
 
 > [!IMPORTANT]
-> Per [cockpit's instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd service which runs a podman container.
+> Per [cockpit's instructions](https://cockpit-project.org/running.html#coreos) the cockpit-ws RPM is **not** installed, rather it is provided as a pre-defined systemd Quadlet which runs a podman container.
 
 > [!NOTE]
 > When uCore was first created, zincati failed to start on systems using OCI-based deployments (such as uCore). This issue has since been addressed, but further testing is needed to verify zincati’s compatibility with custom systems like uCore.
