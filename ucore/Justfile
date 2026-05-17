@@ -2,7 +2,7 @@ set dotenv-load := true
 
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
 UCORE_STREAM := env("UCORE_STREAM", "stable")
-FEDORA_VERSION := env("FEDORA_VERSION", "43")
+FEDORA_VERSION := env("FEDORA_VERSION", "44")
 IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
