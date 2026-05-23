@@ -16,7 +16,7 @@ env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   # lts uses the stable CoreOS base image but with the longterm kernel
   COREOS_STREAM: ${{ inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream }}
-  KERNEL_FLAVOR: ${{ inputs.ucore_stream == 'lts' && 'longterm-6.12' || format('coreos-{0}', inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream) }}
+  KERNEL_FLAVOR: ${{ inputs.ucore_stream == 'lts' && 'longterm-6.18' || format('coreos-{0}', inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream) }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
