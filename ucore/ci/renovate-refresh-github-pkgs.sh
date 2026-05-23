@@ -65,7 +65,7 @@ resolve_release_asset_url() {
 		"https://api.github.com/repos/${repo}/releases/tags/${version}"
 
 	# Build the same style of arch filter the old script used:
-	#   mergerfs with release=43, arch=x86_64 → "fc43.x86_64"
+	#   mergerfs with release=44, arch=x86_64 → "fc44.x86_64"
 	#   updex with release="", arch=x86_64    → "x86_64"
 	if [[ -n "${release}" ]]; then
 		asset_filter="fc${release}\\.${arch}"
