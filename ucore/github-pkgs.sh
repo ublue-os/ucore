@@ -34,10 +34,10 @@ fi
 create_temp_file() {
 	local suffix=${1:-}
 
+	TEMP_FILE=$(mktemp /tmp/github-download-XXXXXXXX)
 	if [[ -n "${suffix}" ]]; then
-		TEMP_FILE=$(mktemp "/tmp/github-download-XXXXXXXX${suffix}")
-	else
-		TEMP_FILE=$(mktemp /tmp/github-download-XXXXXXXX)
+		mv "${TEMP_FILE}" "${TEMP_FILE}${suffix}"
+		TEMP_FILE="${TEMP_FILE}${suffix}"
 	fi
 }
 
@@ -52,18 +52,16 @@ get_curl_auth_args() {
 download_file() {
 	local url=${1}
 	local suffix=${2:-}
-	local curl_auth_args=()
+	local -a curl_args=(curl --fail --retry 5 --retry-delay 5 --retry-all-errors -sSL)
 
 	create_temp_file "${suffix}"
 
 	while IFS= read -r line; do
-		curl_auth_args+=("${line}")
+		curl_args+=("${line}")
 	done < <(get_curl_auth_args)
 
-	curl --fail --retry 5 --retry-delay 5 --retry-all-errors -sSL \
-		"${curl_auth_args[@]}" \
-		-o "${TEMP_FILE}" \
-		"${url}"
+	curl_args+=(-o "${TEMP_FILE}" "${url}")
+	"${curl_args[@]}"
 }
 
 verify_sha256() {
