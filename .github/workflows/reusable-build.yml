@@ -308,11 +308,12 @@ jobs:
           command: |
             set -ex
             for tag in ${{ steps.build_image.outputs.tags }}; do
-              podman push --disable-content-trust "${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${tag}"
+              podman push --digestfile /tmp/digest.txt --disable-content-trust "${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${tag}"
             done
             # Set outputs for subsequent steps
-            echo "digest=$(skopeo inspect --format '{{.Digest}}' "docker://${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${{ steps.build_image.outputs.tags }}" | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
-            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${{ steps.build_image.outputs.tags }}" >> $GITHUB_OUTPUT
+            first_tag=$(echo "${{ steps.build_image.outputs.tags }}" | head -n 1 | xargs)
+            echo "digest=$(cat /tmp/digest.txt)" >> $GITHUB_OUTPUT
+            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${first_tag}" >> $GITHUB_OUTPUT
 
       - name: Save image metadata
         if: github.event_name != 'pull_request'
@@ -478,11 +479,12 @@ jobs:
           command: |
             set -ex
             for tag in ${{ steps.single-line.outputs.tags }}; do
-              podman manifest push --tls-verify=false --all "${{ env.IMAGE_NAME }}:${tag}" "docker://${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}"
+              podman manifest push --digestfile /tmp/digest.txt --tls-verify=false --all "${{ env.IMAGE_NAME }}:${tag}" "docker://${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}"
             done
             # Set outputs for subsequent steps
-            echo "digest=$(podman manifest inspect "${{ env.IMAGE_NAME }}" | jq -r '.manifests[0].digest')" >> $GITHUB_OUTPUT
-            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_OUTPUT
+            first_tag=$(echo "${{ steps.single-line.outputs.tags }}" | cut -d ' ' -f 1 | xargs)
+            echo "digest=$(cat /tmp/digest.txt)" >> $GITHUB_OUTPUT
+            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${first_tag}" >> $GITHUB_OUTPUT
 
       # Sign container
       - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
