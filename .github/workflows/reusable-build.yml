@@ -295,7 +295,7 @@ jobs:
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
         run: |
-          echo ${{ github.token }} | podman login ${{ env.IMAGE_REGISTRY }} -u ${{ github.actor }} --password-stdin
+          printf '%s' "${{ github.token }}" | podman login "${{ env.IMAGE_REGISTRY }}" -u "${{ github.actor }}" --password-stdin
 
       - name: Push Image to Registry
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
@@ -381,7 +381,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         run: |
-          echo ${{ github.token }} | podman login ${{ env.IMAGE_REGISTRY }} -u ${{ github.actor }} --password-stdin
+          printf '%s' "${{ github.token }}" | podman login "${{ env.IMAGE_REGISTRY }}" -u "${{ github.actor }}" --password-stdin
 
       - name: Set matrix environment variables
         shell: bash
@@ -487,7 +487,7 @@ jobs:
           command: |
             set -ex
             for tag in $MANIFEST_TAGS; do
-              podman manifest push --digestfile /tmp/digest.txt --tls-verify=false --all "$IMAGE_NAME:$tag" "docker://$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
+              podman manifest push --digestfile /tmp/digest.txt --all "$IMAGE_NAME:$tag" "docker://$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
             done
             # Set outputs for subsequent steps
             first_tag=$(echo "$MANIFEST_TAGS" | cut -d ' ' -f 1 | xargs)
