@@ -46,6 +46,12 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ## Announcements
 
+### 2026.05.23 - uCore Fedora 44 Builds and LTS Kernel Update
+
+Fedora CoreOS stable moved to Fedora 44 recently, and now uCore builds have moved as well.
+
+The `lts` stream now uses the `longterm-6.18` kernel, superseding the earlier `longterm-6.12` kernel as our upstream for this kernel is does not build 6.12 for Fedora 44. The `stable` and `testing` streams continue to follow the stock Fedora CoreOS kernels for their respective streams.
+
 ### 2026.01.08 - uCore LTS Stream and LTS kernel sysext issue
 
 It's come to our attention that the most recent 6.12 LTS kernel, used in uCore stable builds, has broken sysext functionality.
@@ -279,7 +285,7 @@ There are varying methods of installation for bare metal, cloud providers, and v
 
 ### Image Verification
 
-These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/overview/). You can verify the signature by running the following command:
+These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/signing/overview/). You can verify the signature by running the following command:
 
 ```bash
 cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG

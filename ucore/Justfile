@@ -2,11 +2,11 @@ set dotenv-load := true
 
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
 UCORE_STREAM := env("UCORE_STREAM", "stable")
-FEDORA_VERSION := env("FEDORA_VERSION", "43")
+FEDORA_VERSION := env("FEDORA_VERSION", "44")
 IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
-KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.12" } else { 'coreos-' + COREOS_STREAM })
+KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.18" } else { 'coreos-' + COREOS_STREAM })
 KERNEL_VERSION := env("KERNEL_VERSION", "")
 NVIDIA_TAG := env("NVIDIA_TAG", "")
 SELINUX := path_exists('/sys/fs/selinux')
@@ -70,7 +70,7 @@ build upstream_image='':
         --target {{ TARGET_IMAGE }} \
         -t "{{ TARGET_IMAGE }}:${BUILD_TAG}" .
 
-# Verify one package, or all effective entries, download succssfully and  match the manifest checksum.
+# Verify one package, or all effective entries, download successfully and match the manifest checksum.
 verify-checksum package='' release='{{ FEDORA_VERSION }}' arch='':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -87,7 +87,7 @@ verify-checksum package='' release='{{ FEDORA_VERSION }}' arch='':
     if [ -n "$package" ]; then
         ./github-pkgs.sh verify-checksum "$package" --release "$release" --arch "$arch"
     else
-        mapfile -t entries < <(./github-pkgs.sh list --arch "$arch")
+        mapfile -t entries < <(./github-pkgs.sh list --release "$release" --arch "$arch")
         for entry in "${entries[@]}"; do
             name=$(jq -r '.name' <<<"$entry")
             release_arg=$(jq -r '.release // empty' <<<"$entry")
@@ -96,6 +96,7 @@ verify-checksum package='' release='{{ FEDORA_VERSION }}' arch='':
                 release_arg="$release"
             fi
 
+            printf 'Verifying %s for release=%s arch=%s\n' "$name" "$release_arg" "$arch"
             if ! ./github-pkgs.sh verify-checksum "$name" --release "$release_arg" --arch "$arch"; then
                 failed=1
             fi
