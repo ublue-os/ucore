@@ -500,6 +500,14 @@ jobs:
         with:
           cosign-release: "v2.6.1"
 
+      - name: Login to GitHub Container Registry for cosign
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Sign member images
         if: github.event_name != 'pull_request'
         shell: bash
