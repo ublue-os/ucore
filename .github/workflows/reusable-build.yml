@@ -16,7 +16,7 @@ env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   # lts uses the stable CoreOS base image but with the longterm kernel
   COREOS_STREAM: ${{ inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream }}
-  KERNEL_FLAVOR: ${{ inputs.ucore_stream == 'lts' && 'longterm-6.12' || format('coreos-{0}', inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream) }}
+  KERNEL_FLAVOR: ${{ inputs.ucore_stream == 'lts' && 'longterm-6.18' || format('coreos-{0}', inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream) }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
@@ -187,7 +187,7 @@ jobs:
         if: matrix.image_suffix != '-minimal'
         run: |
           pushd ucore
-          just verify-checksum
+          just verify-checksum "" "${{ env.FEDORA_VERSION }}" "${{ matrix.arch }}"
 
       - name: Pull base and kmod images
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
