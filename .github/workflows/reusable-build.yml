@@ -301,19 +301,23 @@ jobs:
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         id: push
         if: github.event_name != 'pull_request'
+        env:
+          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
+          BUILD_IMAGE: ${{ steps.build_image.outputs.image }}
+          BUILD_TAGS: ${{ steps.build_image.outputs.tags }}
         with:
           max_attempts: 3
           retry_wait_seconds: 15
           timeout_minutes: 15
           command: |
             set -ex
-            for tag in ${{ steps.build_image.outputs.tags }}; do
-              podman push --digestfile /tmp/digest.txt --disable-content-trust "${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${tag}"
+            for tag in $BUILD_TAGS; do
+              podman push --digestfile /tmp/digest.txt --disable-content-trust "$IMAGE_REGISTRY/$BUILD_IMAGE:$tag"
             done
             # Set outputs for subsequent steps
-            first_tag=$(echo "${{ steps.build_image.outputs.tags }}" | head -n 1 | xargs)
+            first_tag=$(echo "$BUILD_TAGS" | head -n 1 | xargs)
             echo "digest=$(cat /tmp/digest.txt)" >> $GITHUB_OUTPUT
-            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${first_tag}" >> $GITHUB_OUTPUT
+            echo "registry-path=$IMAGE_REGISTRY/$BUILD_IMAGE:$first_tag" >> $GITHUB_OUTPUT
 
       - name: Save image metadata
         if: github.event_name != 'pull_request'
@@ -472,19 +476,23 @@ jobs:
       - name: Push Manifest to GHCR
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         id: push
+        env:
+          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          MANIFEST_TAGS: ${{ steps.single-line.outputs.tags }}
         with:
           max_attempts: 3
           retry_wait_seconds: 15
           timeout_minutes: 15
           command: |
             set -ex
-            for tag in ${{ steps.single-line.outputs.tags }}; do
-              podman manifest push --digestfile /tmp/digest.txt --tls-verify=false --all "${{ env.IMAGE_NAME }}:${tag}" "docker://${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${tag}"
+            for tag in $MANIFEST_TAGS; do
+              podman manifest push --digestfile /tmp/digest.txt --tls-verify=false --all "$IMAGE_NAME:$tag" "docker://$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
             done
             # Set outputs for subsequent steps
-            first_tag=$(echo "${{ steps.single-line.outputs.tags }}" | cut -d ' ' -f 1 | xargs)
+            first_tag=$(echo "$MANIFEST_TAGS" | cut -d ' ' -f 1 | xargs)
             echo "digest=$(cat /tmp/digest.txt)" >> $GITHUB_OUTPUT
-            echo "registry-path=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${first_tag}" >> $GITHUB_OUTPUT
+            echo "registry-path=$IMAGE_REGISTRY/$IMAGE_NAME:$first_tag" >> $GITHUB_OUTPUT
 
       # Sign container
       - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
