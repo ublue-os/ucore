@@ -500,6 +500,11 @@ jobs:
         with:
           cosign-release: "v2.6.1"
 
+      - name: Login to GitHub Container Registry for cosign
+        if: github.event_name != 'pull_request'
+        run: |
+          printf '%s' "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
+
       - name: Sign member images
         if: github.event_name != 'pull_request'
         shell: bash
