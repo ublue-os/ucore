@@ -312,10 +312,10 @@ jobs:
           command: |
             set -ex
             for tag in $BUILD_TAGS; do
-              podman push --digestfile /tmp/digest.txt --disable-content-trust "$IMAGE_REGISTRY/$BUILD_IMAGE:$tag"
+              podman push --digestfile /tmp/digest.txt --disable-content-trust "$BUILD_IMAGE:$tag" "docker://$IMAGE_REGISTRY/$BUILD_IMAGE:$tag"
             done
             # Set outputs for subsequent steps
-            first_tag=$(echo "$BUILD_TAGS" | head -n 1 | xargs)
+            first_tag=$(echo "$BUILD_TAGS" | cut -d ' ' -f 1 | xargs)
             echo "digest=$(cat /tmp/digest.txt)" >> $GITHUB_OUTPUT
             echo "registry-path=$IMAGE_REGISTRY/$BUILD_IMAGE:$first_tag" >> $GITHUB_OUTPUT
 
