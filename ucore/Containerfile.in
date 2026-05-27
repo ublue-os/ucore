@@ -8,9 +8,9 @@ COPY / /
 
 # /* ucore-minimal image section */
 FROM UPSTREAM_IMAGE AS ucore-minimal
-COPY system_files/etc /etc
-COPY system_files/usr/lib /usr/lib/
-COPY system_files/usr/sbin /usr/sbin/
+COPY system_files/minimal/etc /etc
+COPY system_files/minimal/usr/lib /usr/lib/
+COPY system_files/minimal/usr/sbin /usr/sbin/
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
@@ -36,6 +36,7 @@ RUN ["bootc", "container", "lint"]
 
 # /* ucore image section */
 FROM ucore-minimal AS ucore
+COPY system_files/ucore/usr/lib /usr/lib/
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
