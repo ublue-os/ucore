@@ -17,9 +17,9 @@ Please take a look at the included modifications, and help us improve uCore if t
     - [`ucore`](#ucore)
     - [`ucore-hci`](#ucore-hci)
   - [Tag Matrix](#tag-matrix)
-- [Installation](#installation)
   - [Image Verification](#image-verification)
   - [Software Bill of Materials](#software-bill-of-materials)
+- [Installation](#installation)
   - [Auto-Rebase Install](#auto-rebase-install)
   - [Manual Install/Rebase](#manual-installrebase)
 - [Tips and Tricks](#tips-and-tricks)
@@ -272,18 +272,6 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 | [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
 
-## Installation
-
-> [!IMPORTANT]
-> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; **it does not provide its own custom or GUI installer**.
-
-There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
-
-**All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/).** This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
-
-> [!TIP]
-> For bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the bare metal process.
-
 ### Image Verification
 
 These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/signing/overview/). You can verify an image tag with the public key:
@@ -345,6 +333,18 @@ oras discover \
   --artifact-type application/vnd.spdx+json \
   "ghcr.io/ublue-os/ucore@${IMAGE_DIGEST}"
 ```
+
+## Installation
+
+> [!IMPORTANT]
+> **Read the [CoreOS installation guide](https://docs.fedoraproject.org/en-US/fedora-coreos/bare-metal/)** before attempting installation. uCore extends Fedora CoreOS; **it does not provide its own custom or GUI installer**.
+
+There are varying methods of installation for bare metal, cloud providers, and virtualization platforms.
+
+**All CoreOS installation methods require the user to [produce an Ignition file](https://docs.fedoraproject.org/en-US/fedora-coreos/producing-ign/).** This Ignition file should, at mimimum, set a password and SSH key for the default user (default username is `core`).
+
+> [!TIP]
+> For bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the bare metal process.
 
 ### Auto-Rebase Install
 
