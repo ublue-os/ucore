@@ -619,10 +619,11 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
           set -xeuo pipefail
-          while IFS= read -r sbom_ref; do
+          mapfile -t SBOM_REFS <<< "${{ steps.upload-sbom.outputs.sbom_refs }}"
+          for sbom_ref in "${SBOM_REFS[@]}"; do
             echo "Signing SBOM artifact: ${sbom_ref}"
             cosign sign -y --key env://COSIGN_PRIVATE_KEY "${sbom_ref}"
-          done <<< "${{ steps.upload-sbom.outputs.sbom_refs }}"
+          done
 
   check:
     name: Check all successful
