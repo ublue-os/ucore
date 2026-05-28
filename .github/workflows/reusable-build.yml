@@ -277,22 +277,12 @@ jobs:
         if: github.event_name != 'pull_request'
         id: generate-sbom
         env:
-          IMAGE: ${{ env.IMAGE_NAME }}
-          TAG: ${{ env.TAG_VERSION_ARCH }}
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
-          OCI_DIR: "/tmp/image-oci-dir"
         run: |
-          SBOM_DIR="$(mktemp -d)"
-          SBOM="${SBOM_DIR}/sbom.json"
-          trap 'rm -rf "${OCI_DIR}" "${SBOM_DIR}"' EXIT
-          mkdir -p ${OCI_DIR}/rootfs
-          podman container create --replace --name "${IMAGE}" "localhost/${IMAGE}:${TAG}"
-          podman export "${IMAGE}" | tar --no-same-owner -C ${OCI_DIR}/rootfs -xf -
-          podman container rm "${IMAGE}"
-          export SYFT_PARALLELISM=$(($(nproc)*2))
-          $SYFT_CMD --source-name "${IMAGE}-${{ env.TAG_VERSION }}" ${OCI_DIR} -o syft-json=${SBOM}
-          du -sh ${SBOM}
-          cp ${SBOM} sbom.json
+          pushd ucore
+          just gen-sbom \
+              "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
+              ../sbom.json
 
       - name: Package Provenance
         run: |
@@ -581,50 +571,58 @@ jobs:
       - name: Login to GitHub Container Registry with ORAS
         if: github.event_name != 'pull_request'
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          printf '%s' "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Upload SBOMs
         if: github.event_name != 'pull_request'
         id: upload-sbom
-        env:
-          IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
-          DIGEST: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
         run: |
           set -xeuo pipefail
-          if [[ -z "${DIGEST}" || "${DIGEST}" == "false" ]]; then
-            echo "::error::Manifest digest is missing or invalid"
-            exit 1
-          fi
-          CURRENT_DIR="$(pwd)"
+          SBOM_REFS=()
           while IFS= read -r -d '' SBOM_FILE; do
-            cd "$(dirname "${SBOM_FILE}")"
-            oras attach \
-              --artifact-type application/vnd.syft+json \
-              "${IMAGE}@${DIGEST}" \
-              sbom.json
-            cd "${CURRENT_DIR}"
+            SBOM_DIR="$(dirname "${SBOM_FILE}")"
+            # shellcheck disable=SC1091
+            source "${SBOM_DIR}/image.env"
+            if [[ -z "${IMAGE_REF:-}" || -z "${IMAGE_DIGEST:-}" ]]; then
+              echo "::error::Missing IMAGE_REF or IMAGE_DIGEST in ${SBOM_DIR}/image.env"
+              exit 1
+            fi
+
+            sbom_ref="$(oras attach \
+              --artifact-type application/vnd.spdx+json \
+              --annotation filename=sbom.json \
+              "${IMAGE_REF}@${IMAGE_DIGEST}" \
+              "${SBOM_FILE}" \
+              --format go-template \
+              --template '{{ .reference }}')"
+
+            if [[ -z "${sbom_ref}" ]]; then
+              echo "::error::ORAS did not return an SBOM artifact reference for ${IMAGE_REF}@${IMAGE_DIGEST}"
+              exit 1
+            fi
+            SBOM_REFS+=("${sbom_ref}")
           done < <(find images -type f -name "sbom.json" -print0)
-          sbom_digests=$(oras discover --format json "${IMAGE}@${DIGEST}" | jq -r '.referrers[]? | select(.artifactType == "application/vnd.syft+json") | .digest')
-          if [[ -z "${sbom_digests}" ]]; then
-            echo "::error::No SBOM artifacts discovered for ${IMAGE}@${DIGEST}"
+
+          if [[ "${#SBOM_REFS[@]}" -eq 0 ]]; then
+            echo "::error::No SBOM files found under images/"
             exit 1
           fi
-          echo "sbom_digests<<EOF" >> $GITHUB_OUTPUT
-          echo "${sbom_digests}" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "sbom_refs<<EOF" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "${SBOM_REFS[@]}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Sign SBOM OCI Artifacts
         if: github.event_name != 'pull_request'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-          IMAGE: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
           set -xeuo pipefail
-          while IFS= read -r sbom_digest; do
-            echo "Signing SBOM artifact: ${IMAGE}@${sbom_digest}"
-            cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${sbom_digest}"
-          done <<< "${{ steps.upload-sbom.outputs.sbom_digests }}"
+          while IFS= read -r sbom_ref; do
+            echo "Signing SBOM artifact: ${sbom_ref}"
+            cosign sign -y --key env://COSIGN_PRIVATE_KEY "${sbom_ref}"
+          done <<< "${{ steps.upload-sbom.outputs.sbom_refs }}"
 
   check:
     name: Check all successful
