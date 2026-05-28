@@ -17,8 +17,9 @@ Please take a look at the included modifications, and help us improve uCore if t
     - [`ucore`](#ucore)
     - [`ucore-hci`](#ucore-hci)
   - [Tag Matrix](#tag-matrix)
-- [Installation](#installation)
   - [Image Verification](#image-verification)
+  - [Software Bill of Materials](#software-bill-of-materials)
+- [Installation](#installation)
   - [Auto-Rebase Install](#auto-rebase-install)
   - [Manual Install/Rebase](#manual-installrebase)
 - [Tips and Tricks](#tips-and-tricks)
@@ -271,6 +272,68 @@ Hyper-Coverged Infrastructure(HCI) refers to storage and hypervisor in one place
 | [`ucore-hci`](#ucore-hci) - *stable* | `stable`, `stable-nvidia`, `stable-nvidia-lts` |
 | [`ucore-hci`](#ucore-hci) - *testing* | `testing`, `testing-nvidia`, `testing-nvidia-lts` |
 
+### Image Verification
+
+These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/signing/overview/). You can verify an image tag with the public key:
+
+```bash
+cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
+```
+
+For an exact architecture-specific image, verify the resolved digest instead:
+
+```bash
+cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE@sha256:IMAGE_DIGEST
+```
+
+For example:
+
+```bash
+cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/ucore:stable
+```
+
+### Software Bill of Materials
+
+uCore publishes SPDX JSON SBOMs for each architecture-specific image digest. Multi-arch tags such as `stable` resolve to a platform-specific image, and the SBOM is attached to that resolved image digest rather than only to the multi-arch manifest.
+
+To inspect the SBOM for an image, first resolve the digest for the platform you want to audit:
+
+```bash
+skopeo inspect --raw docker://ghcr.io/ublue-os/IMAGE:TAG \
+  | jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest'
+```
+
+Then discover the SPDX SBOM attached to the platform image digest:
+
+```bash
+oras discover \
+  --artifact-type application/vnd.spdx+json \
+  ghcr.io/ublue-os/IMAGE@sha256:IMAGE_DIGEST
+```
+
+You can pull the SBOM artifact by digest:
+
+```bash
+oras pull ghcr.io/ublue-os/IMAGE@sha256:SBOM_ARTIFACT_DIGEST
+```
+
+SBOM artifacts are signed with cosign and can be verified with the same public key:
+
+```bash
+cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE@sha256:SBOM_ARTIFACT_DIGEST
+```
+
+For example, to inspect the `amd64` SBOM for `ucore:stable`, resolve the image digest and discover the SBOM artifact:
+
+```bash
+IMAGE_DIGEST="$(skopeo inspect --raw docker://ghcr.io/ublue-os/ucore:stable \
+  | jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest')"
+
+oras discover \
+  --artifact-type application/vnd.spdx+json \
+  "ghcr.io/ublue-os/ucore@${IMAGE_DIGEST}"
+```
+
 ## Installation
 
 > [!IMPORTANT]
@@ -282,14 +345,6 @@ There are varying methods of installation for bare metal, cloud providers, and v
 
 > [!TIP]
 > For bare metal installs, first test your ignition configuration by installing in a VM (or other test hardware) using the bare metal process.
-
-### Image Verification
-
-These images are signed with sigstore's [cosign](https://docs.sigstore.dev/cosign/signing/overview/). You can verify the signature by running the following command:
-
-```bash
-cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE:TAG
-```
 
 ### Auto-Rebase Install
 

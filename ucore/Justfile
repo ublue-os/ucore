@@ -10,6 +10,7 @@ KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.18"
 KERNEL_VERSION := env("KERNEL_VERSION", "")
 NVIDIA_TAG := env("NVIDIA_TAG", "")
 SELINUX := path_exists('/sys/fs/selinux')
+SYFT_CMD := env("SYFT_CMD", "syft")
 TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 
 _default:
@@ -153,3 +154,50 @@ package-provenance image='' output='':
         printf "\n$NON_FED_REPO packages:\n"
         grep "$NON_FED_REPO$" "$OUTPUT"
     done
+
+gen-sbom image='' output='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    IMAGE='{{ image }}'
+    BUILD_TAG='{{ CI_BUILD_TAG }}'
+    if [ -z "$IMAGE" ]; then
+        if [ -z "$BUILD_TAG" ]; then
+            BUILD_TAG='{{ UCORE_STREAM }}{{ NVIDIA_TAG }}'
+        fi
+        IMAGE='{{ TARGET_IMAGE }}:'"$BUILD_TAG"
+    fi
+
+    OUTPUT='{{ output }}'
+    if [ -z "$OUTPUT" ]; then
+        NVIDIA_SEGMENT='{{ NVIDIA_TAG }}'
+        if [ -n "$NVIDIA_SEGMENT" ]; then
+            NVIDIA_SEGMENT="-${NVIDIA_SEGMENT#-}"
+        fi
+        OUTPUT="audit/{{ TARGET_IMAGE }}-{{ UCORE_STREAM }}${NVIDIA_SEGMENT}-sbom.spdx.json"
+    fi
+
+    if ! podman image exists "$IMAGE"; then
+        if podman image exists "localhost/$IMAGE"; then
+            IMAGE="localhost/$IMAGE"
+        else
+            printf 'Local image not found: %s\n' "$IMAGE" >&2
+            printf 'Build it first with the matching environment, for example:\n' >&2
+            printf '  TARGET_IMAGE=%s UCORE_STREAM=%s NVIDIA_TAG=%s just build\n' \
+                '{{ TARGET_IMAGE }}' '{{ UCORE_STREAM }}' '{{ NVIDIA_TAG }}' >&2
+            exit 1
+        fi
+    fi
+
+    WORK_DIR="$(mktemp -d)"
+    ROOTFS="${WORK_DIR}/rootfs"
+    CONTAINER="gen-sbom-${RANDOM}-${RANDOM}"
+    trap 'podman container rm -f "${CONTAINER}" >/dev/null 2>&1 || true; rm -rf "${WORK_DIR}"' EXIT
+
+    mkdir -p "$ROOTFS" "$(dirname "$OUTPUT")"
+    podman container create --name "$CONTAINER" "$IMAGE" >/dev/null
+    podman export "$CONTAINER" | tar --no-same-owner -C "$ROOTFS" -xf -
+
+    export SYFT_PARALLELISM="${SYFT_PARALLELISM:-$(($(nproc) * 2))}"
+    "{{ SYFT_CMD }}" --source-name "$IMAGE" "$ROOTFS" -o "spdx-json=$OUTPUT"
+    du -sh "$OUTPUT"
