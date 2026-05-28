@@ -199,5 +199,5 @@ gen-sbom image='' output='':
     podman export "$CONTAINER" | tar --no-same-owner -C "$ROOTFS" -xf -
 
     export SYFT_PARALLELISM="${SYFT_PARALLELISM:-$(($(nproc) * 2))}"
-    "{{ SYFT_CMD }}" --source-name "$IMAGE" "$WORK_DIR" -o "spdx-json=$OUTPUT"
+    "{{ SYFT_CMD }}" --source-name "$IMAGE" "$ROOTFS" -o "spdx-json=$OUTPUT"
     du -sh "$OUTPUT"
