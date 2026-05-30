@@ -201,3 +201,46 @@ gen-sbom image='' output='':
     export SYFT_PARALLELISM="${SYFT_PARALLELISM:-$(($(nproc) * 2))}"
     "{{ SYFT_CMD }}" --source-name "$IMAGE" "$ROOTFS" -o "spdx-json=$OUTPUT"
     du -sh "$OUTPUT"
+
+changelog stream='{{ UCORE_STREAM }}' output='' env_output='' notes_file='' max_dated_tags='20' current_artifacts_dir='' release_date='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    STREAM='{{ stream }}'
+    OUTPUT='{{ output }}'
+    ENV_OUTPUT='{{ env_output }}'
+    NOTES_FILE='{{ notes_file }}'
+    MAX_DATED_TAGS='{{ max_dated_tags }}'
+    CURRENT_ARTIFACTS_DIR='{{ current_artifacts_dir }}'
+    RELEASE_DATE='{{ release_date }}'
+
+    if [ -z "$OUTPUT" ]; then
+        OUTPUT="../audit/ucore-${STREAM}-changelog.md"
+    fi
+    if [ -z "$ENV_OUTPUT" ]; then
+        ENV_OUTPUT="../audit/ucore-${STREAM}-changelog.env"
+    fi
+
+    declare -a CMD
+    CMD=(
+        python3
+        ../.github/changelogs.py
+        --stream "$STREAM"
+        --output "$OUTPUT"
+        --env-output "$ENV_OUTPUT"
+        --max-dated-tags "$MAX_DATED_TAGS"
+    )
+
+    if [ -n "$NOTES_FILE" ]; then
+        CMD+=(--notes-file "$NOTES_FILE")
+    fi
+    if [ -n "$CURRENT_ARTIFACTS_DIR" ]; then
+        CMD+=(--current-artifacts-dir "$CURRENT_ARTIFACTS_DIR")
+    fi
+    if [ -n "$RELEASE_DATE" ]; then
+        CMD+=(--release-date "$RELEASE_DATE")
+    fi
+
+    "${CMD[@]}"
+    printf 'Wrote changelog markdown to %s\n' "$OUTPUT"
+    printf 'Wrote changelog env to %s\n' "$ENV_OUTPUT"
