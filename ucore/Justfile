@@ -283,6 +283,7 @@ changelog stream='{{ UCORE_STREAM }}' output='' env_output='' notes_file='' max_
         --stream "$STREAM"
         --output "$OUTPUT"
         --env-output "$ENV_OUTPUT"
+        --image-registry "{{ IMAGE_REGISTRY }}"
         --max-dated-tags "$MAX_DATED_TAGS"
     )
 

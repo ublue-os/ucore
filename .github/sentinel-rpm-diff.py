@@ -74,9 +74,9 @@ def discover_sbom(image_ref: str, digest: str) -> str:
         artifact_type = referrer.get("artifactType") or referrer.get("mediaType")
         if artifact_type and artifact_type != SBOM_ARTIFACT_TYPE:
             continue
-        digest = referrer.get("digest")
-        if digest:
-            return f"{repository}@{digest}"
+        referrer_digest = referrer.get("digest")
+        if referrer_digest:
+            return f"{repository}@{referrer_digest}"
     raise RuntimeError(f"{repository}@{digest}: no SPDX SBOM referrer found")
 
 

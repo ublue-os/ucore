@@ -1064,7 +1064,7 @@ def main() -> int:
     global ARGS
     ARGS = parse_args()
 
-    for command in ("python3", "jq", "skopeo", "oras"):
+    for command in ("python3", "skopeo", "oras"):
         ensure_command(command)
 
     notes = read_notes(ARGS.notes_file)
