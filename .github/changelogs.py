@@ -997,11 +997,12 @@ def nvidia_specific_diffs(
 
 
 def render_rebase(current_date: str) -> list[str]:
+    repository = image_repository("ucore")
     return [
         "## Rebase",
         "",
-        f"- Stream tag: `sudo bootc switch --enforce-container-sigpolicy ghcr.io/ublue-os/ucore:{ARGS.stream}`",
-        f"- Exact dated tag: `sudo bootc switch --enforce-container-sigpolicy ghcr.io/ublue-os/ucore:{ARGS.stream}-{current_date}`",
+        f"- Stream tag: `sudo bootc switch --enforce-container-sigpolicy {repository}:{ARGS.stream}`",
+        f"- Exact dated tag: `sudo bootc switch --enforce-container-sigpolicy {repository}:{ARGS.stream}-{current_date}`",
         "",
     ]
 
