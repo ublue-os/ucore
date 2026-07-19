@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       force_build:
-        description: "Bypass sentinel package-diff gate and run the full build"
+        description: "Bypass RPM-only sentinel package-diff gate for non-RPM changes"
         default: true
         required: false
         type: boolean

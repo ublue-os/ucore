@@ -11,7 +11,7 @@ import sys
 import tempfile
 from collections import Counter
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -244,38 +244,31 @@ def normalize_arch(arch: str) -> str:
     return arch
 
 
-def dated_tags_for_prefix(repository: str, prefix: str) -> list[str]:
+def dated_tags(tags: list[str], prefix: str, release_date: str | None, max_tags: int) -> list[str]:
+    if release_date:
+        try:
+            datetime.strptime(release_date, "%Y%m%d")
+        except ValueError as exc:
+            raise RuntimeError(f"release date must use YYYYMMDD format: {release_date}") from exc
+
     matches = []
-    for tag in list_tags(repository):
+    for tag in tags:
         match = DATE_RE.match(tag)
         if not match:
             continue
         if match.group("prefix") != prefix:
             continue
+        if release_date and match.group("date") > release_date:
+            continue
         matches.append(tag)
     matches.sort(reverse=True)
-    if ARGS.max_dated_tags > 0:
-        matches = matches[:ARGS.max_dated_tags]
+    if max_tags > 0:
+        matches = matches[:max_tags]
     return matches
 
 
-def dated_tags_from_release_date(prefix: str) -> list[str]:
-    if not ARGS.release_date:
-        return []
-
-    try:
-        start_date = datetime.strptime(ARGS.release_date, "%Y%m%d").date()
-    except ValueError as exc:
-        raise RuntimeError(f"release date must use YYYYMMDD format: {ARGS.release_date}") from exc
-
-    tag_count = ARGS.max_dated_tags
-    if tag_count <= 0:
-        tag_count = 20
-
-    return [
-        f"{prefix}-{(start_date - timedelta(days=offset)).strftime('%Y%m%d')}"
-        for offset in range(tag_count)
-    ]
+def dated_tags_for_prefix(repository: str, prefix: str) -> list[str]:
+    return dated_tags(list_tags(repository), prefix, ARGS.release_date, ARGS.max_dated_tags)
 
 
 def inspect_reference_or_none(reference: str) -> dict | None:
@@ -291,9 +284,7 @@ def resolve_image_ref(repository: str, tag: str) -> ImageRef:
     if not digest:
         raise RuntimeError(f"{repository}:{tag}: missing digest")
 
-    dated_tags = dated_tags_from_release_date(tag)
-    if not dated_tags:
-        dated_tags = dated_tags_for_prefix(repository, tag)
+    dated_tags = dated_tags_for_prefix(repository, tag)
 
     matched_dated_tag = None
     previous_dated_tag = None
@@ -566,6 +557,8 @@ def short_revision(labels: dict[str, str]) -> str | None:
 
 
 def release_date(primary_ref: ImageRef) -> str:
+    if ARGS.release_date:
+        return ARGS.release_date
     tag = primary_ref.matched_dated_tag
     if tag:
         match = DATE_RE.match(tag)

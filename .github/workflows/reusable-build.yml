@@ -12,7 +12,8 @@ on:
         required: false
         type: string
       force_build:
-        description: "Bypass the sentinel package-diff gate and run the full build"
+        description: >-
+          Bypass the RPM-only sentinel package-diff gate and run the full build for non-RPM changes
         default: false
         required: false
         type: boolean
@@ -228,9 +229,13 @@ jobs:
     needs: [sentinel_build]
     permissions:
       actions: read
+      contents: read
     outputs:
       changed: ${{ steps.decision.outputs.changed }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - name: Download sentinel results
         if: needs.sentinel_build.result == 'success'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -243,6 +248,7 @@ jobs:
         shell: bash
         env:
           SENTINEL_RESULT: ${{ needs.sentinel_build.result }}
+          SENTINEL_ARCHITECTURES: ${{ inputs.arch }}
         run: |
           set -euo pipefail
 
@@ -257,15 +263,10 @@ jobs:
               exit 1
           fi
 
-          aggregate_changed=false
-          while IFS= read -r result_file; do
-              # shellcheck disable=SC1090
-              source "${result_file}"
-              result_changed="${changed:-false}"
-              if [[ "${result_changed}" == "true" ]]; then
-                  aggregate_changed=true
-              fi
-          done < <(find sentinel-results -type f -name sentinel-result.env | sort)
+          decision="$(python3 .github/sentinel-result-aggregate.py \
+              --results-dir sentinel-results \
+              --architectures "${SENTINEL_ARCHITECTURES}")"
+          aggregate_changed="${decision#changed=}"
 
           echo "changed=${aggregate_changed}" >> "${GITHUB_OUTPUT}"
           if [[ "${aggregate_changed}" == "true" ]]; then
