@@ -9,6 +9,12 @@ on:
   schedule:
     - cron: "55 2 * * *" # 2:55am-ish UTC everyday (approx 50 minutes after akmods images run)
   workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Bypass RPM-only sentinel package-diff gate for non-RPM changes"
+        default: true
+        required: false
+        type: boolean
 
 jobs:
   build-testing:
@@ -17,3 +23,4 @@ jobs:
     with:
       ucore_stream: testing
       arch: "['aarch64','x86_64']"
+      force_build: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
