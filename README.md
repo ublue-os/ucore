@@ -18,7 +18,10 @@ Please take a look at the included modifications, and help us improve uCore if t
     - [`ucore-hci`](#ucore-hci)
   - [Tag Matrix](#tag-matrix)
   - [Image Verification](#image-verification)
-  - [Software Bill of Materials](#software-bill-of-materials)
+  - [Build Transparency and Releases](#build-transparency-and-releases)
+    - [RPM Package Provenance](#rpm-package-provenance)
+    - [Software Bill of Materials](#software-bill-of-materials)
+    - [Releases and Changelogs](#releases-and-changelogs)
 - [Installation](#installation)
   - [Auto-Rebase Install](#auto-rebase-install)
   - [Manual Install/Rebase](#manual-installrebase)
@@ -46,6 +49,16 @@ Please take a look at the included modifications, and help us improve uCore if t
 - [Metrics](#metrics)
 
 ## Announcements
+
+### 2026.07.20 - Build Transparency: Provenance, SBOMs, and Release Changelogs
+
+Curious what changed in today's image? uCore now surfaces a bit more build transparency:
+
+- RPM package provenance from each image build
+- signed per-architecture SPDX SBOMs attached to image digests
+- generated GitHub Release changelogs for `stable`, `testing`, and `lts`
+
+See [Build Transparency and Releases](#build-transparency-and-releases) for the details.
 
 ### 2026.05.23 - uCore Fedora 44 Builds and LTS Kernel Update
 
@@ -292,9 +305,17 @@ For example:
 cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/ucore:stable
 ```
 
-### Software Bill of Materials
+### Build Transparency and Releases
 
-uCore publishes SPDX JSON SBOMs for each architecture-specific image digest. Multi-arch tags such as `stable` resolve to a platform-specific image, and the SBOM is attached to that resolved image digest rather than only to the multi-arch manifest.
+#### RPM Package Provenance
+
+Each image build produces `package-provenance.txt` for its image and architecture. It lists installed RPMs using `name|evr|arch|from_repo`: package name, epoch-version-release, architecture, and source repository.
+
+Download the report from the matching [GitHub Actions](https://github.com/ublue-os/ucore/actions) run in its `image-*` artifact. Build artifacts are kept for 7 days; they are not attached to GitHub Releases or image digests. Use the signed SBOM below when you need a durable package inventory.
+
+#### Software Bill of Materials
+
+uCore publishes signed SPDX JSON SBOMs for each architecture-specific image digest. Since multi-arch tags such as `stable` resolve to a platform-specific image, each SBOM is attached to that platform image digest, not only to the multi-arch manifest.
 
 To inspect the SBOM for an image, first resolve the digest for the platform you want to audit:
 
@@ -303,7 +324,7 @@ skopeo inspect --raw docker://ghcr.io/ublue-os/IMAGE:TAG \
   | jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest'
 ```
 
-Then discover the SPDX SBOM attached to the platform image digest:
+Then discover the SPDX SBOM attached to that image digest:
 
 ```bash
 oras discover \
@@ -317,7 +338,7 @@ You can pull the SBOM artifact by digest:
 oras pull ghcr.io/ublue-os/IMAGE@sha256:SBOM_ARTIFACT_DIGEST
 ```
 
-SBOM artifacts are signed with cosign and can be verified with the same public key:
+The SBOM artifact is signed with cosign and can be verified with the same public key:
 
 ```bash
 cosign verify --key https://github.com/ublue-os/ucore/raw/main/cosign.pub ghcr.io/ublue-os/IMAGE@sha256:SBOM_ARTIFACT_DIGEST
@@ -333,6 +354,16 @@ oras discover \
   --artifact-type application/vnd.spdx+json \
   "ghcr.io/ublue-os/ucore@${IMAGE_DIGEST}"
 ```
+
+#### Releases and Changelogs
+
+[GitHub Releases](https://github.com/ublue-os/ucore/releases) provide generated changelogs for `stable`, `testing`, and `lts`. Release tags use the stream and date, such as `stable-YYYYMMDD`. `stable` is marked as the latest release; `testing` and `lts` are not.
+
+Releases are published after successful full image builds from `main`. Scheduled builds without RPM changes do not publish a release. Manual workflow runs can publish one, and a later build on the same day updates that day's release.
+
+Each changelog includes major package versions, build metadata, source comparison links, and SBOM-derived RPM additions, removals, and upgrades. Changes are grouped by image family, NVIDIA variant, and architecture where needed. The release also includes commands to rebase to either the moving stream tag or that day's exact image tag.
+
+Releases are changelog notes, not image downloads. Images remain on `ghcr.io`; use [Image Verification](#image-verification) and the SBOM above to verify or audit an image.
 
 ## Installation
 
