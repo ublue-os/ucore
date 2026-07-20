@@ -566,8 +566,10 @@ jobs:
             *) printf "Invalid architecture" >&2; exit 1 ;;
           esac
 
-          echo "Installing up to date buildah for $IMAGE_ARCH"
-          curl -fsSL https://github.com/bsherman/buildah-static/releases/latest/download/buildah-${IMAGE_ARCH:?}.tar.gz \
+          # Buildah >=1.44.0 is incompatible with the ubuntu-24.04 Podman stack.
+          BUILDAH_VERSION=v1.43.1
+          echo "Installing Buildah $BUILDAH_VERSION for $IMAGE_ARCH"
+          curl -fsSL "https://github.com/bsherman/buildah-static/releases/download/${BUILDAH_VERSION}/buildah-${IMAGE_ARCH:?}.tar.gz" \
             | tar -xzf - -C /usr/local/bin/
 
           # Workaround issues between custom buildah installation and apparmor
