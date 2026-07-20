@@ -144,7 +144,7 @@ jobs:
           syft-version: v1.39.0
 
       - name: Install ORAS
-        uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
 
       - name: Login to GitHub Container Registry with ORAS
         run: |
@@ -687,7 +687,7 @@ jobs:
 
       - name: Install ORAS
         if: github.event_name != 'pull_request'
-        uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
 
       - name: Login to GitHub Container Registry with ORAS
         if: github.event_name != 'pull_request'
@@ -762,7 +762,7 @@ jobs:
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Install ORAS
-        uses: oras-project/setup-oras@38de303aac69abb66f3e6255b7198bff35f323e3 # v2.0.0
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
 
       - name: Login to GitHub Container Registry with ORAS
         run: |
