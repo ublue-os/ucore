@@ -11,9 +11,9 @@
     "name": "cockpit-font-fix",
     "repo": "45Drives/scripts",
     "branch": "main",
-    "commit": "b0a61cb99c64dcc71f5c726a5cb8f5c9beb2dc87",
+    "commit": "4e69e21d650e479c5b2d36ca35a3fbfa0c1ffccc",
     "release": "",
-    "url": "https://raw.githubusercontent.com/45Drives/scripts/b0a61cb99c64dcc71f5c726a5cb8f5c9beb2dc87/cockpit_font_fix/fix-cockpit.sh",
+    "url": "https://raw.githubusercontent.com/45Drives/scripts/4e69e21d650e479c5b2d36ca35a3fbfa0c1ffccc/cockpit_font_fix/fix-cockpit.sh",
     "sha256": "78e0049e21a1b141402647d9b229b24004e5ecf8608fe110bf7feb32fec300aa"
   }
 ]
