@@ -41,7 +41,7 @@ upstream-image:
     version=$(just upstream-version "$image")
     printf '%s:%s\n' "$image" "$version"
 
-# Emergency CoreOS image-version override: https://github.com/ublue-os/ucore/issues/413
+# Planned emergency CoreOS image-version override: https://github.com/ublue-os/ucore/issues/413
 stream-info output='stream-info.env':
     #!/usr/bin/env bash
     set -euo pipefail
