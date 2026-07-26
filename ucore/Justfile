@@ -1,40 +1,52 @@
 set dotenv-load := true
 
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
-UCORE_STREAM := env("UCORE_STREAM", "stable")
-FEDORA_VERSION := env("FEDORA_VERSION", "44")
-IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
+export UCORE_STREAM := env("UCORE_STREAM", "stable")
+export FEDORA_VERSION := env("FEDORA_VERSION", "44")
+export IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
-KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.18" } else { 'coreos-' + COREOS_STREAM })
-KERNEL_VERSION := env("KERNEL_VERSION", "")
-NVIDIA_TAG := env("NVIDIA_TAG", "")
+export KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.18" } else { 'coreos-' + COREOS_STREAM })
+export KERNEL_VERSION := env("KERNEL_VERSION", "")
+export NVIDIA_TAG := env("NVIDIA_TAG", "")
 SELINUX := path_exists('/sys/fs/selinux')
 SYFT_CMD := env("SYFT_CMD", "syft")
-TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
+export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 
 _default:
     @just --list --unsorted
 
 upstream-version image:
     #!/usr/bin/env bash
-    version=$(skopeo inspect docker://"{{ image }}":{{ COREOS_STREAM }} | \
+    set -euo pipefail
+
+    image='{{ image }}'
+    version=$(skopeo inspect "docker://${image}:{{ COREOS_STREAM }}" | \
             jq -r '.["Labels"]["org.opencontainers.image.version"]')
     if [ -z "$version" ] || [ "null" = "$version" ]; then
-      echo "inspected image ({{ image }}) version must not be empty or null" >&2
+      echo "inspected image ($image) version must not be empty or null" >&2
       exit 1
     fi
-    echo "$version"
+    printf '%s\n' "$version"
 
 upstream-image:
     #!/usr/bin/env bash
+    set -euo pipefail
+
     image='quay.io/fedora/fedora-coreos'
-    version=$(just upstream-version $image)
-    echo "$image:$version"
+    version=$(just upstream-version "$image")
+    printf '%s:%s\n' "$image" "$version"
 
 containerfile upstream_image='':
     #!/usr/bin/env bash
+    set -euo pipefail
     set -x
+
+    UPSTREAM_IMAGE='{{ upstream_image }}'
+    if [ -z "$UPSTREAM_IMAGE" ]; then
+        UPSTREAM_IMAGE="$(just upstream-image)"
+    fi
+
     KERNEL_VERSION=""
     if [ -n "{{ KERNEL_VERSION }}" ]; then
         KERNEL_VERSION="-{{ KERNEL_VERSION }}"
@@ -45,7 +57,7 @@ containerfile upstream_image='':
       "-DUCORE={{ UCORE_STREAM }}"
       "-DIMAGE_REGISTRY={{ IMAGE_REGISTRY }}"
       "-DKERNEL={{ KERNEL_FLAVOR }}"
-      "-DUPSTREAM_IMAGE={{ if upstream_image == '' { shell('just upstream-image') } else { upstream_image } }}"
+      "-DUPSTREAM_IMAGE=${UPSTREAM_IMAGE}"
     )
     if [ -n "$NVIDIA_TAG" ]; then
       # NVIDIA_TAG=={{ NVIDIA_TAG }}
@@ -60,15 +72,17 @@ containerfile upstream_image='':
 
 build upstream_image='':
     #!/usr/bin/env bash
+    set -euo pipefail
     set -x
-    just containerfile {{ upstream_image }}
+
+    just containerfile "{{ upstream_image }}"
     # TODO: use LABELS_FILE to include labels in image
-    BUILD_TAG={{ CI_BUILD_TAG }}
+    BUILD_TAG='{{ CI_BUILD_TAG }}'
     if [ -z "$BUILD_TAG" ]; then
-        BUILD_TAG={{ UCORE_STREAM }}{{ NVIDIA_TAG }}
+        BUILD_TAG='{{ UCORE_STREAM }}{{ NVIDIA_TAG }}'
     fi
     podman build -f Containerfile \
-        --target {{ TARGET_IMAGE }} \
+        --target "{{ TARGET_IMAGE }}" \
         -t "{{ TARGET_IMAGE }}:${BUILD_TAG}" .
 
 ci-prepare-build upstream_image='' arch='':
