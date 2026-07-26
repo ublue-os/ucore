@@ -1,6 +1,7 @@
 set dotenv-load := true
 
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
+export AKMODS_REGISTRY := env("AKMODS_REGISTRY", "ghcr.io/ublue-os")
 export UCORE_STREAM := env("UCORE_STREAM", "stable")
 export FEDORA_VERSION := env("FEDORA_VERSION", "44")
 export IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
@@ -54,8 +55,8 @@ containerfile upstream_image='':
     declare -a CPP_FLAGS
     CPP_FLAGS+=(
       "-DAKMODS_TAG={{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}${KERNEL_VERSION}"
+      "-DAKMODS_REGISTRY={{ AKMODS_REGISTRY }}"
       "-DUCORE={{ UCORE_STREAM }}"
-      "-DIMAGE_REGISTRY={{ IMAGE_REGISTRY }}"
       "-DKERNEL={{ KERNEL_FLAVOR }}"
       "-DUPSTREAM_IMAGE=${UPSTREAM_IMAGE}"
     )
@@ -116,11 +117,11 @@ ci-prepare-build upstream_image='' arch='':
         just verify-checksum "" "{{ FEDORA_VERSION }}" "$ARCH"
     fi
 
-    AKMODS_ZFS="{{ IMAGE_REGISTRY }}/akmods-zfs:{{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}-{{ KERNEL_VERSION }}"
+    AKMODS_ZFS="{{ AKMODS_REGISTRY }}/akmods-zfs:{{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}-{{ KERNEL_VERSION }}"
     podman pull "$UPSTREAM_IMAGE"
     podman pull "$AKMODS_ZFS"
     if [ -n "{{ NVIDIA_TAG }}" ]; then
-        AKMODS_NVIDIA="{{ IMAGE_REGISTRY }}/akmods{{ NVIDIA_TAG }}:{{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}-{{ KERNEL_VERSION }}"
+        AKMODS_NVIDIA="{{ AKMODS_REGISTRY }}/akmods{{ NVIDIA_TAG }}:{{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}-{{ KERNEL_VERSION }}"
         podman pull "$AKMODS_NVIDIA"
     fi
 
