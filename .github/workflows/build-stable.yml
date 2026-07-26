@@ -22,5 +22,5 @@ jobs:
     secrets: inherit
     with:
       ucore_stream: stable
-      arch: "['aarch64','x86_64']"
+      arch: '["aarch64","x86_64"]'
       force_build: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}

@@ -7,8 +7,8 @@ on:
         required: true
         type: string
       arch:
-        description: "JSON string of architectures to build, '[aarch64, x86_64]'"
-        default: "['x86_64']"
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
         required: false
         type: string
       force_build:
@@ -19,10 +19,8 @@ on:
         type: boolean
 
 env:
+  AKMODS_REGISTRY: ghcr.io/ublue-os
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  # lts uses the stable CoreOS base image but with the longterm kernel
-  COREOS_STREAM: ${{ inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream }}
-  KERNEL_FLAVOR: ${{ inputs.ucore_stream == 'lts' && 'longterm-6.18' || format('coreos-{0}', inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream) }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
@@ -36,76 +34,50 @@ jobs:
       contents: read
     outputs:
       date: ${{ steps.date.outputs.date }}
-      pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
+      publish: ${{ steps.publish.outputs.publish }}
     steps:
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
-      - name: Set PR Prefix
-        id: pr_prefix
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              PR_PREFIX="pr-${{ github.event.number }}-"
-          else
-              PR_PREFIX=""
-          fi
-          echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
+      - name: Determine whether to publish
+        id: publish
+        run: echo "publish=${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
           echo "${{ toJSON(steps.date.outputs) }}"
-          echo "${{ toJSON(steps.pr_prefix.outputs) }}"
+          echo "${{ toJSON(steps.publish.outputs) }}"
 
   stream_info:
     name: "Stream Info: ${{ matrix.arch }}"
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
     permissions:
       actions: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         arch: ${{ fromJson(inputs.arch) }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
       - name: Fetch CoreOS stream versions
         id: fetch
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        env:
+          AKMODS_REGISTRY: ${{ env.AKMODS_REGISTRY }}
+          UCORE_STREAM: ${{ inputs.ucore_stream }}
         with:
           max_attempts: 3
           retry_wait_seconds: 15
           timeout_minutes: 5
           command: |
-            set -eo pipefail
-
-            skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ env.COREOS_STREAM }} > inspect.json
-
-            image=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
-            if [ -z "$image" ] || [ "null" = "$image" ]; then
-              echo "inspected image version must not be empty or null" >&2
-              exit 1
-            fi
-
-            if [[ "${image}" =~ "42.20250410.3" ]]; then
-              echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.* to 41.20250331.3.0" >&2
-              image="41.20250331.3.0"
-            fi
-
-            fedora=$(echo "$image" | cut -f1 -d.)
-            if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
-              echo "fedora version must not be empty or null" >&2
-              exit 1
-            fi
-
-            kernel=$(skopeo inspect docker://ghcr.io/ublue-os/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${fedora} | jq -r '.["Labels"]["ostree.linux"]')
-            if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
-              echo "inspected linux (kernel) version must not be empty or null" >&2
-              exit 1
-            fi
-
-            echo "FEDORA_VERSION=${fedora}" > stream-info.env
-            echo "IMAGE_VERSION=${image}" >> stream-info.env
-            echo "KERNEL_VERSION=${kernel}" >> stream-info.env
-
-            cat stream-info.env
+            set -euo pipefail
+            just --justfile ucore/Justfile --working-directory ucore \
+                stream-info ../stream-info.env
       - name: Upload stream info as artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -162,6 +134,7 @@ jobs:
           set -x
           echo "IMAGE_NAME=ucore-hci" >> $GITHUB_ENV
           echo "SENTINEL_TAG=sentinel-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}" >> $GITHUB_ENV
+          # -nvidia-open selects the akmods source; the compatible public tag remains -nvidia.
           NVIDIA_TAG="${{ matrix.nvidia_tag }}"
           echo "PUBLISHED_TAG=${{ inputs.ucore_stream }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
@@ -169,9 +142,9 @@ jobs:
       - name: Prepare image build inputs
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         env:
+          AKMODS_REGISTRY: ${{ env.AKMODS_REGISTRY }}
           UCORE_STREAM: ${{ inputs.ucore_stream }}
           FEDORA_VERSION: ${{ env.FEDORA_VERSION }}
-          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
           KERNEL_FLAVOR: ${{ env.KERNEL_FLAVOR }}
           KERNEL_VERSION: ${{ env.KERNEL_VERSION }}
           NVIDIA_TAG: ${{ matrix.nvidia_tag }}
@@ -181,8 +154,8 @@ jobs:
           retry_wait_seconds: 15
           timeout_minutes: 15
           command: |
-            pushd ucore
-            just ci-prepare-build \
+            just --justfile ucore/Justfile --working-directory ucore \
+                ci-prepare-build \
                 "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}" \
                 "${{ matrix.arch }}"
 
@@ -190,17 +163,18 @@ jobs:
         env:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
         run: |
-          pushd ucore
+          AKMODS_REGISTRY=${{ env.AKMODS_REGISTRY }} \
           UCORE_STREAM=${{ inputs.ucore_stream }} \
           FEDORA_VERSION=${{ env.FEDORA_VERSION }} \
-          IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }} \
           KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }} \
           KERNEL_VERSION=${{ env.KERNEL_VERSION }} \
           NVIDIA_TAG=${{ matrix.nvidia_tag }} \
           TARGET_IMAGE=${{ env.IMAGE_NAME }} \
           CI_BUILD_TAG=${{ env.SENTINEL_TAG }} \
-          just build "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
-          just gen-sbom \
+          just --justfile ucore/Justfile --working-directory ucore \
+              build "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
+          just --justfile ucore/Justfile --working-directory ucore \
+              gen-sbom \
               "${{ env.IMAGE_NAME }}:${{ env.SENTINEL_TAG }}" \
               ../sentinel-sbom.json
 
@@ -284,8 +258,6 @@ jobs:
       actions: write
       contents: read
       packages: write
-    env:
-      PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
       fail-fast: false
       matrix:
@@ -353,9 +325,9 @@ jobs:
       - name: Prepare image build inputs
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         env:
+          AKMODS_REGISTRY: ${{ env.AKMODS_REGISTRY }}
           UCORE_STREAM: ${{ inputs.ucore_stream }}
           FEDORA_VERSION: ${{ env.FEDORA_VERSION }}
-          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
           KERNEL_FLAVOR: ${{ env.KERNEL_FLAVOR }}
           KERNEL_VERSION: ${{ env.KERNEL_VERSION }}
           NVIDIA_TAG: ${{ matrix.nvidia_tag }}
@@ -365,8 +337,8 @@ jobs:
           retry_wait_seconds: 15
           timeout_minutes: 15
           command: |
-            pushd ucore
-            just ci-prepare-build \
+            just --justfile ucore/Justfile --working-directory ucore \
+                ci-prepare-build \
                 "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}" \
                 "${{ matrix.arch }}"
 
@@ -380,7 +352,6 @@ jobs:
           image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ env.TAG_VERSION_ARCH }}
-          build-args: |
           labels: ${{ steps.meta.outputs.labels }}
           oci: true
           extra-args: |
@@ -388,26 +359,26 @@ jobs:
 
       - name: Setup Syft
         id: setup-syft
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           syft-version: v1.39.0
 
       - name: Generate SBOM
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         id: generate-sbom
         env:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
         run: |
-          pushd ucore
-          just gen-sbom \
+          just --justfile ucore/Justfile --working-directory ucore \
+              gen-sbom \
               "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
               ../sbom.json
 
       - name: Package Provenance
         run: |
-          pushd ucore
-          just package-provenance \
+          just --justfile ucore/Justfile --working-directory ucore \
+              package-provenance \
               "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
               ../package-provenance.txt
 
@@ -431,14 +402,14 @@ jobs:
           sbverify --cert akmods.crt vmlinuz || exit 1
 
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         run: |
-          printf '%s' "${{ github.token }}" | podman login "${{ env.IMAGE_REGISTRY }}" -u "${{ github.actor }}" --password-stdin
+          printf '%s' "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push Image to Registry
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         id: push
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         env:
           IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
           BUILD_IMAGE: ${{ steps.build_image.outputs.image }}
@@ -458,7 +429,7 @@ jobs:
             echo "registry-path=$IMAGE_REGISTRY/$BUILD_IMAGE:$first_tag" >> $GITHUB_OUTPUT
 
       - name: Save image metadata
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         run: |
           set -x
           echo "IMAGE_ARCH=${{ matrix.arch }}" >> image.env
@@ -467,7 +438,7 @@ jobs:
           echo "${{ steps.meta.outputs.labels }}" > labels.txt
 
       - name: Upload image metadata as artifact
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: image-ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag != '' && matrix.nvidia_tag || '-default' }}-${{ matrix.arch }}
@@ -498,7 +469,7 @@ jobs:
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
-    if: needs.check_builds.result == 'success' && needs.build_image.result == 'success' && needs.sentinel_decision.outputs.changed == 'true' && !cancelled() && github.event_name != 'pull_request'
+    if: needs.check_builds.result == 'success' && needs.build_image.result == 'success' && needs.sentinel_decision.outputs.changed == 'true' && needs.workflow_info.outputs.publish == 'true' && !cancelled()
     needs: [workflow_info, sentinel_decision, check_builds, build_image]
     permissions:
       actions: read
@@ -521,13 +492,14 @@ jobs:
 
       - name: Login to GitHub Container Registry
         run: |
-          printf '%s' "${{ github.token }}" | podman login "${{ env.IMAGE_REGISTRY }}" -u "${{ github.actor }}" --password-stdin
+          printf '%s' "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Set matrix environment variables
         shell: bash
         run: |
           set -x
           echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
+          # -nvidia-open selects the akmods source; the compatible public tag remains -nvidia.
           NVIDIA_TAG="${{ matrix.nvidia_tag }}"
           echo "TAG_VERSION=${{ inputs.ucore_stream }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
 
@@ -543,10 +515,9 @@ jobs:
         with:
           tags: |
             type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
-            type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
-            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
+            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
 
       - name: Single Line (convert newlines to spaces)
         id: single-line
@@ -638,17 +609,14 @@ jobs:
 
       # Sign container
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        if: github.event_name != 'pull_request'
         with:
           cosign-release: "v2.6.1"
 
       - name: Login to GitHub Container Registry for cosign
-        if: github.event_name != 'pull_request'
         run: |
           printf '%s' "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Sign member images
-        if: github.event_name != 'pull_request'
         shell: bash
         env:
           COSIGN_EXPERIMENTAL: false
@@ -677,7 +645,6 @@ jobs:
           done
 
       - name: Sign container manifest
-        if: github.event_name != 'pull_request'
         env:
           REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
           DIGEST: ${{ steps.push.outputs.digest }}
@@ -688,16 +655,13 @@ jobs:
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
 
       - name: Install ORAS
-        if: github.event_name != 'pull_request'
         uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
 
       - name: Login to GitHub Container Registry with ORAS
-        if: github.event_name != 'pull_request'
         run: |
           printf '%s' "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Upload SBOMs
-        if: github.event_name != 'pull_request'
         id: upload-sbom
         run: |
           set -xeuo pipefail
@@ -736,7 +700,6 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Sign SBOM OCI Artifacts
-        if: github.event_name != 'pull_request'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
@@ -751,7 +714,7 @@ jobs:
   publish_release:
     name: Publish release notes
     runs-on: ubuntu-24.04
-    if: needs.push_and_sign.result == 'success' && !cancelled() && github.event_name != 'pull_request' && github.event_name != 'merge_group' && startsWith(github.ref, 'refs/heads/main')
+    if: needs.push_and_sign.result == 'success' && needs.workflow_info.outputs.publish == 'true' && !cancelled() && startsWith(github.ref, 'refs/heads/main')
     needs: [workflow_info, push_and_sign]
     permissions:
       contents: write
@@ -782,8 +745,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          pushd ucore
-          just changelog \
+          just --justfile ucore/Justfile --working-directory ucore \
+              changelog \
               "${{ inputs.ucore_stream }}" \
               ../changelog.md \
               ../changelog.env \
@@ -791,7 +754,6 @@ jobs:
               20 \
               ../images \
               "${{ needs.workflow_info.outputs.date }}"
-          popd
 
           # shellcheck disable=SC1091
           source changelog.env

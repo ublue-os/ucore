@@ -1,3 +1,5 @@
 .env
+__pycache__/
+*.py[cod]
 Containerfile
 ucore/audit

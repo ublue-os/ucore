@@ -1,7 +1,7 @@
 # /* FROMs for copying */
-FROM IMAGE_REGISTRY/akmods-zfs:AKMODS_TAG AS akmods-zfs
+FROM AKMODS_REGISTRY/akmods-zfs:AKMODS_TAG AS akmods-zfs
 # ifdef NVIDIA
-FROM IMAGE_REGISTRY/akmods-NVIDIA:AKMODS_TAG AS akmods-nvidia
+FROM AKMODS_REGISTRY/akmods-NVIDIA:AKMODS_TAG AS akmods-nvidia
 # endif /* NVIDIA */
 FROM scratch AS ctx
 COPY / /

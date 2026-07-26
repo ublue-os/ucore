@@ -60,7 +60,7 @@ class SentinelResultAggregateTests(unittest.TestCase):
                 AGGREGATE.aggregate_results(directory, 1)
 
     def test_expected_count_uses_the_architecture_list(self) -> None:
-        self.assertEqual(AGGREGATE.expected_result_count("['aarch64', 'x86_64']"), 4)
+        self.assertEqual(AGGREGATE.expected_result_count('["aarch64", "x86_64"]'), 4)
 
 
 if __name__ == "__main__":
