@@ -1,4 +1,4 @@
-set dotenv-load := true
+set dotenv-load
 
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
 export AKMODS_REGISTRY := env("AKMODS_REGISTRY", "ghcr.io/ublue-os")
@@ -16,6 +16,10 @@ export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 
 _default:
     @just --list --unsorted
+
+check:
+    just --fmt --check
+    python3 -m unittest discover -s ../.github/tests -v
 
 upstream-version image:
     #!/usr/bin/env bash
