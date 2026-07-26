@@ -41,6 +41,7 @@ upstream-image:
     version=$(just upstream-version "$image")
     printf '%s:%s\n' "$image" "$version"
 
+# Emergency CoreOS image-version override: https://github.com/ublue-os/ucore/issues/413
 stream-info output='stream-info.env':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -102,6 +103,7 @@ containerfile upstream_image='':
     cpp -E -P "${CPP_FLAGS[@]}" Containerfile.in -o Containerfile
     cat Containerfile
 
+# Sandbox end-to-end publication testing: https://github.com/ublue-os/ucore/issues/414
 build upstream_image='':
     #!/usr/bin/env bash
     set -euo pipefail
