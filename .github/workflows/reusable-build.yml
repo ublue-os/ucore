@@ -21,9 +21,6 @@ on:
 env:
   AKMODS_REGISTRY: ghcr.io/ublue-os
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  # lts uses the stable CoreOS base image but with the longterm kernel
-  COREOS_STREAM: ${{ inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream }}
-  KERNEL_FLAVOR: ${{ inputs.ucore_stream == 'lts' && 'longterm-6.18' || format('coreos-{0}', inputs.ucore_stream == 'lts' && 'stable' || inputs.ucore_stream) }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
@@ -66,51 +63,32 @@ jobs:
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
     permissions:
       actions: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         arch: ${{ fromJson(inputs.arch) }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
       - name: Fetch CoreOS stream versions
         id: fetch
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        env:
+          AKMODS_REGISTRY: ${{ env.AKMODS_REGISTRY }}
+          UCORE_STREAM: ${{ inputs.ucore_stream }}
         with:
           max_attempts: 3
           retry_wait_seconds: 15
           timeout_minutes: 5
           command: |
-            set -eo pipefail
-
-            skopeo inspect docker://quay.io/fedora/fedora-coreos:${{ env.COREOS_STREAM }} > inspect.json
-
-            image=$(jq -r '.["Labels"]["org.opencontainers.image.version"]' inspect.json)
-            if [ -z "$image" ] || [ "null" = "$image" ]; then
-              echo "inspected image version must not be empty or null" >&2
-              exit 1
-            fi
-
-            if [[ "${image}" =~ "42.20250410.3" ]]; then
-              echo "WARNING: Overriding known problematic release. Downgrading from 42.20250410.3.* to 41.20250331.3.0" >&2
-              image="41.20250331.3.0"
-            fi
-
-            fedora=$(echo "$image" | cut -f1 -d.)
-            if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
-              echo "fedora version must not be empty or null" >&2
-              exit 1
-            fi
-
-            kernel=$(skopeo inspect docker://${{ env.AKMODS_REGISTRY }}/akmods-zfs:${{ env.KERNEL_FLAVOR }}-${fedora} | jq -r '.["Labels"]["ostree.linux"]')
-            if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
-              echo "inspected linux (kernel) version must not be empty or null" >&2
-              exit 1
-            fi
-
-            echo "FEDORA_VERSION=${fedora}" > stream-info.env
-            echo "IMAGE_VERSION=${image}" >> stream-info.env
-            echo "KERNEL_VERSION=${kernel}" >> stream-info.env
-
-            cat stream-info.env
+            set -euo pipefail
+            pushd ucore
+            just stream-info ../stream-info.env
       - name: Upload stream info as artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

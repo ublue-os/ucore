@@ -38,6 +38,35 @@ upstream-image:
     version=$(just upstream-version "$image")
     printf '%s:%s\n' "$image" "$version"
 
+stream-info output='stream-info.env':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    output='{{ output }}'
+    image=$(just upstream-version quay.io/fedora/fedora-coreos)
+    fedora=${image%%.*}
+    if [ -z "$fedora" ] || [ "null" = "$fedora" ]; then
+        echo "Fedora version must not be empty or null" >&2
+        exit 1
+    fi
+
+    kernel=$(skopeo inspect \
+        "docker://{{ AKMODS_REGISTRY }}/akmods-zfs:{{ KERNEL_FLAVOR }}-${fedora}" | \
+        jq -r '.["Labels"]["ostree.linux"]')
+    if [ -z "$kernel" ] || [ "null" = "$kernel" ]; then
+        echo "inspected linux kernel version must not be empty or null" >&2
+        exit 1
+    fi
+
+    {
+        printf 'COREOS_STREAM=%s\n' '{{ COREOS_STREAM }}'
+        printf 'KERNEL_FLAVOR=%s\n' '{{ KERNEL_FLAVOR }}'
+        printf 'FEDORA_VERSION=%s\n' "$fedora"
+        printf 'IMAGE_VERSION=%s\n' "$image"
+        printf 'KERNEL_VERSION=%s\n' "$kernel"
+    } > "$output"
+    cat "$output"
+
 containerfile upstream_image='':
     #!/usr/bin/env bash
     set -euo pipefail
