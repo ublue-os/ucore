@@ -204,6 +204,11 @@ The [tag matrix](#tag-matrix) includes combinations of the following:
 - `nvidia` - images which include latest open nvidia driver and container runtime
 - `nvidia-lts` - images which include LTS nvidia driver and container runtime
 
+CI uses `-nvidia-open` internally to select the open-driver akmods image, then publishes that
+variant under the existing `-nvidia` tags. Local builds, per-architecture CI images, and sentinel
+candidates retain the internal selector in their temporary tags; published manifests and the
+sentinel comparison target use the public tag.
+
 ### Images
 
 #### `ucore-minimal`

@@ -145,6 +145,7 @@ jobs:
           set -x
           echo "IMAGE_NAME=ucore-hci" >> $GITHUB_ENV
           echo "SENTINEL_TAG=sentinel-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}" >> $GITHUB_ENV
+          # -nvidia-open selects the akmods source; the compatible public tag remains -nvidia.
           NVIDIA_TAG="${{ matrix.nvidia_tag }}"
           echo "PUBLISHED_TAG=${{ inputs.ucore_stream }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
           cat stream-info.env >> $GITHUB_ENV
@@ -514,6 +515,7 @@ jobs:
         run: |
           set -x
           echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
+          # -nvidia-open selects the akmods source; the compatible public tag remains -nvidia.
           NVIDIA_TAG="${{ matrix.nvidia_tag }}"
           echo "TAG_VERSION=${{ inputs.ucore_stream }}${NVIDIA_TAG%-open}" >> $GITHUB_ENV
 
