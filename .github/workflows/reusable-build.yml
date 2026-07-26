@@ -36,11 +36,15 @@ jobs:
       contents: read
     outputs:
       date: ${{ steps.date.outputs.date }}
+      publish: ${{ steps.publish.outputs.publish }}
       pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+      - name: Determine whether to publish
+        id: publish
+        run: echo "publish=${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}" >> $GITHUB_OUTPUT
       - name: Set PR Prefix
         id: pr_prefix
         shell: bash
@@ -388,13 +392,13 @@ jobs:
 
       - name: Setup Syft
         id: setup-syft
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           syft-version: v1.39.0
 
       - name: Generate SBOM
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         id: generate-sbom
         env:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
@@ -431,14 +435,14 @@ jobs:
           sbverify --cert akmods.crt vmlinuz || exit 1
 
       - name: Login to GitHub Container Registry
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         run: |
           printf '%s' "${{ github.token }}" | podman login "${{ env.IMAGE_REGISTRY }}" -u "${{ github.actor }}" --password-stdin
 
       - name: Push Image to Registry
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         id: push
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         env:
           IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
           BUILD_IMAGE: ${{ steps.build_image.outputs.image }}
@@ -458,7 +462,7 @@ jobs:
             echo "registry-path=$IMAGE_REGISTRY/$BUILD_IMAGE:$first_tag" >> $GITHUB_OUTPUT
 
       - name: Save image metadata
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         run: |
           set -x
           echo "IMAGE_ARCH=${{ matrix.arch }}" >> image.env
@@ -467,7 +471,7 @@ jobs:
           echo "${{ steps.meta.outputs.labels }}" > labels.txt
 
       - name: Upload image metadata as artifact
-        if: github.event_name != 'pull_request'
+        if: needs.workflow_info.outputs.publish == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: image-ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag != '' && matrix.nvidia_tag || '-default' }}-${{ matrix.arch }}
@@ -498,7 +502,7 @@ jobs:
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
     runs-on: ubuntu-24.04
-    if: needs.check_builds.result == 'success' && needs.build_image.result == 'success' && needs.sentinel_decision.outputs.changed == 'true' && !cancelled() && github.event_name != 'pull_request'
+    if: needs.check_builds.result == 'success' && needs.build_image.result == 'success' && needs.sentinel_decision.outputs.changed == 'true' && needs.workflow_info.outputs.publish == 'true' && !cancelled()
     needs: [workflow_info, sentinel_decision, check_builds, build_image]
     permissions:
       actions: read
@@ -544,9 +548,9 @@ jobs:
           tags: |
             type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
             type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
-            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') }}
-            type=raw,value=latest,enable=${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
+            type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
 
       - name: Single Line (convert newlines to spaces)
         id: single-line
@@ -638,17 +642,14 @@ jobs:
 
       # Sign container
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        if: github.event_name != 'pull_request'
         with:
           cosign-release: "v2.6.1"
 
       - name: Login to GitHub Container Registry for cosign
-        if: github.event_name != 'pull_request'
         run: |
           printf '%s' "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Sign member images
-        if: github.event_name != 'pull_request'
         shell: bash
         env:
           COSIGN_EXPERIMENTAL: false
@@ -677,7 +678,6 @@ jobs:
           done
 
       - name: Sign container manifest
-        if: github.event_name != 'pull_request'
         env:
           REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
           DIGEST: ${{ steps.push.outputs.digest }}
@@ -688,16 +688,13 @@ jobs:
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
 
       - name: Install ORAS
-        if: github.event_name != 'pull_request'
         uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
 
       - name: Login to GitHub Container Registry with ORAS
-        if: github.event_name != 'pull_request'
         run: |
           printf '%s' "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Upload SBOMs
-        if: github.event_name != 'pull_request'
         id: upload-sbom
         run: |
           set -xeuo pipefail
@@ -736,7 +733,6 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Sign SBOM OCI Artifacts
-        if: github.event_name != 'pull_request'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
@@ -751,7 +747,7 @@ jobs:
   publish_release:
     name: Publish release notes
     runs-on: ubuntu-24.04
-    if: needs.push_and_sign.result == 'success' && !cancelled() && github.event_name != 'pull_request' && github.event_name != 'merge_group' && startsWith(github.ref, 'refs/heads/main')
+    if: needs.push_and_sign.result == 'success' && needs.workflow_info.outputs.publish == 'true' && !cancelled() && startsWith(github.ref, 'refs/heads/main')
     needs: [workflow_info, push_and_sign]
     permissions:
       contents: write
