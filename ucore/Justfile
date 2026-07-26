@@ -10,7 +10,6 @@ COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
 export KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.18" } else { 'coreos-' + COREOS_STREAM })
 export KERNEL_VERSION := env("KERNEL_VERSION", "")
 export NVIDIA_TAG := env("NVIDIA_TAG", "")
-SELINUX := path_exists('/sys/fs/selinux')
 SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 
@@ -94,7 +93,6 @@ containerfile upstream_image='':
       "-DUPSTREAM_IMAGE=${UPSTREAM_IMAGE}"
     )
     if [ -n "$NVIDIA_TAG" ]; then
-      # NVIDIA_TAG=={{ NVIDIA_TAG }}
       CPP_FLAGS+=(
         "-DNVIDIA=${NVIDIA_TAG#-}"
       )

@@ -7,8 +7,8 @@ on:
         required: true
         type: string
       arch:
-        description: "JSON string of architectures to build, '[aarch64, x86_64]'"
-        default: "['x86_64']"
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
         required: false
         type: string
       force_build:
@@ -35,7 +35,6 @@ jobs:
     outputs:
       date: ${{ steps.date.outputs.date }}
       publish: ${{ steps.publish.outputs.publish }}
-      pr_prefix: ${{ steps.pr_prefix.outputs.pr_prefix }}
     steps:
       - name: Get current date
         id: date
@@ -43,20 +42,10 @@ jobs:
       - name: Determine whether to publish
         id: publish
         run: echo "publish=${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}" >> $GITHUB_OUTPUT
-      - name: Set PR Prefix
-        id: pr_prefix
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              PR_PREFIX="pr-${{ github.event.number }}-"
-          else
-              PR_PREFIX=""
-          fi
-          echo "pr_prefix=${PR_PREFIX}" >> $GITHUB_OUTPUT
       - name: Echo outputs
         run: |
           echo "${{ toJSON(steps.date.outputs) }}"
-          echo "${{ toJSON(steps.pr_prefix.outputs) }}"
+          echo "${{ toJSON(steps.publish.outputs) }}"
 
   stream_info:
     name: "Stream Info: ${{ matrix.arch }}"
@@ -87,8 +76,8 @@ jobs:
           timeout_minutes: 5
           command: |
             set -euo pipefail
-            pushd ucore
-            just stream-info ../stream-info.env
+            just --justfile ucore/Justfile --working-directory ucore \
+                stream-info ../stream-info.env
       - name: Upload stream info as artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -156,7 +145,6 @@ jobs:
           AKMODS_REGISTRY: ${{ env.AKMODS_REGISTRY }}
           UCORE_STREAM: ${{ inputs.ucore_stream }}
           FEDORA_VERSION: ${{ env.FEDORA_VERSION }}
-          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
           KERNEL_FLAVOR: ${{ env.KERNEL_FLAVOR }}
           KERNEL_VERSION: ${{ env.KERNEL_VERSION }}
           NVIDIA_TAG: ${{ matrix.nvidia_tag }}
@@ -166,8 +154,8 @@ jobs:
           retry_wait_seconds: 15
           timeout_minutes: 15
           command: |
-            pushd ucore
-            just ci-prepare-build \
+            just --justfile ucore/Justfile --working-directory ucore \
+                ci-prepare-build \
                 "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}" \
                 "${{ matrix.arch }}"
 
@@ -175,18 +163,18 @@ jobs:
         env:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
         run: |
-          pushd ucore
           AKMODS_REGISTRY=${{ env.AKMODS_REGISTRY }} \
           UCORE_STREAM=${{ inputs.ucore_stream }} \
           FEDORA_VERSION=${{ env.FEDORA_VERSION }} \
-          IMAGE_REGISTRY=${{ env.IMAGE_REGISTRY }} \
           KERNEL_FLAVOR=${{ env.KERNEL_FLAVOR }} \
           KERNEL_VERSION=${{ env.KERNEL_VERSION }} \
           NVIDIA_TAG=${{ matrix.nvidia_tag }} \
           TARGET_IMAGE=${{ env.IMAGE_NAME }} \
           CI_BUILD_TAG=${{ env.SENTINEL_TAG }} \
-          just build "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
-          just gen-sbom \
+          just --justfile ucore/Justfile --working-directory ucore \
+              build "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}"
+          just --justfile ucore/Justfile --working-directory ucore \
+              gen-sbom \
               "${{ env.IMAGE_NAME }}:${{ env.SENTINEL_TAG }}" \
               ../sentinel-sbom.json
 
@@ -270,8 +258,6 @@ jobs:
       actions: write
       contents: read
       packages: write
-    env:
-      PR_PREFIX: ${{ needs.workflow_info.outputs.pr_prefix }}
     strategy:
       fail-fast: false
       matrix:
@@ -342,7 +328,6 @@ jobs:
           AKMODS_REGISTRY: ${{ env.AKMODS_REGISTRY }}
           UCORE_STREAM: ${{ inputs.ucore_stream }}
           FEDORA_VERSION: ${{ env.FEDORA_VERSION }}
-          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
           KERNEL_FLAVOR: ${{ env.KERNEL_FLAVOR }}
           KERNEL_VERSION: ${{ env.KERNEL_VERSION }}
           NVIDIA_TAG: ${{ matrix.nvidia_tag }}
@@ -352,8 +337,8 @@ jobs:
           retry_wait_seconds: 15
           timeout_minutes: 15
           command: |
-            pushd ucore
-            just ci-prepare-build \
+            just --justfile ucore/Justfile --working-directory ucore \
+                ci-prepare-build \
                 "quay.io/fedora/fedora-coreos:${{ env.IMAGE_VERSION }}" \
                 "${{ matrix.arch }}"
 
@@ -367,7 +352,6 @@ jobs:
           image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ env.TAG_VERSION_ARCH }}
-          build-args: |
           labels: ${{ steps.meta.outputs.labels }}
           oci: true
           extra-args: |
@@ -386,15 +370,15 @@ jobs:
         env:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
         run: |
-          pushd ucore
-          just gen-sbom \
+          just --justfile ucore/Justfile --working-directory ucore \
+              gen-sbom \
               "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
               ../sbom.json
 
       - name: Package Provenance
         run: |
-          pushd ucore
-          just package-provenance \
+          just --justfile ucore/Justfile --working-directory ucore \
+              package-provenance \
               "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
               ../package-provenance.txt
 
@@ -420,7 +404,7 @@ jobs:
       - name: Login to GitHub Container Registry
         if: needs.workflow_info.outputs.publish == 'true'
         run: |
-          printf '%s' "${{ github.token }}" | podman login "${{ env.IMAGE_REGISTRY }}" -u "${{ github.actor }}" --password-stdin
+          printf '%s' "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push Image to Registry
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
@@ -508,7 +492,7 @@ jobs:
 
       - name: Login to GitHub Container Registry
         run: |
-          printf '%s' "${{ github.token }}" | podman login "${{ env.IMAGE_REGISTRY }}" -u "${{ github.actor }}" --password-stdin
+          printf '%s' "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Set matrix environment variables
         shell: bash
@@ -531,7 +515,6 @@ jobs:
         with:
           tags: |
             type=sha,format=short,suffix=-${{ env.TAG_VERSION }}
-            type=ref,event=pr,suffix=-${{ env.TAG_VERSION }}
             type=raw,value=${{ env.TAG_VERSION }}-${{ needs.workflow_info.outputs.date }},priority=750,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
             type=raw,value=${{ env.TAG_VERSION }},priority=350,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') && env.TAG_VERSION == 'stable' }}
@@ -762,8 +745,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          pushd ucore
-          just changelog \
+          just --justfile ucore/Justfile --working-directory ucore \
+              changelog \
               "${{ inputs.ucore_stream }}" \
               ../changelog.md \
               ../changelog.env \
@@ -771,7 +754,6 @@ jobs:
               20 \
               ../images \
               "${{ needs.workflow_info.outputs.date }}"
-          popd
 
           # shellcheck disable=SC1091
           source changelog.env
