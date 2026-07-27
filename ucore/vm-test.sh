@@ -532,7 +532,7 @@ capture_guest_host_keys() {
     local -n output=$1
     local keys line fingerprint ktype
     output=()
-    keys=$(ssh_cmd 'sudo -n bash -c "for f in /etc/ssh/ssh_host_*_key.pub; do ssh-keygen -lf \"\$f\"; done"') || return 1
+    keys=$(vm_root bash -c "for f in /etc/ssh/ssh_host_*_key.pub; do ssh-keygen -lf \"\$f\"; done") || return 1
     while IFS= read -r line; do
         [[ -n "$line" ]] || continue
         fingerprint=$(awk '{print $2}' <<<"$line")
@@ -645,10 +645,10 @@ validate_ucore_boot() {
         assert_eq "$expect_rollback" "$rollback_digest" "rollback digest matches previous"
     fi
 
-    variant_id=$(vm_ssh bash -c 'source /usr/lib/os-release && echo "${VARIANT_ID:-}"')
+    variant_id=$(vm_ssh bash -c "source /usr/lib/os-release && echo \"\${VARIANT_ID:-}\"")
     assert_eq "ucore" "$variant_id" "VARIANT_ID=ucore"
 
-    assert_root "kernel modules available" bash -c 'test -d "/usr/lib/modules/$(uname -r)"'
+    assert_root "kernel modules available" bash -c "test -d \"/usr/lib/modules/\$(uname -r)\""
     assert_guest "podman works" podman version
     assert_guest "DNS resolution works" getent hosts example.com
     assert_guest "network connectivity" curl -sf --max-time 10 https://example.com -o /dev/null
