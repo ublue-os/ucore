@@ -16,6 +16,14 @@ export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 _default:
     @just --list --unsorted
 
+# Local VM test: boot an FCOS QEMU image, switch to non-direct-stream SOURCEs,
+# then TARGET, and reboot twice. Prereqs: KVM, podman, jq, curl, xz, qemu, OVMF.
+# Caches the FCOS qemu image under the user's cache directory.
+vm-test source_image target_image:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    exec bash ./vm-test.sh "{{ source_image }}" "{{ target_image }}"
+
 check:
     just --fmt --check
     python3 -m unittest discover -s ../.github/tests -v
