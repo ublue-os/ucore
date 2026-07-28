@@ -344,7 +344,7 @@ jobs:
 
       - name: Build Image
         id: build_image
-        uses: redhat-actions/buildah-build@3a51aade9afa17e5c78256bcbe2e1ee08c7b995b # main
+        uses: redhat-actions/buildah-build@f7d442baf3aee5ed729feca9a2b697e1ca924dfc # main
         with:
           containerfiles: |
             ./ucore/Containerfile
