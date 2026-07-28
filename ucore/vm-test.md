@@ -45,11 +45,20 @@ just vm-test \
   ghcr.io/ublue-os/ucore-minimal:stable
 ```
 
-The script always starts from an official Fedora CoreOS QEMU disk. When
-`SOURCE_IMAGE` is Fedora CoreOS, that disk is the source deployment. The
-`stable`, `testing`, and `next` source tags select the matching CoreOS stream.
+The script always starts from an official Fedora CoreOS QEMU disk. The disk is
+used directly as the source deployment only for these exact references:
 
-When any other source image is provided, the script follows this sequence:
+- `quay.io/fedora/fedora-coreos:stable`
+- `quay.io/fedora/fedora-coreos:testing`
+- `quay.io/fedora/fedora-coreos:next`
+
+Each reference selects the matching CoreOS stream. If an explicitly configured
+`VM_TEST_FCOS_STREAM` conflicts with that source stream, the test exits rather
+than silently booting a different source.
+
+When any other source image is provided, including a pinned FCOS tag or digest,
+a registry mirror, or a custom image with `fedora-coreos` in its name, the
+script follows this sequence:
 
 1. Boot the Fedora CoreOS bootstrap disk.
 2. Switch to and boot `SOURCE_IMAGE`.
@@ -91,7 +100,7 @@ The following environment variables are optional:
 | `VM_TEST_SHUTDOWN_TIMEOUT` | `120` | Seconds to wait for SSH to stop during reboot |
 | `VM_TEST_SSH_PORT` | `2222` | Unprivileged host port forwarded to guest SSH |
 | `VM_TEST_FCOS_CACHE` | `$XDG_CACHE_HOME/ucore-vm-test/fcos` | Fedora CoreOS image cache |
-| `VM_TEST_FCOS_STREAM` | Source stream or `stable` | Explicit Fedora CoreOS bootstrap stream |
+| `VM_TEST_FCOS_STREAM` | Direct SOURCE stream or `stable` | Bootstrap stream; must match SOURCE only for direct stream references |
 | `VM_TEST_KEEP` | Unset | Keep the work directory and running VM when nonempty |
 
 For example:

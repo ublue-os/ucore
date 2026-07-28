@@ -16,8 +16,8 @@ export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 _default:
     @just --list --unsorted
 
-# Local VM test: boot FCOS QEMU image, bootc switch SOURCE (if not FCOS) then
-# TARGET, reboot twice. Prereqs: KVM, podman, jq, curl, xz, qemu, OVMF.
+# Local VM test: boot an FCOS QEMU image, switch to non-direct-stream SOURCEs,
+# then TARGET, and reboot twice. Prereqs: KVM, podman, jq, curl, xz, qemu, OVMF.
 # Caches the FCOS qemu image under the user's cache directory.
 vm-test source_image target_image:
     #!/usr/bin/env bash

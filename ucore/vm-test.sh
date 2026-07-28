@@ -2,9 +2,9 @@
 # Verify a ucore image can boot on a VM and survive a reboot.
 #
 # Boots an official Fedora CoreOS QEMU image (the recommended starting
-# point for uCore), optionally bootc-switches to SOURCE_IMAGE when it is
-# not FCOS, then bootc-switches to TARGET_IMAGE, reboots, and validates
-# health and persistence through a second ordinary reboot.
+# point for uCore), uses it directly for canonical FCOS stream sources or
+# bootc-switches to any other SOURCE_IMAGE, then switches to TARGET_IMAGE
+# and validates health and persistence through a second ordinary reboot.
 #
 # Usage:  ./vm-test.sh SOURCE_IMAGE TARGET_IMAGE
 # Documentation: vm-test.md
@@ -38,8 +38,8 @@
 #   VM_TEST_SSH_PORT          Host port for SSH forward (default 2222)
 #   VM_TEST_FCOS_CACHE        Dir for cached FCOS qemu image
 #                             (default $XDG_CACHE_HOME/ucore-vm-test/fcos)
-#   VM_TEST_FCOS_STREAM       Override CoreOS bootstrap stream (default SOURCE
-#                             tag when stable/testing/next, otherwise stable)
+#   VM_TEST_FCOS_STREAM       CoreOS bootstrap stream (default direct SOURCE
+#                             stream, otherwise stable; conflicts are rejected)
 #
 # Prerequisites: Linux, /dev/kvm, podman, jq, curl, xz, qemu-system-x86_64,
 #   qemu-img, OVMF (edk2), ssh, ssh-keygen, flock, sha256sum, ss.
@@ -64,6 +64,7 @@ SSH_KEY=""
 QEMU_PID=""
 QEMU_CONSOLE_LOG=""
 DISK_IMAGE=""
+FCOS_QEMU_SHA256=""
 BOOT_ID=""
 MACHINE_ID=""
 SOURCE_DIGEST=""
@@ -271,9 +272,13 @@ digest_ref() {
     printf '%s@%s\n' "$ref" "$digest"
 }
 
-is_fcos_ref() {
-    local ref="$1"
-    [[ "$ref" == *fedora-coreos* || "$ref" == *fedora/fedora-coreos* ]]
+direct_fcos_stream() {
+    case "$1" in
+        quay.io/fedora/fedora-coreos:stable) printf '%s\n' stable ;;
+        quay.io/fedora/fedora-coreos:testing) printf '%s\n' testing ;;
+        quay.io/fedora/fedora-coreos:next) printf '%s\n' next ;;
+        *) return 1 ;;
+    esac
 }
 
 assert_ssh_port_free() {
@@ -372,6 +377,7 @@ ensure_fcos_qemu_image() {
     uncompressed_sha=$(jq -r '."uncompressed-sha256"' <<<"$artifact")
     [[ "$compressed_sha" =~ ^[0-9a-f]{64}$ && "$uncompressed_sha" =~ ^[0-9a-f]{64}$ ]] ||
         die "FCOS ${stream} metadata contains invalid checksums"
+    FCOS_QEMU_SHA256="$uncompressed_sha"
     filename=${url##*/}
     [[ "$filename" == *.qcow2.xz && "$filename" != */* ]] || die "unexpected FCOS artifact name: $filename"
     img="$cache/${filename%.xz}"
@@ -485,7 +491,7 @@ vm_start() {
 # host image through SSH instead.
 guest_bootc_switch() {
     local ref="$1" expected_digest="$2" expected_id="$3"
-    local exact_ref switch_ref guest_digest guest_id transferred=0
+    local exact_ref switch_ref guest_digest guest_id import_ref transferred=0
     exact_ref=$(digest_ref "$ref" "$expected_digest")
     switch_ref="$exact_ref"
 
@@ -495,7 +501,10 @@ guest_bootc_switch() {
         if ! podman save "$ref" | ssh_cmd 'sudo -n podman load'; then
             die "failed to transfer image '$ref' into guest storage"
         fi
-        switch_ref="$ref"
+        import_ref="localhost/ucore-vm-test-import:$expected_id"
+        vm_root podman tag "$expected_id" "$import_ref" ||
+            die "failed to tag transferred image '$expected_id' as '$import_ref'"
+        switch_ref="$import_ref"
         transferred=1
     fi
 
@@ -692,12 +701,15 @@ validate_ucore_boot() {
 SOURCE_ARG="$1"
 TARGET_ARG="$2"
 
-if is_fcos_ref "$SOURCE_ARG" && [[ -z "$VM_TEST_FCOS_STREAM_EXPLICIT" ]]; then
-    source_tag=${SOURCE_ARG##*/}
-    source_tag=${source_tag##*:}
-    case "$source_tag" in
-        stable | testing | next) VM_TEST_FCOS_STREAM="$source_tag" ;;
-    esac
+SOURCE_DIRECT_FCOS_STREAM=""
+if SOURCE_DIRECT_FCOS_STREAM=$(direct_fcos_stream "$SOURCE_ARG"); then
+    if [[ -n "$VM_TEST_FCOS_STREAM_EXPLICIT" &&
+        "$VM_TEST_FCOS_STREAM" != "$SOURCE_DIRECT_FCOS_STREAM" ]]; then
+        echo "FATAL [arguments]: SOURCE stream '$SOURCE_DIRECT_FCOS_STREAM' conflicts" \
+            "with VM_TEST_FCOS_STREAM '$VM_TEST_FCOS_STREAM'" >&2
+        exit 1
+    fi
+    VM_TEST_FCOS_STREAM="$SOURCE_DIRECT_FCOS_STREAM"
 fi
 
 trap cleanup EXIT
@@ -714,11 +726,11 @@ HOST_TARGET_DIGEST="$HOST_DIGEST"
 HOST_TARGET_ID="$HOST_IMAGE_ID"
 TARGET_REF="$TARGET_ARG"
 
-SOURCE_IS_FCOS=0
-if is_fcos_ref "$SOURCE_ARG"; then
-    SOURCE_IS_FCOS=1
-    echo "source image: $SOURCE_ARG (FCOS — using official QEMU disk image)"
-    HOST_SOURCE_DIGEST="fcos-qemu-image"
+SOURCE_IS_DIRECT_FCOS_STREAM=0
+if [[ -n "$SOURCE_DIRECT_FCOS_STREAM" ]]; then
+    SOURCE_IS_DIRECT_FCOS_STREAM=1
+    echo "source image: $SOURCE_ARG (using official ${SOURCE_DIRECT_FCOS_STREAM} QEMU disk image)"
+    HOST_SOURCE_DIGEST="fcos-qemu-pending"
 else
     ensure_image "$SOURCE_ARG" "source"
     HOST_SOURCE_DIGEST="$HOST_DIGEST"
@@ -726,7 +738,7 @@ else
     SOURCE_REF="$SOURCE_ARG"
 fi
 
-if [[ "$SOURCE_IS_FCOS" -eq 0 && "$HOST_SOURCE_DIGEST" == "$HOST_TARGET_DIGEST" ]]; then
+if [[ "$SOURCE_IS_DIRECT_FCOS_STREAM" -eq 0 && "$HOST_SOURCE_DIGEST" == "$HOST_TARGET_DIGEST" ]]; then
     die "source and target have the same digest ($HOST_SOURCE_DIGEST)"
 fi
 
@@ -735,6 +747,9 @@ phase="prepare FCOS"
 echo ""
 echo "=== Prepare FCOS QEMU Image ==="
 ensure_fcos_qemu_image
+if [[ "$SOURCE_IS_DIRECT_FCOS_STREAM" -eq 1 ]]; then
+    HOST_SOURCE_DIGEST="qemu-sha256:$FCOS_QEMU_SHA256"
+fi
 
 WORK_DIR=$(mktemp -d /var/tmp/ucore-vm-test.XXXXXX)
 echo "Work directory: $WORK_DIR"
@@ -759,8 +774,8 @@ esac
 assert_root "bootc status succeeds" bootc status --format json
 record_baseline_state
 
-# If SOURCE is not FCOS, switch to it first (older uCore path).
-if [[ "$SOURCE_IS_FCOS" -eq 0 ]]; then
+# Every source except a canonical FCOS stream reference is explicitly booted.
+if [[ "$SOURCE_IS_DIRECT_FCOS_STREAM" -eq 0 ]]; then
     phase="switch to source"
     echo ""
     echo "=== Switch to Source ($SOURCE_REF) ==="
