@@ -16,6 +16,11 @@ The host must be an x86-64 Linux system with:
 - At least 4 GiB of memory and enough storage for the FCOS cache, container
   images, and a sparse 40 GiB virtual disk with the defaults
 
+Direct testing additionally requires [`bcvk`](https://github.com/bootc-dev/bcvk)
+version 0.18 or newer and `virtiofsd`. `virtiofsd` is packaged separately on Fedora, Fedora CoreOS,
+uCore, Debian, Snow, and Cayo hypervisor hosts. Set `VIRTIOFSD_BIN` when it is
+installed outside bcvk's normal search paths.
+
 Access to `/dev/kvm` is commonly granted through membership in the `kvm`
 group. Installing packages or changing group membership may require an
 administrator, but running the test does not.
@@ -44,6 +49,40 @@ just vm-test \
   ghcr.io/ublue-os/ucore-minimal:stable-20250101 \
   ghcr.io/ublue-os/ucore-minimal:stable
 ```
+
+## Direct Image Testing
+
+For faster testing of one uCore image, use direct mode:
+
+```bash
+just vm-test-direct ghcr.io/ublue-os/ucore-minimal:stable
+```
+
+This is useful for `ucore-minimal`, `ucore`, and locally built or downstream
+uCore images already available in host Podman storage. Direct mode does not
+boot FCOS first and does not run `bootc switch`; it is a testing shortcut, not
+a replacement for the documented FCOS install/switch workflow.
+
+Direct mode uses rootless bcvk to run an installer VM. bcvk creates a
+privileged container under the current user's rootless Podman account, so host
+`root` and `sudo` are still not required. The script creates a temporary
+FCOS-compatible disk with these partitions:
+
+- 1 MiB BIOS boot partition
+- 127 MiB EFI System Partition
+- 384 MiB ext4 `/boot` partition
+- XFS root partition using the remaining space
+
+It installs with `bootc install to-filesystem`, using the generated root and
+boot filesystem UUIDs. It injects its temporary SSH key with
+`--root-ssh-authorized-keys`, so direct-mode guest checks connect as `root`
+rather than the FCOS `core` user. The installer VM receives a swap device and
+a disk-sized `/var/tmp` tmpfs to hold imported image layers.
+
+Because bcvk runs the installer from the image being tested, that image must
+include `bootc`, `sgdisk`, `blockdev`, `udevadm`, `mkfs.vfat`, `mkfs.ext4`,
+`mkfs.xfs`, `blkid`, `mount`, and `umount`. Direct mode reports any missing
+guest tool before partitioning the disk.
 
 The script always starts from an official Fedora CoreOS QEMU disk. The disk is
 used directly as the source deployment only for these exact references:
@@ -87,6 +126,10 @@ The test checks:
 - Every SSH host key type and fingerprint remains unchanged
 - The same checks still pass after a second target reboot
 
+Direct mode validates the installed image digest on both boots and performs
+the same health, networking, identity, SSH-key, and persistence checks. It
+does not assert a rollback deployment because no `bootc switch` occurs.
+
 ## Configuration
 
 The following environment variables are optional:
@@ -102,6 +145,10 @@ The following environment variables are optional:
 | `VM_TEST_FCOS_CACHE` | `$XDG_CACHE_HOME/ucore-vm-test/fcos` | Fedora CoreOS image cache |
 | `VM_TEST_FCOS_STREAM` | Direct SOURCE stream or `stable` | Bootstrap stream; must match SOURCE only for direct stream references |
 | `VM_TEST_KEEP` | Unset | Keep the work directory and running VM when nonempty |
+| `VIRTIOFSD_BIN` | bcvk search paths | Path to `virtiofsd` for direct mode |
+
+`VM_TEST_CPUS` and `VM_TEST_MEMORY` apply to both the bcvk installer VM and
+the booted test VM in direct mode.
 
 For example:
 
@@ -128,6 +175,9 @@ host state remains:
 - An empty SSH port lock file under `$XDG_RUNTIME_DIR`, or under
   `~/.cache/ucore-vm-test` when `XDG_RUNTIME_DIR` is unset
 - Source or target images that the script pulled into host Podman storage
+- A temporary `localhost/ucore-vm-test-install:*` image tag while a direct-mode
+  run is active; it is removed during normal cleanup and retained with
+  `VM_TEST_KEEP`
 
 Lock files remain on disk, but their locks are released when the script exits.
 Cached Fedora CoreOS versions and host Podman images are not automatically
@@ -147,6 +197,12 @@ Depending on how early the failure occurred, it may contain:
 |-- id_ed25519.pub
 |-- console.log
 |-- qemu.pid
+|-- direct.qcow2
+|-- direct-install.sh
+`-- installer/
+    |-- console.txt
+    |-- install.log
+    |-- journal.json
 `-- diagnostics/
     |-- bootc-status.json
     |-- failed-units.txt
