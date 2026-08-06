@@ -280,7 +280,11 @@ assert_root() {
         pass_msg "$desc"
     else
         fail_msg "$desc"
-        echo "        command failed: sudo $*" >&2
+        if [[ "$SSH_USER" == root ]]; then
+            echo "        command failed: $*" >&2
+        else
+            echo "        command failed: sudo -n -- $*" >&2
+        fi
     fi
 }
 
