@@ -79,10 +79,12 @@ boot filesystem UUIDs. It injects its temporary SSH key with
 rather than the FCOS `core` user. The installer VM receives a swap device and
 a disk-sized `/var/tmp` tmpfs to hold imported image layers.
 
-Because bcvk runs the installer from the image being tested, that image must
-include `bootc`, `sgdisk`, `blockdev`, `udevadm`, `mkfs.vfat`, `mkfs.ext4`,
-`mkfs.xfs`, `blkid`, `mount`, and `umount`. Direct mode reports any missing
-guest tool before partitioning the disk.
+In direct mode, the image under test has two roles: bcvk boots it as the
+installer VM, and `bootc install` installs the same image onto the temporary
+target disk. Therefore, the image must be bootable by bcvk and include `bootc`,
+`sgdisk`, `blockdev`, `udevadm`, `mkfs.vfat`, `mkfs.ext4`, `mkfs.xfs`, `blkid`,
+`mount`, and `umount`. Direct mode reports any missing installer tool before
+partitioning the disk.
 
 The script always starts from an official Fedora CoreOS QEMU disk. The disk is
 used directly as the source deployment only for these exact references:
