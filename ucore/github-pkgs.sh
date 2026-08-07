@@ -52,7 +52,7 @@ get_curl_auth_args() {
 download_file() {
 	local url=${1}
 	local suffix=${2:-}
-	local -a curl_args=(curl --fail --retry 5 --retry-delay 5 --retry-all-errors -sSL)
+	local -a curl_args=(curl --fail --retry 12 --retry-max-time 300 --retry-all-errors -sSL)
 
 	create_temp_file "${suffix}"
 

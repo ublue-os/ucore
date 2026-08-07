@@ -106,6 +106,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Configure OCI runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          podman --version
+          if [[ -x /usr/bin/crun ]]; then
+              /usr/bin/crun --version
+          fi
+          if [[ -x /usr/local/bin/crun ]]; then
+              /usr/local/bin/crun --version
+          fi
+
+          runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
+          echo "Selected OCI runtime: ${runtime_path}"
+          # The 20260726 runner image pairs Podman 5.x with stale crun 1.14.1.
+          if [[ "${runtime_path}" == "/usr/bin/crun" && -x /usr/local/bin/crun ]]; then
+              sudo install -d -m 755 /etc/containers/containers.conf.d
+              printf '[engine.runtimes]\ncrun = ["/usr/local/bin/crun"]\n' \
+                  | sudo tee /etc/containers/containers.conf.d/00-fix-runtime.conf >/dev/null
+
+              runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
+              echo "Selected OCI runtime after workaround: ${runtime_path}"
+              if [[ "${runtime_path}" != "/usr/local/bin/crun" ]]; then
+                  echo "Failed to select /usr/local/bin/crun" >&2
+                  exit 1
+              fi
+          fi
+
       - name: Setup Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
@@ -280,6 +310,36 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure OCI runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          podman --version
+          if [[ -x /usr/bin/crun ]]; then
+              /usr/bin/crun --version
+          fi
+          if [[ -x /usr/local/bin/crun ]]; then
+              /usr/local/bin/crun --version
+          fi
+
+          runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
+          echo "Selected OCI runtime: ${runtime_path}"
+          # The 20260726 runner image pairs Podman 5.x with stale crun 1.14.1.
+          if [[ "${runtime_path}" == "/usr/bin/crun" && -x /usr/local/bin/crun ]]; then
+              sudo install -d -m 755 /etc/containers/containers.conf.d
+              printf '[engine.runtimes]\ncrun = ["/usr/local/bin/crun"]\n' \
+                  | sudo tee /etc/containers/containers.conf.d/00-fix-runtime.conf >/dev/null
+
+              runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
+              echo "Selected OCI runtime after workaround: ${runtime_path}"
+              if [[ "${runtime_path}" != "/usr/local/bin/crun" ]]; then
+                  echo "Failed to select /usr/local/bin/crun" >&2
+                  exit 1
+              fi
+          fi
 
       - name: Setup Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
