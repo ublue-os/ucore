@@ -435,6 +435,13 @@ jobs:
               "${{ env.IMAGE_NAME }}:${TAG_VERSION_ARCH}" \
               ../sbom.json
 
+      - name: Validate SBOM
+        if: needs.workflow_info.outputs.publish == 'true'
+        run: |
+          python3 .github/validate-sbom.py \
+              --sbom sbom.json \
+              --arch "${{ matrix.arch }}"
+
       - name: Package Provenance
         run: |
           just --justfile ucore/Justfile --working-directory ucore \
