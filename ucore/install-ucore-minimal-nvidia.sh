@@ -34,6 +34,14 @@ dnf -y install --setopt=install_weak_deps=False \
 # disable repos provided by ublue-os-nvidia-addons
 dnf5 config-manager setopt "$NVREPO".enabled=0 nvidia-container-toolkit.enabled=0
 
-semodule --verbose --install /usr/share/selinux/packages/nvidia-container.pp
+# work around intermittent aarch64 overlayfs EXDEV/ENOTEMPTY failures in the
+# semodule policy-store transaction (mainly nvidia-lts:aarch64) by forcing
+# /etc/selinux/targeted fully into this layer first, so the transaction's
+# directory renames stay within a single layer.
+cp -a /etc/selinux/targeted /etc/selinux/targeted.rebuilt
+rm -rf /etc/selinux/targeted
+mv /etc/selinux/targeted.rebuilt /etc/selinux/targeted
+
+semodule --verbose --noreload --install /usr/share/selinux/packages/nvidia-container.pp
 
 systemctl enable ublue-nvctk-cdi.service
