@@ -13,7 +13,7 @@ on:
         type: string
       force_build:
         description: >-
-          Bypass the RPM-only sentinel package-diff gate and run the full build for non-RPM changes
+          Force a full build for non-RPM or HCI-only changes, bypassing the RPM-only sentinel package-diff gate
         default: false
         required: false
         type: boolean
@@ -87,7 +87,7 @@ jobs:
           retention-days: 7
 
   sentinel_build:
-    name: "Sentinel: ucore-hci${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
+    name: "Sentinel: ucore${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     if: (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.force_build)) && !cancelled()
     needs: [stream_info]
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
@@ -162,7 +162,8 @@ jobs:
         shell: bash
         run: |
           set -x
-          echo "IMAGE_NAME=ucore-hci" >> $GITHUB_ENV
+          # Ignore HCI-only churn; shared ucore packages still gate releases.
+          echo "IMAGE_NAME=ucore" >> $GITHUB_ENV
           echo "SENTINEL_TAG=sentinel-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}" >> $GITHUB_ENV
           # -nvidia-open selects the akmods source; the compatible public tag remains -nvidia.
           NVIDIA_TAG="${{ matrix.nvidia_tag }}"
@@ -276,7 +277,8 @@ jobs:
           if [[ "${aggregate_changed}" == "true" ]]; then
               echo "Sentinel detected package changes; running full build."
           else
-              echo "No sentinel package changes detected; skipping full build."
+              echo "No ucore sentinel package changes detected; skipping full build." \
+                  "HCI-only changes require a manual force build."
           fi
 
   build_image:

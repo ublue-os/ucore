@@ -364,7 +364,7 @@ oras discover \
 
 [GitHub Releases](https://github.com/ublue-os/ucore/releases) provide generated changelogs for `stable`, `testing`, and `lts`. Release tags use the stream and date, such as `stable-YYYYMMDD`. `stable` is marked as the latest release; `testing` and `lts` are not.
 
-Releases are published after successful full image builds from `main`. Scheduled builds without RPM changes do not publish a release. Manual workflow runs can publish one, and a later build on the same day updates that day's release.
+Releases are published after successful full image builds from `main`. Scheduled builds without RPM changes do not publish a release. The scheduled sentinel tracks `ucore`, so changes exclusive to `ucore-hci` are included with the next shared update. Maintainers can publish an HCI-only update by manually running the relevant stream workflow with `force_build` enabled. A later build on the same day updates that day's release.
 
 Each changelog includes major package versions, build metadata, source comparison links, and SBOM-derived RPM additions, removals, and upgrades. Changes are grouped by image family, NVIDIA variant, and architecture where needed. The release also includes commands to rebase to either the moving stream tag or that day's exact image tag.
 

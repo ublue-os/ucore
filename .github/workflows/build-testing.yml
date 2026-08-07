@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       force_build:
-        description: "Bypass RPM-only sentinel package-diff gate for non-RPM changes"
+        description: "Force full build for non-RPM or HCI-only changes"
         default: true
         required: false
         type: boolean
