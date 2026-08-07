@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # Verify a ucore image can boot on a VM and survive a reboot.
 #
-# Boots an official Fedora CoreOS QEMU image (the recommended starting
-# point for uCore), uses it directly for canonical FCOS stream sources or
-# bootc-switches to any other SOURCE_IMAGE, then switches to TARGET_IMAGE
-# and validates health and persistence through a second ordinary reboot.
+# By default, boots an official Fedora CoreOS QEMU image (the recommended
+# starting point for uCore), uses it directly for canonical FCOS stream
+# sources or bootc-switches to any other SOURCE_IMAGE, then switches to
+# TARGET_IMAGE and validates health and persistence through a second ordinary
+# reboot.  The --direct mode instead installs one uCore image to a temporary
+# FCOS-compatible disk through bcvk for faster image-specific testing.
 #
 # Usage:  ./vm-test.sh SOURCE_IMAGE TARGET_IMAGE
+#         ./vm-test.sh --direct IMAGE
 # Documentation: vm-test.md
 #
 # Examples:
@@ -20,13 +23,12 @@
 #     ghcr.io/ublue-os/ucore-minimal:stable-20250101 \
 #     ghcr.io/ublue-os/ucore-minimal:stable
 #
-# Why FCOS QEMU image (not bootc install to-disk / bcvk)?
-#   bootc install to-disk on FCOS/uCore does not create a LABEL=boot
-#   partition, and FCOS sets skip-boot-uuid=true.  GRUB then fails with
-#   "no such device: boot".  Even after writing bootuuid.cfg, bare
-#   bootc-installed FCOS disks were observed to reset under UEFI before
-#   reaching multi-user.  The official FCOS QEMU image boots reliably
-#   and matches the documented install-from-CoreOS path.
+#   # Direct image-specific test (not the recommended install workflow)
+#   ./vm-test.sh --direct ghcr.io/ublue-os/ucore-minimal:stable
+#
+# Direct mode deliberately does not use `bootc install to-disk`: FCOS needs a
+# separate /boot partition, while to-disk creates only an ESP and rootfs.  It
+# instead provisions the FCOS-compatible GPT layout and uses to-filesystem.
 #
 # Environment (all optional):
 #   VM_TEST_CPUS              vCPUs (default 2)
@@ -40,6 +42,7 @@
 #                             (default $XDG_CACHE_HOME/ucore-vm-test/fcos)
 #   VM_TEST_FCOS_STREAM       CoreOS bootstrap stream (default direct SOURCE
 #                             stream, otherwise stable; conflicts are rejected)
+#   VIRTIOFSD_BIN              Path to virtiofsd for --direct (optional)
 #
 # Prerequisites: Linux, /dev/kvm, podman, jq, curl, xz, qemu-system-x86_64,
 #   qemu-img, OVMF (edk2), ssh, ssh-keygen, flock, sha256sum, ss.
@@ -64,6 +67,7 @@ SSH_KEY=""
 QEMU_PID=""
 QEMU_CONSOLE_LOG=""
 DISK_IMAGE=""
+BCVK_CONTAINER=""
 FCOS_QEMU_SHA256=""
 BOOT_ID=""
 MACHINE_ID=""
@@ -71,6 +75,13 @@ SOURCE_DIGEST=""
 STAGED_DIGEST=""
 FAIL_COUNT=0
 SSH_USER="core"
+DIRECT_MODE=0
+DIRECT_REF=""
+DIRECT_SOURCE_REF=""
+HOST_DIRECT_DIGEST=""
+HOST_DIRECT_ID=""
+DIRECT_DISK=""
+VIRTIOFSD_PATH=""
 PORT_LOCK_FD=""
 declare -A SSH_HOST_KEY_FPS=()
 declare -A BASELINE_FAILED_UNITS=()
@@ -96,6 +107,16 @@ cleanup() {
             echo "VM_TEST_KEEP is set: QEMU PID $QEMU_PID still running" >&2
             echo "  ssh -i $SSH_KEY -p $VM_TEST_SSH_PORT ${SSH_USER}@localhost" >&2
         fi
+    fi
+    if [[ -n "$BCVK_CONTAINER" ]]; then
+        if [[ -z "$VM_TEST_KEEP" ]]; then
+            podman rm -f "$BCVK_CONTAINER" >/dev/null 2>&1 || true
+        else
+            echo "VM_TEST_KEEP is set: bcvk installer container $BCVK_CONTAINER retained" >&2
+        fi
+    fi
+    if [[ -n "$DIRECT_SOURCE_REF" && -z "$VM_TEST_KEEP" ]]; then
+        podman untag "$DIRECT_SOURCE_REF" "$DIRECT_SOURCE_REF" >/dev/null 2>&1 || true
     fi
     if [[ -n "$WORK_DIR" && -d "$WORK_DIR" ]]; then
         if [[ -z "$VM_TEST_KEEP" && "$exit_code" -eq 0 ]]; then
@@ -172,13 +193,21 @@ vm_ssh() {
 vm_root() {
     local cmd
     printf -v cmd '%q ' "$@"
-    ssh_cmd "sudo -n -- $cmd"
+    if [[ "$SSH_USER" == root ]]; then
+        ssh_cmd "$cmd"
+    else
+        ssh_cmd "sudo -n -- $cmd"
+    fi
 }
 
 # Write a file as root via tee (avoids sudo redirect pitfalls).
 vm_root_write() {
     local path="$1" content="$2"
-    ssh_cmd "printf '%s\n' $(printf '%q' "$content") | sudo -n tee $(printf '%q' "$path") >/dev/null"
+    if [[ "$SSH_USER" == root ]]; then
+        ssh_cmd "printf '%s\n' $(printf '%q' "$content") > $(printf '%q' "$path")"
+    else
+        ssh_cmd "printf '%s\n' $(printf '%q' "$content") | sudo -n tee $(printf '%q' "$path") >/dev/null"
+    fi
 }
 
 wait_ssh_up() {
@@ -251,7 +280,11 @@ assert_root() {
         pass_msg "$desc"
     else
         fail_msg "$desc"
-        echo "        command failed: sudo $*" >&2
+        if [[ "$SSH_USER" == root ]]; then
+            echo "        command failed: $*" >&2
+        else
+            echo "        command failed: sudo -n -- $*" >&2
+        fi
     fi
 }
 
@@ -302,6 +335,30 @@ preflight() {
     for cmd in podman jq curl xz qemu-system-x86_64 qemu-img ssh ssh-keygen flock sha256sum ss; do
         command -v "$cmd" >/dev/null 2>&1 || die "'$cmd' not found in PATH"
     done
+
+    if [[ "$DIRECT_MODE" -eq 1 ]]; then
+        command -v bcvk >/dev/null 2>&1 || die "'bcvk' is required for --direct mode"
+        local bcvk_version bcvk_major bcvk_minor
+        bcvk_version=$(bcvk --version | awk '{print $2}')
+        [[ "$bcvk_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+            die "could not determine bcvk version (need 0.18.0 or newer)"
+        IFS=. read -r bcvk_major bcvk_minor _ <<<"$bcvk_version"
+        ((bcvk_major > 0 || bcvk_minor >= 18)) ||
+            die "bcvk $bcvk_version is too old; need 0.18.0 or newer for --direct mode"
+        if [[ -n "${VIRTIOFSD_BIN:-}" ]]; then
+            VIRTIOFSD_PATH="$VIRTIOFSD_BIN"
+        else
+            local candidate
+            for candidate in /usr/libexec/virtiofsd /usr/bin/virtiofsd /usr/local/bin/virtiofsd /usr/lib/virtiofsd; do
+                if [[ -x "$candidate" ]]; then
+                    VIRTIOFSD_PATH="$candidate"
+                    break
+                fi
+            done
+        fi
+        [[ -n "$VIRTIOFSD_PATH" && -x "$VIRTIOFSD_PATH" ]] ||
+            die "virtiofsd is required for --direct mode (install the virtiofsd package or set VIRTIOFSD_BIN)"
+    fi
 
     local ovmf_code="/usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2"
     local ovmf_vars="/usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2"
@@ -423,8 +480,12 @@ ensure_fcos_qemu_image() {
 # ---------------------------------------------------------------------------
 # VM lifecycle (QEMU + Ignition)
 # ---------------------------------------------------------------------------
-create_ignition() {
+create_ssh_key() {
     ssh-keygen -t ed25519 -f "$SSH_KEY" -N "" -q
+}
+
+create_ignition() {
+    create_ssh_key
     local pub
     pub=$(cat "${SSH_KEY}.pub")
     # core user is the FCOS default; passwordless sudo is standard on FCOS.
@@ -444,6 +505,122 @@ EOF
     echo "Generated Ignition config and SSH key"
 }
 
+create_direct_installer() {
+    local script="$WORK_DIR/direct-install.sh"
+    cat >"$script" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+source_ref=$1
+target_ref=$2
+tmp_size=$3
+key_path=$4
+disk=/dev/disk/by-id/virtio-output
+target=/mnt/ucore-vm-test
+
+for command in sgdisk blockdev udevadm mkfs.vfat mkfs.ext4 mkfs.xfs blkid mount umount bootc; do
+    command -v "$command" >/dev/null || {
+        echo "required command not found in target image: $command" >&2
+        exit 1
+    }
+done
+
+[[ -b "$disk" ]] || {
+    echo "attached target disk not found: $disk" >&2
+    exit 1
+}
+[[ -r "$key_path" ]] || {
+    echo "SSH public key not found: $key_path" >&2
+    exit 1
+}
+
+# bootc imports image layers through container storage; use the disk-sized
+# tmpfs backed by bcvk's equally sized swap device rather than the small root.
+mount -t tmpfs -o "size=$tmp_size" tmpfs /var/tmp
+mkdir -p /var/tmp/containers
+rm -rf /var/lib/containers
+ln -s /var/tmp/containers /var/lib/containers
+
+sgdisk --zap-all "$disk"
+sgdisk --new=1:2048:+1MiB --typecode=1:21686148-6449-6E6F-744E-656564454649 --change-name=1:BIOS-BOOT "$disk"
+sgdisk --new=2:0:+127MiB --typecode=2:C12A7328-F81F-11D2-BA4B-00A0C93EC93B --change-name=2:EFI-SYSTEM "$disk"
+sgdisk --new=3:0:+384MiB --typecode=3:BC13C2FF-59E6-4262-A352-B275FD6F7172 --change-name=3:boot "$disk"
+sgdisk --new=4:0:-2048 --typecode=4:4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709 --change-name=4:root "$disk"
+blockdev --rereadpt "$disk"
+udevadm settle
+
+mkfs.vfat -F 32 -n EFI-SYSTEM /dev/disk/by-partlabel/EFI-SYSTEM
+mkfs.ext4 -F -L boot /dev/disk/by-partlabel/boot
+mkfs.xfs -f -L root /dev/disk/by-partlabel/root
+root_uuid=$(blkid -s UUID -o value /dev/disk/by-partlabel/root)
+boot_uuid=$(blkid -s UUID -o value /dev/disk/by-partlabel/boot)
+
+mkdir -p "$target"
+mount /dev/disk/by-partlabel/root "$target"
+mkdir -p "$target/boot"
+mount /dev/disk/by-partlabel/boot "$target/boot"
+mkdir -p "$target/boot/efi"
+mount /dev/disk/by-partlabel/EFI-SYSTEM "$target/boot/efi"
+
+export STORAGE_OPTS=additionalimagestore=/run/virtiofs-mnt-hoststorage
+bootc install to-filesystem \
+    --source-imgref "$source_ref" \
+    --target-imgref "$target_ref" \
+    --root-mount-spec "UUID=$root_uuid" \
+    --boot-mount-spec "UUID=$boot_uuid" \
+    --root-ssh-authorized-keys "$key_path" \
+    --generic-image \
+    --skip-fetch-check \
+    "$target"
+
+sync
+umount "$target/boot/efi"
+umount "$target/boot"
+umount "$target"
+sgdisk --print "$disk"
+EOF
+    chmod 700 "$script"
+}
+
+install_direct_image() {
+    local installer_name installer_dir script_in_guest key_in_guest
+    DIRECT_DISK="$WORK_DIR/direct.qcow2"
+    qemu-img create -f qcow2 "$DIRECT_DISK" "$VM_TEST_DISK_SIZE" >/dev/null
+
+    DIRECT_SOURCE_REF="localhost/ucore-vm-test-install:${HOST_DIRECT_ID}-${RANDOM}${RANDOM}"
+    podman tag "$DIRECT_REF" "$DIRECT_SOURCE_REF" ||
+        die "failed to tag direct image as '$DIRECT_SOURCE_REF'"
+
+    installer_name="ucore-vm-test-installer-${BASHPID}-${RANDOM}${RANDOM}"
+    installer_dir="$WORK_DIR/installer"
+    mkdir -p "$installer_dir"
+    create_direct_installer
+    script_in_guest=/run/virtiofs-mnt-installer/direct-install.sh
+    key_in_guest=/run/virtiofs-mnt-installer/id_ed25519.pub
+
+    echo "Starting bcvk installer VM for $DIRECT_REF"
+    BCVK_CONTAINER=$(bcvk ephemeral run -d -K --name "$installer_name" \
+        --bind-storage-ro \
+        --bind "$WORK_DIR:installer" \
+        --mount-disk-file "$DIRECT_DISK:output:qcow2" \
+        --add-swap "$VM_TEST_DISK_SIZE" \
+        --memory "$VM_TEST_MEMORY" \
+        --vcpus "$VM_TEST_CPUS" \
+        --virtiofsd "$VIRTIOFSD_PATH" \
+        --log-dir="journal,console=$installer_dir" \
+        "$DIRECT_REF") || die "failed to start bcvk installer VM"
+
+    echo "Installing direct image to FCOS-compatible disk"
+    if ! bcvk ephemeral ssh "$BCVK_CONTAINER" -- bash "$script_in_guest" \
+        "containers-storage:$DIRECT_SOURCE_REF" "$DIRECT_REF" "$VM_TEST_DISK_SIZE" "$key_in_guest" \
+        >"$installer_dir/install.log" 2>&1; then
+        die "direct installer failed (see $installer_dir/install.log)"
+    fi
+
+    podman rm -f "$BCVK_CONTAINER" >/dev/null 2>&1 || true
+    BCVK_CONTAINER=""
+}
+
 vm_start() {
     local backing="$1"
     DISK_IMAGE="$WORK_DIR/disk.qcow2"
@@ -456,6 +633,10 @@ vm_start() {
 
     QEMU_CONSOLE_LOG="$WORK_DIR/console.log"
     local pidfile="$WORK_DIR/qemu.pid"
+    local ignition_args=()
+    if [[ -f "$WORK_DIR/config.ign" ]]; then
+        ignition_args=(-fw_cfg "name=opt/com.coreos/config,file=$WORK_DIR/config.ign")
+    fi
 
     # Recheck immediately before QEMU binds; the per-user lock also prevents
     # concurrent vm-test runs from choosing the same port.
@@ -469,7 +650,7 @@ vm_start() {
         -drive "file=$DISK_IMAGE,format=qcow2,if=virtio" \
         -netdev "user,id=n0,hostfwd=tcp::${VM_TEST_SSH_PORT}-:22" \
         -device virtio-net-pci,netdev=n0 \
-        -fw_cfg "name=opt/com.coreos/config,file=$WORK_DIR/config.ign" \
+        "${ignition_args[@]}" \
         -display none \
         -serial "file:$QEMU_CONSOLE_LOG" \
         -daemonize \
@@ -585,11 +766,16 @@ record_baseline_state() {
     echo "SSH host keys: ${#SSH_HOST_KEY_FPS[@]} recorded (${!SSH_HOST_KEY_FPS[*]})"
 
     BASELINE_FAILED_UNITS=()
-    local unit
+    local unit failed_units
+    if [[ "$SSH_USER" == root ]]; then
+        failed_units=$(ssh_cmd 'systemctl --failed --no-legend --plain' 2>/dev/null || true)
+    else
+        failed_units=$(ssh_cmd 'sudo -n systemctl --failed --no-legend --plain' 2>/dev/null || true)
+    fi
     while IFS= read -r unit; do
         [[ -z "$unit" ]] && continue
         BASELINE_FAILED_UNITS["$unit"]=1
-    done < <(ssh_cmd 'sudo -n systemctl --failed --no-legend --plain' 2>/dev/null | awk '{print $1}')
+    done < <(awk '{print $1}' <<<"$failed_units")
     echo "Baseline failed units: ${#BASELINE_FAILED_UNITS[@]}"
 
     # Prefer top-level /var paths; some /var/lib subtrees are deployment-tied.
@@ -690,26 +876,95 @@ validate_ucore_boot() {
     done
 }
 
+run_direct_test() {
+    phase="resolve direct image"
+    echo ""
+    echo "=== Resolve Direct Image ==="
+    ensure_image "$DIRECT_REF" "direct"
+    HOST_DIRECT_DIGEST="$HOST_DIGEST"
+    HOST_DIRECT_ID="$HOST_IMAGE_ID"
+
+    WORK_DIR=$(mktemp -d /var/tmp/ucore-vm-test.XXXXXX)
+    echo "Work directory: $WORK_DIR"
+    SSH_KEY="$WORK_DIR/id_ed25519"
+    create_ssh_key
+    SSH_USER=root
+
+    phase="install direct image"
+    echo ""
+    echo "=== Install Direct Image ==="
+    install_direct_image
+
+    phase="boot direct image"
+    echo ""
+    echo "=== Boot Direct Image ==="
+    vm_start "$DIRECT_DISK"
+    wait_ssh_up || die "SSH did not become available after direct image boot"
+
+    phase="validate direct boot"
+    echo ""
+    echo "=== Validate Direct Boot ==="
+    record_baseline_state
+    validate_ucore_boot "$HOST_DIRECT_DIGEST"
+
+    phase="direct second reboot"
+    echo ""
+    echo "=== Second Ordinary Reboot ==="
+    vm_root systemctl reboot 2>/dev/null || true
+    wait_ssh_down || true
+    wait_ssh_up "$BOOT_ID" || die "SSH did not return after direct image reboot"
+    read_boot_id
+    echo "New boot_id: $BOOT_ID"
+
+    phase="validate direct second boot"
+    echo ""
+    echo "=== Validate Direct Second Boot ==="
+    validate_ucore_boot "$HOST_DIRECT_DIGEST"
+
+    phase="summary"
+    echo ""
+    echo "========================================"
+    echo "  Direct VM Test Summary"
+    echo "========================================"
+    echo "  image:    $DIRECT_REF  ($HOST_DIRECT_DIGEST)"
+    echo "  workdir:  $WORK_DIR"
+    echo "========================================"
+
+    if [[ "$FAIL_COUNT" -eq 0 ]]; then
+        echo "PASSED: All assertions passed."
+    else
+        red "FAILED: $FAIL_COUNT assertion(s) failed."
+        exit 1
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-[[ $# -eq 2 ]] || {
-    echo "Usage: $0 SOURCE_IMAGE TARGET_IMAGE" >&2
+if [[ $# -eq 2 && "$1" == --direct ]]; then
+    DIRECT_MODE=1
+    DIRECT_REF="$2"
+elif [[ $# -eq 2 && "$2" == --direct ]]; then
+    echo "Usage: $0 --direct IMAGE" >&2
     exit 1
-}
+elif [[ $# -eq 2 ]]; then
+    SOURCE_ARG="$1"
+    TARGET_ARG="$2"
 
-SOURCE_ARG="$1"
-TARGET_ARG="$2"
-
-SOURCE_DIRECT_FCOS_STREAM=""
-if SOURCE_DIRECT_FCOS_STREAM=$(direct_fcos_stream "$SOURCE_ARG"); then
-    if [[ -n "$VM_TEST_FCOS_STREAM_EXPLICIT" &&
-        "$VM_TEST_FCOS_STREAM" != "$SOURCE_DIRECT_FCOS_STREAM" ]]; then
-        echo "FATAL [arguments]: SOURCE stream '$SOURCE_DIRECT_FCOS_STREAM' conflicts" \
-            "with VM_TEST_FCOS_STREAM '$VM_TEST_FCOS_STREAM'" >&2
-        exit 1
+    SOURCE_DIRECT_FCOS_STREAM=""
+    if SOURCE_DIRECT_FCOS_STREAM=$(direct_fcos_stream "$SOURCE_ARG"); then
+        if [[ -n "$VM_TEST_FCOS_STREAM_EXPLICIT" &&
+            "$VM_TEST_FCOS_STREAM" != "$SOURCE_DIRECT_FCOS_STREAM" ]]; then
+            echo "FATAL [arguments]: SOURCE stream '$SOURCE_DIRECT_FCOS_STREAM' conflicts" \
+                "with VM_TEST_FCOS_STREAM '$VM_TEST_FCOS_STREAM'" >&2
+            exit 1
+        fi
+        VM_TEST_FCOS_STREAM="$SOURCE_DIRECT_FCOS_STREAM"
     fi
-    VM_TEST_FCOS_STREAM="$SOURCE_DIRECT_FCOS_STREAM"
+else
+    echo "Usage: $0 SOURCE_IMAGE TARGET_IMAGE" >&2
+    echo "       $0 --direct IMAGE" >&2
+    exit 1
 fi
 
 trap cleanup EXIT
@@ -717,6 +972,11 @@ trap cleanup EXIT
 phase="preflight"
 echo "=== Preflight ==="
 preflight
+
+if [[ "$DIRECT_MODE" -eq 1 ]]; then
+    run_direct_test
+    exit 0
+fi
 
 phase="resolve images"
 echo ""

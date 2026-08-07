@@ -24,6 +24,14 @@ vm-test source_image target_image:
     set -euo pipefail
     exec bash ./vm-test.sh "{{ source_image }}" "{{ target_image }}"
 
+# Direct local image test: installs IMAGE to a temporary FCOS-compatible disk
+# through bcvk, then validates two boots. This is not the recommended FCOS
+# install/switch workflow. Prereqs: vm-test prereqs plus bcvk and virtiofsd.
+vm-test-direct image:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    exec bash ./vm-test.sh --direct "{{ image }}"
+
 check:
     just --fmt --check
     python3 -m unittest discover -s ../.github/tests -v
