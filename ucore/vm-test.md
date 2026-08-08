@@ -128,6 +128,11 @@ The test checks:
 - Every SSH host key type and fingerprint remains unchanged
 - The same checks still pass after a second target reboot
 
+For images with the `swtpm` package, the test also verifies the `swtpm`,
+`swtpm_svirt`, and `swtpm_libvirt` SELinux modules are installed at priority
+200, `/usr/bin/swtpm` resolves and is labeled `swtpm_exec_t`, and no bind mount
+masks that deployed file. These checks run on both target boots.
+
 Direct mode validates the installed image digest on both boots and performs
 the same health, networking, identity, SSH-key, and persistence checks. It
 does not assert a rollback deployment because no `bootc switch` occurs.
