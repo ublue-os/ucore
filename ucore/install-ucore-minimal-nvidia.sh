@@ -84,4 +84,4 @@ mv /etc/selinux/targeted.rebuilt /etc/selinux/targeted
 
 semodule --verbose --noreload --install /usr/share/selinux/packages/nvidia-container.pp
 
-systemctl enable ublue-nvctk-cdi.service
+systemctl enable nvidia-cdi-refresh.service nvidia-cdi-refresh.path nvidia-persistenced.service
