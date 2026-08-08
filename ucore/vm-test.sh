@@ -829,6 +829,7 @@ check_swtpm_selinux() {
 
     assert_root "swtpm executable installed" test -x /usr/bin/swtpm
     assert_root "swtpm SELinux package installed" rpm -q swtpm-selinux
+    # shellcheck disable=SC2016 # The awk expression is evaluated by guest bash.
     assert_root "swtpm SELinux modules installed at priority 200" bash -c '
         semodule --list-modules=full | awk '\''
             $1 == 200 && ($2 == "swtpm" || $2 == "swtpm_svirt" || $2 == "swtpm_libvirt") {
