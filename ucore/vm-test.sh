@@ -822,6 +822,30 @@ check_system_health() {
     fi
 }
 
+check_swtpm_selinux() {
+    if ! vm_root rpm -q swtpm >/dev/null 2>&1; then
+        return
+    fi
+
+    assert_root "swtpm executable installed" test -x /usr/bin/swtpm
+    assert_root "swtpm SELinux package installed" rpm -q swtpm-selinux
+    # shellcheck disable=SC2016 # The awk expression is evaluated by guest bash.
+    assert_root "swtpm SELinux modules installed at priority 200" bash -c '
+        semodule --list-modules=full | awk '\''
+            $1 == 200 && ($2 == "swtpm" || $2 == "swtpm_svirt" || $2 == "swtpm_libvirt") {
+                found[$2] = 1
+            }
+            END { exit !(found["swtpm"] && found["swtpm_svirt"] && found["swtpm_libvirt"]) }
+        '\''
+    '
+    assert_root "swtpm expected SELinux context" bash -c \
+        "matchpathcon /usr/bin/swtpm | grep -Eq 'swtpm_exec_t(:|$)'"
+    assert_root "swtpm deployed SELinux context" bash -c \
+        "stat -Lc '%C' /usr/bin/swtpm | grep -Eq 'swtpm_exec_t(:|$)'"
+    assert_root "swtpm is not masked by a bind mount" bash -c \
+        "awk '\$5 == \"/usr/bin/swtpm\" { found = 1 } END { exit found }' /proc/self/mountinfo"
+}
+
 validate_ucore_boot() {
     local expected_digest="$1"
     local expect_rollback="${2:-}"
@@ -849,6 +873,7 @@ validate_ucore_boot() {
     assert_guest "network connectivity" curl -sf --max-time 10 https://example.com -o /dev/null
 
     check_system_health
+    check_swtpm_selinux
 
     assert_root "/var marker persisted" grep -q 'source marker' /var/ucore-vm-test-marker
     assert_root "/etc marker persisted" grep -q 'ucore-vm-test persisted' /etc/ucore-vm-test.conf
