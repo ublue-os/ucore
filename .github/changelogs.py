@@ -973,7 +973,60 @@ def render_tiered_diffs(
                 empty_message="No further RPM changes detected.",
             )
         )
+
+    shown = union_diffs([displayed_common, nvidia_specific])
+    lines.extend(render_flavor_specific_diffs(refs_by_variant, variant_diffs, shown))
     return lines
+
+
+def render_flavor_specific_diffs(
+    refs_by_variant: dict[Variant, ImageRef],
+    variant_diffs: dict[Variant, dict[str, PackageDiff]],
+    shown: dict[str, PackageDiff],
+) -> list[str]:
+    """Surface changes intersect_diffs dropped for not being uniform across a whole tier/flavor."""
+    leftovers: dict[Variant, dict[str, PackageDiff]] = {}
+    for variant in VARIANTS:
+        leftover = subtract_diffs(variant_diffs[variant], shown)
+        if not leftover:
+            continue
+        # subtract_diffs drops arches whose residue is empty; without padding to the
+        # full ARCH_ORDER, a single-arch leftover looks "common" to render_diff and
+        # prints with no arch qualifier, implying it applies to every architecture.
+        for arch in ARCH_ORDER:
+            leftover.setdefault(arch, PackageDiff(added=[], removed=[], changed=[]))
+        leftovers[variant] = leftover
+
+    lines: list[str] = []
+    rendered: set[Variant] = set()
+    for variant in VARIANTS:
+        if variant not in leftovers or variant in rendered:
+            continue
+        # Group variants whose leftover is byte-identical (e.g. a change that landed
+        # on ucore-nvidia and was inherited unchanged into ucore-hci-nvidia) so it's
+        # attributed to all of them in one section instead of only the first match.
+        group = [
+            other
+            for other in VARIANTS
+            if other in leftovers and diff_signature(leftovers[other]) == diff_signature(leftovers[variant])
+        ]
+        rendered.update(group)
+
+        title = " / ".join(member.section_name for member in group) + " — Additional Changes"
+        ref = refs_by_variant[variant]
+        lines.extend(render_diff(title, ref, ref.previous_dated_tag, leftovers[variant]))
+    return lines
+
+
+def diff_signature(diff_by_arch: dict[str, PackageDiff]) -> dict[str, tuple[frozenset, frozenset, frozenset]]:
+    return {
+        arch: (
+            frozenset(entry.render() for entry in diff.added),
+            frozenset(entry.render() for entry in diff.removed),
+            frozenset(entry.render() for entry in diff.changed),
+        )
+        for arch, diff in diff_by_arch.items()
+    }
 
 
 def nvidia_specific_diffs(
