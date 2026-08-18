@@ -2,10 +2,8 @@
 
 set -ouex pipefail
 
-# Verify the parent image before the HCI package transaction.
-rpmdb --verifydb
-
-# Keep the libvirt workaround and HCI packages in one RPM database transaction.
+# Download from COPR only; a standalone install corrupted the RPM database.
+# Installing it with the HCI stack keeps the package transaction valid.
 dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' download \
     --arch noarch \
     --destdir /tmp \

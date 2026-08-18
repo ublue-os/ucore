@@ -461,9 +461,6 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p failed-rpmdb
-          nproc
-          free -h
-          df -h .
           podman run --rm --entrypoint /usr/bin/bash "$IMAGE" -lc '
             rpm --eval "%{_dbpath}"
             rpm -q rpm
