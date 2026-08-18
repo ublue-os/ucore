@@ -2,13 +2,23 @@
 
 set -ouex pipefail
 
-# install packages
-dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' install ublue-os-libvirt-workarounds
+# Download from COPR only; a standalone install corrupted the RPM database.
+# Installing it with the HCI stack keeps the package transaction valid.
+dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' download \
+    --arch noarch \
+    --destdir /tmp \
+    ublue-os-libvirt-workarounds
 dnf -y install \
+    /tmp/ublue-os-libvirt-workarounds-*.noarch.rpm \
     cockpit-machines \
     libvirt-client \
     libvirt-daemon-kvm \
     virt-install
+
+rpmdb --verifydb
+rpm -q ublue-os-libvirt-workarounds
+systemctl is-enabled ublue-os-libvirt-workarounds.service
+rm -f /tmp/ublue-os-libvirt-workarounds-*.rpm
 
 # swtpm-selinux ignores failed semodule transactions during overlay-backed
 # image builds. Install its modules explicitly in the image policy store.
