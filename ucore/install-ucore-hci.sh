@@ -2,24 +2,24 @@
 
 set -ouex pipefail
 
-# Verify the parent image before isolating the HCI package transaction.
+# Verify the parent image before the HCI package transaction.
 rpmdb --verifydb
 
-# The payload from ublue-os/packages@f242674 avoids its RPM transaction.
-systemd-sysusers /usr/lib/sysusers.d/ublue-os-libvirt-workarounds.conf
-getent group libvirt
-getent passwd libvirtdbus
-systemctl preset ublue-os-libvirt-workarounds.service
-systemctl is-enabled ublue-os-libvirt-workarounds.service
-
-# install packages
+# Keep the libvirt workaround and HCI packages in one RPM database transaction.
+dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' download \
+    --destdir /tmp \
+    ublue-os-libvirt-workarounds
 dnf -y install \
+    /tmp/ublue-os-libvirt-workarounds-*.rpm \
     cockpit-machines \
     libvirt-client \
     libvirt-daemon-kvm \
     virt-install
 
 rpmdb --verifydb
+rpm -q ublue-os-libvirt-workarounds
+systemctl is-enabled ublue-os-libvirt-workarounds.service
+rm -f /tmp/ublue-os-libvirt-workarounds-*.rpm
 
 # swtpm-selinux ignores failed semodule transactions during overlay-backed
 # image builds. Install its modules explicitly in the image policy store.
