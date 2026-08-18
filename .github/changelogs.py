@@ -961,7 +961,8 @@ def render_tiered_diffs(
         )
     )
 
-    nvidia_specific = nvidia_specific_diffs(variant_diffs, displayed_common)
+    nvidia_open_specific, nvidia_lts_specific = nvidia_specific_diffs(variant_diffs, displayed_common)
+    nvidia_specific = union_diffs([nvidia_open_specific, nvidia_lts_specific])
     if nvidia_specific:
         sample_ref = refs_by_variant[Variant("ucore", "uCore", "-nvidia")]
         lines.extend(
@@ -974,20 +975,32 @@ def render_tiered_diffs(
             )
         )
 
-    shown = union_diffs([displayed_common, nvidia_specific])
-    lines.extend(render_flavor_specific_diffs(refs_by_variant, variant_diffs, shown))
+    shown_by_variant = {}
+    for variant in VARIANTS:
+        shown = [minimal_common]
+        if variant.image_name in ("ucore", "ucore-hci"):
+            shown.append(ucore_increment)
+        if variant.image_name == "ucore-hci":
+            shown.append(hci_increment)
+        if variant.tag_suffix == "-nvidia":
+            shown.append(nvidia_open_specific)
+        elif variant.tag_suffix == "-nvidia-lts":
+            shown.append(nvidia_lts_specific)
+        shown_by_variant[variant] = union_diffs(shown)
+
+    lines.extend(render_flavor_specific_diffs(refs_by_variant, variant_diffs, shown_by_variant))
     return lines
 
 
 def render_flavor_specific_diffs(
     refs_by_variant: dict[Variant, ImageRef],
     variant_diffs: dict[Variant, dict[str, PackageDiff]],
-    shown: dict[str, PackageDiff],
+    shown_by_variant: dict[Variant, dict[str, PackageDiff]],
 ) -> list[str]:
     """Surface changes intersect_diffs dropped for not being uniform across a whole tier/flavor."""
     leftovers: dict[Variant, dict[str, PackageDiff]] = {}
     for variant in VARIANTS:
-        leftover = subtract_diffs(variant_diffs[variant], shown)
+        leftover = subtract_diffs(variant_diffs[variant], shown_by_variant[variant])
         if not leftover:
             continue
         # subtract_diffs drops arches whose residue is empty; without padding to the
@@ -1032,14 +1045,16 @@ def diff_signature(diff_by_arch: dict[str, PackageDiff]) -> dict[str, tuple[froz
 def nvidia_specific_diffs(
     variant_diffs: dict[Variant, dict[str, PackageDiff]],
     displayed_common: dict[str, PackageDiff],
-) -> dict[str, PackageDiff]:
-    nvidia_common = union_diffs(
-        [
-            intersect_diffs([variant_diffs[variant] for variant in variants_for(tag_suffix="-nvidia")]),
-            intersect_diffs([variant_diffs[variant] for variant in variants_for(tag_suffix="-nvidia-lts")]),
-        ]
+) -> tuple[dict[str, PackageDiff], dict[str, PackageDiff]]:
+    open_specific = subtract_diffs(
+        intersect_diffs([variant_diffs[variant] for variant in variants_for(tag_suffix="-nvidia")]),
+        displayed_common,
     )
-    return subtract_diffs(nvidia_common, displayed_common)
+    lts_specific = subtract_diffs(
+        intersect_diffs([variant_diffs[variant] for variant in variants_for(tag_suffix="-nvidia-lts")]),
+        displayed_common,
+    )
+    return open_specific, lts_specific
 
 
 def render_rebase(current_date: str) -> list[str]:

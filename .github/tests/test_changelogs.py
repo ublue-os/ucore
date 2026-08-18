@@ -107,6 +107,69 @@ class TieredDiffTests(unittest.TestCase):
         self.assertIn("## All NVIDIA Images", text)
         self.assertNotIn("Additional Changes", text)
 
+    def test_hci_increment_does_not_hide_same_change_on_minimal_nvidia(self) -> None:
+        diff = {
+            "amd64": changed("hci-package", "1.0-1.fc44", "1.1-1.fc44"),
+            "arm64": changed("hci-package", "1.0-1.fc44", "1.1-1.fc44"),
+        }
+        overrides = {
+            ("ucore-hci", ""): diff,
+            ("ucore-hci", "-nvidia"): diff,
+            ("ucore-hci", "-nvidia-lts"): diff,
+            ("ucore-minimal", "-nvidia"): diff,
+        }
+        refs_by_variant, variant_diffs = full_refs_and_diffs(overrides)
+        primary_ref = refs_by_variant[CHANGELOGS.Variant("ucore", "uCore", "")]
+
+        lines = CHANGELOGS.render_tiered_diffs(primary_ref, refs_by_variant, variant_diffs)
+        text = "\n".join(lines)
+
+        self.assertEqual(text.count("hci-package"), 2)
+        self.assertIn("## All ucore-hci Images", text)
+        self.assertIn("uCore Minimal NVIDIA — Additional Changes", text)
+
+    def test_ucore_increment_does_not_hide_same_change_on_minimal(self) -> None:
+        diff = {
+            "amd64": changed("ucore-package", "1.0-1.fc44", "1.1-1.fc44"),
+            "arm64": changed("ucore-package", "1.0-1.fc44", "1.1-1.fc44"),
+        }
+        overrides = {
+            ("ucore", ""): diff,
+            ("ucore", "-nvidia"): diff,
+            ("ucore", "-nvidia-lts"): diff,
+            ("ucore-minimal", ""): diff,
+        }
+        refs_by_variant, variant_diffs = full_refs_and_diffs(overrides)
+        primary_ref = refs_by_variant[CHANGELOGS.Variant("ucore", "uCore", "")]
+
+        lines = CHANGELOGS.render_tiered_diffs(primary_ref, refs_by_variant, variant_diffs)
+        text = "\n".join(lines)
+
+        self.assertEqual(text.count("ucore-package"), 2)
+        self.assertIn("## All ucore Images", text)
+        self.assertIn("uCore Minimal — Additional Changes", text)
+
+    def test_open_nvidia_common_does_not_hide_same_change_on_lts(self) -> None:
+        diff = {
+            "amd64": changed("nvidia-package", "1.0-1.fc44", "1.1-1.fc44"),
+            "arm64": changed("nvidia-package", "1.0-1.fc44", "1.1-1.fc44"),
+        }
+        overrides = {
+            ("ucore-minimal", "-nvidia"): diff,
+            ("ucore", "-nvidia"): diff,
+            ("ucore-hci", "-nvidia"): diff,
+            ("ucore", "-nvidia-lts"): diff,
+        }
+        refs_by_variant, variant_diffs = full_refs_and_diffs(overrides)
+        primary_ref = refs_by_variant[CHANGELOGS.Variant("ucore", "uCore", "")]
+
+        lines = CHANGELOGS.render_tiered_diffs(primary_ref, refs_by_variant, variant_diffs)
+        text = "\n".join(lines)
+
+        self.assertEqual(text.count("nvidia-package"), 2)
+        self.assertIn("## All NVIDIA Images", text)
+        self.assertIn("uCore NVIDIA LTS — Additional Changes", text)
+
     def test_identical_leftover_on_two_variants_is_grouped_into_one_section(self) -> None:
         # ucore-hci-nvidia inherits ucore-nvidia's layer, so an untiered change often
         # lands identically on both. It should be attributed to both, not just the first.
