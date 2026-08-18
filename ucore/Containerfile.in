@@ -47,6 +47,7 @@ RUN ["bootc", "container", "lint"]
 
 # /* ucore-hci image section */
 FROM ucore AS ucore-hci
+COPY system_files/hci/usr/lib /usr/lib/
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=cache,dst=/var/cache/rpm-ostree \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \

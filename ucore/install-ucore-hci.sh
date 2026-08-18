@@ -2,8 +2,10 @@
 
 set -ouex pipefail
 
+# Enable the vendored libvirt relabel workaround without its corrupting COPR RPM.
+systemctl preset ublue-os-libvirt-workarounds.service
+
 # install packages
-dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' install ublue-os-libvirt-workarounds
 dnf -y install \
     cockpit-machines \
     libvirt-client \
