@@ -437,7 +437,6 @@ jobs:
         id: generate-sbom
         env:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
-          SYFT_PARALLELISM: 1
         run: |
           just --justfile ucore/Justfile --working-directory ucore \
               gen-sbom \
@@ -461,22 +460,37 @@ jobs:
           IMAGE: ${{ env.IMAGE_NAME }}:${{ env.TAG_VERSION_ARCH }}
         run: |
           set -euxo pipefail
+          mkdir -p failed-rpmdb
           nproc
           free -h
           df -h .
           podman run --rm --entrypoint /usr/bin/bash "$IMAGE" -lc '
             rpm --eval "%{_dbpath}"
             rpm -q rpm
-            rpm -qa | wc -l
             ls -ld /usr/lib/sysimage/rpm /var/lib/rpm || true
-          '
+            rpmdb --verifydb > /tmp/rpmdb-verify.log 2>&1 || true
+            rpm -qa --qf "%{DBINSTANCE}\t%{NAME}-%{EVR}.%{ARCH}\n" \
+                > /tmp/rpm-packages.tsv 2> /tmp/rpmqa.err || true
+            cat /tmp/rpmdb-verify.log /tmp/rpmqa.err
+            headers="$(grep -h -oE "h#[[:space:]]*[0-9]+" /tmp/rpmdb-verify.log /tmp/rpmqa.err | \
+                grep -oE "[0-9]+" | sort -un || true)"
+            for header in $headers; do
+              rpm -q --querybynumber "$header" --qf "%{DBINSTANCE}\t%{NAME}-%{EVR}.%{ARCH}\n" || true
+            done
+            cat /tmp/rpm-packages.tsv
+          ' > failed-rpmdb/rpmdb-diagnostics.txt 2>&1
+          container="$(podman create "$IMAGE")"
+          podman cp "$container:/usr/lib/sysimage/rpm/rpmdb.sqlite" failed-rpmdb/rpmdb.sqlite || true
+          podman rm "$container" >/dev/null
 
-      - name: Upload failed SBOM
+      - name: Upload failed SBOM and RPM database
         if: failure() && steps.validate-sbom.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: failed-sbom-${{ env.IMAGE_NAME }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}
-          path: sbom.json
+          name: failed-sbom-and-rpmdb-${{ env.IMAGE_NAME }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}
+          path: |
+            sbom.json
+            failed-rpmdb/
           if-no-files-found: warn
           retention-days: 14
 
