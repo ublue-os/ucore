@@ -67,8 +67,8 @@ sudo cp --remove-destination /usr/share/ublue-os/signing/usr/etc/containers/poli
 ```
 
 Corrected images preserve the uCore container-signing policy during image
-builds, so this is only needed once. See [issue
-#431](https://github.com/ublue-os/ucore/issues/431) for details.
+builds, so this is only needed once. See [issue #431](https://github.com/ublue-os/ucore/issues/431)
+for details.
 
 ### 2026.07.20 - Build Transparency: Provenance, SBOMs, and Release Changelogs
 
