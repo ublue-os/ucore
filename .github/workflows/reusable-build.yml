@@ -421,13 +421,19 @@ jobs:
 
       - name: Setup Syft
         id: setup-syft
-        if: needs.workflow_info.outputs.publish == 'true'
+        if: >-
+          needs.workflow_info.outputs.publish == 'true' ||
+          (github.event_name == 'pull_request' && inputs.ucore_stream == 'stable' &&
+          matrix.arch == 'aarch64' && matrix.image_suffix == '-hci' && matrix.nvidia_tag != '')
         uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           syft-version: v1.39.0
 
       - name: Generate SBOM
-        if: needs.workflow_info.outputs.publish == 'true'
+        if: >-
+          needs.workflow_info.outputs.publish == 'true' ||
+          (github.event_name == 'pull_request' && inputs.ucore_stream == 'stable' &&
+          matrix.arch == 'aarch64' && matrix.image_suffix == '-hci' && matrix.nvidia_tag != '')
         id: generate-sbom
         env:
           SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
@@ -439,7 +445,10 @@ jobs:
               ../sbom.json
 
       - name: Validate SBOM
-        if: needs.workflow_info.outputs.publish == 'true'
+        if: >-
+          needs.workflow_info.outputs.publish == 'true' ||
+          (github.event_name == 'pull_request' && inputs.ucore_stream == 'stable' &&
+          matrix.arch == 'aarch64' && matrix.image_suffix == '-hci' && matrix.nvidia_tag != '')
         id: validate-sbom
         run: |
           python3 .github/validate-sbom.py \
