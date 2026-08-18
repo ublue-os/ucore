@@ -46,8 +46,8 @@ dnf -y install /tmp/rpms/akmods-zfs/ucore/ublue-os-ucore-addons*.rpm
 
 dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' install ublue-os-signing
 
-# Put the policy file in the correct place and cleanup /usr/etc
-cp /usr/etc/containers/policy.json /etc/containers/policy.json
+# bootc images must not contain both /etc and /usr/etc. Remove the signing
+# package's defaults before later package installs can add persistent state.
 rm -rf /usr/etc
 
 # mitigate problem on F43 where during kernel install, dracut errors and fails
