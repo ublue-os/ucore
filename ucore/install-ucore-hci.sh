@@ -2,8 +2,15 @@
 
 set -ouex pipefail
 
-# Enable the vendored libvirt relabel workaround without its corrupting COPR RPM.
+# Verify the parent image before isolating the HCI package transaction.
+rpmdb --verifydb
+
+# The payload from ublue-os/packages@f242674 avoids its RPM transaction.
+systemd-sysusers /usr/lib/sysusers.d/ublue-os-libvirt-workarounds.conf
+getent group libvirt
+getent passwd libvirtdbus
 systemctl preset ublue-os-libvirt-workarounds.service
+systemctl is-enabled ublue-os-libvirt-workarounds.service
 
 # install packages
 dnf -y install \
@@ -11,6 +18,8 @@ dnf -y install \
     libvirt-client \
     libvirt-daemon-kvm \
     virt-install
+
+rpmdb --verifydb
 
 # swtpm-selinux ignores failed semodule transactions during overlay-backed
 # image builds. Install its modules explicitly in the image policy store.
