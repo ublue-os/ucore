@@ -18,6 +18,7 @@ on:
 
 jobs:
   build-lts:
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/reusable-build.yml
     secrets: inherit
     with:

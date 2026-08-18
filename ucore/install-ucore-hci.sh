@@ -7,10 +7,11 @@ rpmdb --verifydb
 
 # Keep the libvirt workaround and HCI packages in one RPM database transaction.
 dnf -y --enable-repo='copr:copr.fedorainfracloud.org:ublue-os:packages' download \
+    --arch noarch \
     --destdir /tmp \
     ublue-os-libvirt-workarounds
 dnf -y install \
-    /tmp/ublue-os-libvirt-workarounds-*.rpm \
+    /tmp/ublue-os-libvirt-workarounds-*.noarch.rpm \
     cockpit-machines \
     libvirt-client \
     libvirt-daemon-kvm \
