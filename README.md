@@ -52,7 +52,7 @@ Please take a look at the included modifications, and help us improve uCore if t
 
 ### 2026.08.18 - Manual recovery for failed image upgrades
 
-uCore images published from August 15 through August 18 contain an invalid
+uCore images published from August 15 through early August 18 contain an invalid
 container policy that prevents `bootc` from downloading updates. This affects
 all image variants.
 
@@ -66,9 +66,9 @@ sudo cp --remove-destination /usr/share/ublue-os/signing/usr/etc/containers/poli
   && sudo bootc upgrade
 ```
 
-Corrected images preserve the uCore container-signing policy during image
-builds, so this is only needed once. See [issue #431](https://github.com/ublue-os/ucore/issues/431)
-for details.
+Corrected images, published later on August 18, preserve the uCore container-signing policy during
+image builds, so this is only needed once. 
+See [issue #431](https://github.com/ublue-os/ucore/issues/431) for details.
 
 ### 2026.07.20 - Build Transparency: Provenance, SBOMs, and Release Changelogs
 
