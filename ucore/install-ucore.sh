@@ -55,5 +55,16 @@ chmod +x "${FONT_FIX_SCRIPT}"
 rm -rf /tmp/cockpit-zfs-manager
 rm -f "${MERGERFS_RPM}" "${CZM_TGZ}" "${FONT_FIX_SCRIPT}"
 
+# pcp-selinux's %post ignores failed semodule transactions during overlay-backed
+# image builds. Install its modules explicitly in the image policy store.
+test -f /usr/share/selinux/packages/targeted/pcp.pp.bz2
+test -f /usr/share/selinux/packages/targeted/pcp-import.pp.bz2
+cp -a /etc/selinux/targeted /etc/selinux/targeted.rebuilt
+rm -rf /etc/selinux/targeted
+mv /etc/selinux/targeted.rebuilt /etc/selinux/targeted
+semodule --verbose --noreload --priority 200 --install \
+    /usr/share/selinux/packages/targeted/pcp.pp.bz2 \
+    /usr/share/selinux/packages/targeted/pcp-import.pp.bz2
+
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/(uCore.*$/(uCore)"/' /usr/lib/os-release
