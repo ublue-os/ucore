@@ -846,6 +846,35 @@ check_swtpm_selinux() {
         "awk '\$5 == \"/usr/bin/swtpm\" { found = 1 } END { exit found }' /proc/self/mountinfo"
 }
 
+check_pcp_selinux() {
+    if ! vm_root rpm -q pcp >/dev/null 2>&1; then
+        return
+    fi
+
+    assert_root "pcp SELinux package installed" rpm -q pcp-selinux
+    # shellcheck disable=SC2016 # The awk expression is evaluated by guest bash.
+    assert_root "pcp SELinux module installed at priority 200" bash -c '
+        semodule --list-modules=full | awk '\''
+            $1 == 200 && $2 == "pcp" { found = 1 }
+            END { exit !found }
+        '\''
+    '
+    if vm_root rpm -q pcp-selinux-import >/dev/null 2>&1; then
+        # shellcheck disable=SC2016 # The awk expression is evaluated by guest bash.
+        assert_root "pcp-import SELinux module installed at priority 200" bash -c '
+            semodule --list-modules=full | awk '\''
+                $1 == 200 && $2 == "pcp-import" { found = 1 }
+                END { exit !found }
+            '\''
+        '
+    fi
+    assert_root "pmcd initrc expected SELinux context" bash -c \
+        "matchpathcon /usr/libexec/pcp/lib/pmcd | grep -Eq 'pcp_pmcd_initrc_exec_t(:|$)'"
+    assert_root "pmcd initrc deployed SELinux context" bash -c \
+        "stat -Lc '%C' /usr/libexec/pcp/lib/pmcd | grep -Eq 'pcp_pmcd_initrc_exec_t(:|$)'"
+    assert_root "pmcd.service is active" systemctl is-active pmcd.service
+}
+
 check_container_policy() {
     local policy=/etc/containers/policy.json
     local source=/usr/share/ublue-os/signing/usr/etc/containers/policy.json
@@ -884,6 +913,7 @@ validate_ucore_boot() {
 
     check_system_health
     check_swtpm_selinux
+    check_pcp_selinux
     check_container_policy
 
     assert_root "/var marker persisted" grep -q 'source marker' /var/ucore-vm-test-marker

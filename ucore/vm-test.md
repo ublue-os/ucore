@@ -133,6 +133,12 @@ For images with the `swtpm` package, the test also verifies the `swtpm`,
 200, `/usr/bin/swtpm` resolves and is labeled `swtpm_exec_t`, and no bind mount
 masks that deployed file. These checks run on both target boots.
 
+For images with the `pcp` package, the test also verifies `pcp-selinux` is
+installed, the `pcp` module (and `pcp-import` when `pcp-selinux-import` is
+present) is installed at priority 200, `/usr/libexec/pcp/lib/pmcd` resolves and
+is labeled `pcp_pmcd_initrc_exec_t`, and `pmcd.service` is active. These checks
+run on both target boots.
+
 Direct mode validates the installed image digest on both boots and performs
 the same health, networking, identity, SSH-key, and persistence checks. It
 does not assert a rollback deployment because no `bootc switch` occurs.
