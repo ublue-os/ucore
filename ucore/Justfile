@@ -57,7 +57,15 @@ upstream-image:
     version=$(just upstream-version "$image")
     printf '%s:%s\n' "$image" "$version"
 
-# Planned emergency CoreOS image-version override: https://github.com/ublue-os/ucore/issues/413
+# If a stream release is known-bad, pin `image` in this recipe after
+# upstream-version and before the fedora/akmods inspect. Do not edit
+# upstream-version. Example (F42 pattern from pre-#415):
+#   if [[ "${image}" == "44.YYYYMMDD.N.N" ]]; then
+#     echo "WARNING: overriding known-bad CoreOS ${image} -> 44.GOOD.N.N (#NNNN)" >&2
+#     image="44.GOOD.N.N"
+#   fi
+# The pin holds nightlies and PRs. Remove it once a good upstream exists.
+# Emergency CoreOS pin: https://github.com/ublue-os/ucore/issues/413
 stream-info output='stream-info.env':
     #!/usr/bin/env bash
     set -euo pipefail
