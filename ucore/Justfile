@@ -198,6 +198,10 @@ ci-prepare-build upstream_image='' arch='':
 
     just containerfile "$UPSTREAM_IMAGE"
 
+# Download and checksum-verify a pinned CI dependency. Prints the verified file path.
+ci-dep name:
+    @./github-pkgs.sh download "{{ name }}" --manifest ./ci-deps.json --release "" --arch ""
+
 # Verify one package, or all effective entries, download successfully and match the manifest checksum.
 verify-checksum package='' release='{{ FEDORA_VERSION }}' arch='':
     #!/usr/bin/env bash

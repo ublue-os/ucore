@@ -1,0 +1,24 @@
+[
+  {
+    "name": "buildah-amd64",
+    "repo": "bsherman/buildah-static",
+    "version": "v1.43.2",
+    "url": "https://github.com/bsherman/buildah-static/releases/download/v1.43.2/buildah-amd64.tar.gz",
+    "sha256": "9f347c86602c5f56744272b5b160866eb6b46bd5f51634430ddc0b01722b2df0"
+  },
+  {
+    "name": "buildah-arm64",
+    "repo": "bsherman/buildah-static",
+    "version": "v1.43.2",
+    "url": "https://github.com/bsherman/buildah-static/releases/download/v1.43.2/buildah-arm64.tar.gz",
+    "sha256": "b08e8a006e127e3934ebb1982ee6092652ab169c469a23a7bf05c043e631fef5"
+  },
+  {
+    "name": "kernel-sign",
+    "repo": "ublue-os/akmods",
+    "branch": "main",
+    "commit": "20fce9fe76de494ff901f017a50d6f4dfc1661e0",
+    "url": "https://raw.githubusercontent.com/ublue-os/akmods/20fce9fe76de494ff901f017a50d6f4dfc1661e0/certs/public_key.der",
+    "sha256": "4e5c68474cb133fd8984d9599762cece9100c3e6cd8a9709aeaabd85dd9e70d1"
+  }
+]

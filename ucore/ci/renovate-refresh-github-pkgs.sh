@@ -11,7 +11,8 @@
 # Usage:
 #   renovate-refresh-github-pkgs.sh [MANIFEST ...]
 #
-# If no manifests are given, all ucore/github-pkgs-*.json files are processed.
+# If no manifests are given, all ucore/github-pkgs-*.json files and
+# ucore/ci-deps.json are processed.
 
 set -euo pipefail
 
@@ -22,6 +23,9 @@ if [[ $# -gt 0 ]]; then
 	MANIFESTS=("$@")
 else
 	MANIFESTS=("${UCORE_DIR}"/github-pkgs-*.json)
+	if [[ -f "${UCORE_DIR}/ci-deps.json" ]]; then
+		MANIFESTS+=("${UCORE_DIR}/ci-deps.json")
+	fi
 fi
 
 fail() {
@@ -118,6 +122,19 @@ resolve_raw_commit_url() {
 	printf '%s\n' "${old_url/${old_commit}/${new_commit}}"
 }
 
+# Rewrite a non-RPM release-asset URL from repo + version + existing filename.
+# Used for ci-deps.json, where both arches live in one file and the asset name
+# is not an RPM matched by fc${release}.${arch}.
+resolve_versioned_release_url() {
+	local old_url=${1}
+	local repo=${2}
+	local version=${3}
+	local filename=${old_url##*/}
+
+	filename=${filename%%\?*}
+	printf 'https://github.com/%s/releases/download/%s/%s\n' "${repo}" "${version}" "${filename}"
+}
+
 # Dispatch to the correct resolver based on the URL shape and entry fields.
 resolve_url() {
 	local entry=${1}
@@ -146,9 +163,13 @@ resolve_url() {
 		return
 	fi
 
-	# Release asset (RPM)
+	# Release asset
 	if [[ "${url}" == */releases/download/* ]]; then
-		resolve_release_asset_url "${repo}" "${version}" "${arch}" "${release}"
+		if [[ -n "${arch}" ]]; then
+			resolve_release_asset_url "${repo}" "${version}" "${arch}" "${release}"
+		else
+			resolve_versioned_release_url "${url}" "${repo}" "${version}"
+		fi
 		return
 	fi
 
@@ -162,9 +183,14 @@ manifest_tmp=''
 trap 'rm -f "${download_file:-}" "${manifest_tmp:-}"' EXIT
 
 for manifest in "${MANIFESTS[@]}"; do
-	# Derive arch from manifest filename: github-pkgs-x86_64.json → x86_64
+	# github-pkgs-x86_64.json → x86_64. Other manifests (ci-deps.json) leave
+	# arch empty so release URLs are rewritten from version + filename.
 	arch=$(basename "${manifest}" .json)
-	arch=${arch#github-pkgs-}
+	if [[ "${arch}" == github-pkgs-* ]]; then
+		arch=${arch#github-pkgs-}
+	else
+		arch=""
+	fi
 
 	manifest_tmp=$(mktemp)
 	cp "${manifest}" "${manifest_tmp}"
