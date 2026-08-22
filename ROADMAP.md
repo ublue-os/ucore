@@ -10,9 +10,9 @@ exploration — the general direction we hope to go, not yet a commitment.
 Harden the build and release pipeline before it grows more publish paths
 (more on that below).
 
-- **Emergency CoreOS build override** ([#413](https://github.com/ublue-os/ucore/issues/413)) —
-  a way to pin a specific upstream Fedora CoreOS image when a new release is
-  known-bad, without disabling automatic stream discovery for everyone else.
+- **Emergency CoreOS pin** ([#413](https://github.com/ublue-os/ucore/issues/413)) —
+  documented in `just stream-info`: when a Fedora CoreOS release is known-bad,
+  pin `IMAGE_VERSION` in that recipe so nightlies and PRs stay off it.
 - **Verify checksums for CI dependencies** ([#367](https://github.com/ublue-os/ucore/issues/367)) —
   pin and checksum-verify the build tooling and signing keys the pipeline
   fetches at build time, the same way package manifests already are.
