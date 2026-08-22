@@ -42,9 +42,17 @@ create_temp_file() {
 }
 
 get_curl_auth_args() {
-	if [[ -r /run/secrets/GITHUB_TOKEN ]]; then
-		local github_token
+	local github_token=""
+
+	if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+		github_token="${GITHUB_TOKEN}"
+	elif [[ -n "${GITHUB_COM_TOKEN:-}" ]]; then
+		github_token="${GITHUB_COM_TOKEN}"
+	elif [[ -r /run/secrets/GITHUB_TOKEN ]]; then
 		github_token=$(</run/secrets/GITHUB_TOKEN)
+	fi
+
+	if [[ -n "${github_token}" ]]; then
 		printf '%s\n%s\n' "-H" "Authorization: Bearer ${github_token}"
 	fi
 }

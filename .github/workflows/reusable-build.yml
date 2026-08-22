@@ -500,8 +500,10 @@ jobs:
 
       - name: Check Secureboot
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set -x
+          set -xeuo pipefail
           if [[ ! $(command -v sbverify) || ! $(command -v curl) || ! $(command -v openssl) ]]; then
             sudo apt update
             sudo apt install sbsigntool curl openssl
@@ -510,12 +512,9 @@ jobs:
           podman cp checksb:/usr/lib/modules/${{ env.KERNEL_VERSION }}/vmlinuz .
           podman rm -f  checksb
           sbverify --list vmlinuz
-          curl --retry 3 --retry-delay 5 -Lo kernel-sign.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key.der
-          curl --retry 3 --retry-delay 5 -Lo akmods.der https://github.com/ublue-os/kernel-cache/raw/main/certs/public_key_2.der
-          openssl x509 -in kernel-sign.der -out kernel-sign.crt
-          openssl x509 -in akmods.der -out akmods.crt
+          kernel_sign=$(just --justfile ucore/Justfile --working-directory ucore ci-dep kernel-sign)
+          openssl x509 -in "${kernel_sign}" -out kernel-sign.crt
           sbverify --cert kernel-sign.crt vmlinuz || exit 1
-          sbverify --cert akmods.crt vmlinuz || exit 1
 
       - name: Login to GitHub Container Registry
         if: needs.workflow_info.outputs.publish == 'true'
@@ -606,6 +605,12 @@ jobs:
       - name: Mount BTRFS for podman storage
         uses: ublue-os/container-storage-action@dc1f4c8f17b672069e921f001132f7cf98a423a6 # main
 
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
       - name: Login to GitHub Container Registry
         run: |
           printf '%s' "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -644,6 +649,8 @@ jobs:
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
 
       - name: Update Buildah
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -653,11 +660,10 @@ jobs:
             *) printf "Invalid architecture" >&2; exit 1 ;;
           esac
 
-          # Buildah >=1.44.0 is incompatible with the ubuntu-24.04 Podman stack.
-          BUILDAH_VERSION=v1.43.2
-          echo "Installing Buildah $BUILDAH_VERSION for $IMAGE_ARCH"
-          curl -fsSL "https://github.com/bsherman/buildah-static/releases/download/${BUILDAH_VERSION}/buildah-${IMAGE_ARCH:?}.tar.gz" \
-            | tar -xzf - -C /usr/local/bin/
+          echo "Installing verified Buildah for $IMAGE_ARCH"
+          tgz=$(just --justfile ucore/Justfile --working-directory ucore \
+              ci-dep "buildah-${IMAGE_ARCH:?}")
+          tar -xzf "${tgz}" -C /usr/local/bin/
 
           # Workaround issues between custom buildah installation and apparmor
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0

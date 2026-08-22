@@ -4,7 +4,10 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^ucore/github-pkgs-(x86_64|aarch64|noarch)\\.json$/"],
+      "managerFilePatterns": [
+        "/^ucore/github-pkgs-(x86_64|aarch64|noarch)\\.json$/",
+        "/^ucore/ci-deps\\.json$/"
+      ],
       "matchStrings": [
         "\"repo\":\\s*\"(?<depName>[^\"]+)\"[^}]*?\"version\":\\s*\"(?<currentValue>[^\"]+)\""
       ],
@@ -18,16 +21,6 @@
       ],
       "datasourceTemplate": "git-refs",
       "packageNameTemplate": "https://github.com/{{{depName}}}"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["/^\\.github/workflows/reusable-build\\.yml$/"],
-      "matchStrings": [
-        "BUILDAH_VERSION=(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
-      ],
-      "depNameTemplate": "bsherman/buildah-static",
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -44,7 +37,8 @@
     "fileFilters": [
       "ucore/github-pkgs-x86_64.json",
       "ucore/github-pkgs-aarch64.json",
-      "ucore/github-pkgs-noarch.json"
+      "ucore/github-pkgs-noarch.json",
+      "ucore/ci-deps.json"
     ],
     "executionMode": "update"
   }
