@@ -90,7 +90,7 @@ jobs:
     name: "Sentinel: ucore${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     if: (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.force_build)) && !cancelled()
     needs: [stream_info]
-    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
       actions: write
       contents: read
@@ -122,7 +122,15 @@ jobs:
 
           runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
           echo "Selected OCI runtime: ${runtime_path}"
-          # The 20260726 runner image pairs Podman 5.x with stale crun 1.14.1.
+
+          # ubuntu-24.04 static-bundle Podman paired 5.x with stale crun; keep for rollback.
+          # shellcheck disable=SC1091
+          . /etc/os-release
+          if [[ "${VERSION_ID}" != "24.04" ]]; then
+              echo "Skipping crun runtime workaround on Ubuntu ${VERSION_ID}"
+              exit 0
+          fi
+
           if [[ "${runtime_path}" == "/usr/bin/crun" && -x /usr/local/bin/crun ]]; then
               sudo install -d -m 755 /etc/containers/containers.conf.d
               printf '[engine.runtimes]\ncrun = ["/usr/local/bin/crun"]\n' \
@@ -285,7 +293,7 @@ jobs:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     if: needs.workflow_info.result == 'success' && needs.stream_info.result == 'success' && needs.sentinel_decision.outputs.changed == 'true' && !cancelled()
     needs: [workflow_info, stream_info, sentinel_decision]
-    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
       actions: write
       contents: read
@@ -329,7 +337,15 @@ jobs:
 
           runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
           echo "Selected OCI runtime: ${runtime_path}"
-          # The 20260726 runner image pairs Podman 5.x with stale crun 1.14.1.
+
+          # ubuntu-24.04 static-bundle Podman paired 5.x with stale crun; keep for rollback.
+          # shellcheck disable=SC1091
+          . /etc/os-release
+          if [[ "${VERSION_ID}" != "24.04" ]]; then
+              echo "Skipping crun runtime workaround on Ubuntu ${VERSION_ID}"
+              exit 0
+          fi
+
           if [[ "${runtime_path}" == "/usr/bin/crun" && -x /usr/local/bin/crun ]]; then
               sudo install -d -m 755 /etc/containers/containers.conf.d
               printf '[engine.runtimes]\ncrun = ["/usr/local/bin/crun"]\n' \
@@ -583,7 +599,7 @@ jobs:
 
   push_and_sign:
     name: "Push and sign: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: needs.check_builds.result == 'success' && needs.build_image.result == 'success' && needs.sentinel_decision.outputs.changed == 'true' && needs.workflow_info.outputs.publish == 'true' && !cancelled()
     needs: [workflow_info, sentinel_decision, check_builds, build_image]
     permissions:
@@ -653,6 +669,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
+          # ubuntu-24.04 apt buildah is 1.33; keep the pin so jobs can roll back.
+          # shellcheck disable=SC1091
+          . /etc/os-release
+          if [[ "${VERSION_ID}" != "24.04" ]]; then
+              echo "Using distro Buildah on Ubuntu ${VERSION_ID}: $(buildah --version)"
+              exit 0
+          fi
 
           case "$(uname -m)" in
             x86_64) IMAGE_ARCH='amd64' ;;
