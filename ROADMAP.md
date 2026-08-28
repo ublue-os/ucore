@@ -10,10 +10,10 @@ exploration — the general direction we hope to go, not yet a commitment.
 Harden the build and release pipeline before it grows more publish paths
 (more on that below).
 
-- **Emergency CoreOS pin** ([#413](https://github.com/ublue-os/ucore/issues/413)) —
+- [x] **Emergency CoreOS pin** ([#413](https://github.com/ublue-os/ucore/issues/413)) —
   documented in `just stream-info`: when a Fedora CoreOS release is known-bad,
   pin `IMAGE_VERSION` in that recipe so nightlies and PRs stay off it.
-- **Verify checksums for CI dependencies** ([#367](https://github.com/ublue-os/ucore/issues/367)) —
+- [x] **Verify checksums for CI dependencies** ([#367](https://github.com/ublue-os/ucore/issues/367)) —
   pin and checksum-verify the build tooling and signing keys the pipeline
   fetches at build time, the same way package manifests already are.
 - **Sandbox end-to-end publication testing** ([#414](https://github.com/ublue-os/ucore/issues/414)) —
