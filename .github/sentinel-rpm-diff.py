@@ -15,6 +15,10 @@ from urllib.parse import parse_qs, urlparse
 SBOM_ARTIFACT_TYPE = "application/vnd.spdx+json"
 
 
+class MissingSBOMError(RuntimeError):
+    pass
+
+
 def run_command(command: list[str]) -> str:
     result = subprocess.run(command, check=False, capture_output=True, text=True)
     if result.returncode != 0:
@@ -77,7 +81,7 @@ def discover_sbom(image_ref: str, digest: str) -> str:
         referrer_digest = referrer.get("digest")
         if referrer_digest:
             return f"{repository}@{referrer_digest}"
-    raise RuntimeError(f"{repository}@{digest}: no SPDX SBOM referrer found")
+    raise MissingSBOMError(f"{repository}@{digest}: no SPDX SBOM referrer found")
 
 
 def pull_sbom(artifact_ref: str) -> Path:
@@ -153,7 +157,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     digest = platform_digest(args.published_image, args.arch)
-    published_sbom = pull_sbom(discover_sbom(args.published_image, digest))
+    try:
+        published_sbom = pull_sbom(discover_sbom(args.published_image, digest))
+    except MissingSBOMError as exc:
+        print(f"::warning::{exc}; running a full build to repair the published image", file=sys.stderr)
+        print("changed=true")
+        return 0
     if has_diff(rpm_packages(published_sbom), rpm_packages(args.candidate_sbom)):
         print("changed=true")
     else:

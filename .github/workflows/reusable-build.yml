@@ -631,6 +631,24 @@ jobs:
         run: |
           printf '%s' "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # Install publication tools before changing any public tags. A setup failure
+      # must leave the last complete release in place.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v2.6.5"
+
+      - name: Login to GitHub Container Registry for cosign
+        run: |
+          printf '%s' "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Login to GitHub Container Registry with ORAS
+        run: |
+          printf '%s' "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
       - name: Set matrix environment variables
         shell: bash
         run: |
@@ -663,6 +681,27 @@ jobs:
           tags="${{ steps.meta.outputs.tags }}"
           tags_space=$(printf '%s' "$tags" | tr '\n' ' ' | xargs)
           echo "tags=${tags_space}" >> $GITHUB_OUTPUT
+
+      - name: Separate immutable and floating tags
+        id: publication-tags
+        env:
+          MANIFEST_TAGS: ${{ steps.single-line.outputs.tags }}
+        run: |
+          set -euo pipefail
+          immutable_tags=()
+          floating_tags=()
+          for tag in ${MANIFEST_TAGS}; do
+            case "${tag}" in
+              "${TAG_VERSION}"|latest) floating_tags+=("${tag}") ;;
+              *) immutable_tags+=("${tag}") ;;
+            esac
+          done
+          if [[ "${#immutable_tags[@]}" -eq 0 || "${#floating_tags[@]}" -eq 0 ]]; then
+            echo "::error::Expected both immutable and floating publication tags"
+            exit 1
+          fi
+          echo "immutable=${immutable_tags[*]}" >> "${GITHUB_OUTPUT}"
+          echo "floating=${floating_tags[*]}" >> "${GITHUB_OUTPUT}"
 
       - name: Update Buildah
         env:
@@ -732,80 +771,29 @@ jobs:
           echo 'Podman image state:'
           podman images
 
-      - name: Push Manifest to GHCR
-        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-        id: push
-        env:
-          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-          MANIFEST_TAGS: ${{ steps.single-line.outputs.tags }}
-        with:
-          max_attempts: 3
-          retry_wait_seconds: 15
-          timeout_minutes: 15
-          command: |
-            set -ex
-            for tag in $MANIFEST_TAGS; do
-              podman manifest push --digestfile /tmp/digest.txt --all "$IMAGE_NAME:$tag" "docker://$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
-            done
-            # Set outputs for subsequent steps
-            first_tag=$(echo "$MANIFEST_TAGS" | cut -d ' ' -f 1 | xargs)
-            echo "digest=$(cat /tmp/digest.txt)" >> $GITHUB_OUTPUT
-            echo "registry-path=$IMAGE_REGISTRY/$IMAGE_NAME:$first_tag" >> $GITHUB_OUTPUT
-
-      # Sign container
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        with:
-          cosign-release: "v2.6.5"
-
-      - name: Login to GitHub Container Registry for cosign
-        run: |
-          printf '%s' "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
-
       - name: Sign member images
         shell: bash
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
-          # Sign each member image (IMAGE_REF@IMAGE_DIGEST) from the build artifacts.
           set -xeuo pipefail
-
           shopt -s nullglob
           ENVFILES=(images/*/image.env)
-          if [ ${#ENVFILES[@]} -eq 0 ]; then
-            echo "No image.env files found under images/; nothing to sign"
-            exit 0
+          if [[ ${#ENVFILES[@]} -eq 0 ]]; then
+            echo "::error::No image.env files found under images/"
+            exit 1
           fi
-
-          for f in "${ENVFILES[@]}"; do
-            echo "Sourcing $f"
+          for file in "${ENVFILES[@]}"; do
             # shellcheck disable=SC1090
-            source "$f"   # sets IMAGE_REF and IMAGE_DIGEST
-            if [ -z "${IMAGE_REF:-}" ] || [ -z "${IMAGE_DIGEST:-}" ]; then
-              echo "Missing IMAGE_REF or IMAGE_DIGEST in $f" >&2
+            source "${file}"
+            if [[ -z "${IMAGE_REF:-}" || -z "${IMAGE_DIGEST:-}" ]]; then
+              echo "::error::Missing IMAGE_REF or IMAGE_DIGEST in ${file}"
               exit 1
             fi
             echo "Signing ${IMAGE_REF}@${IMAGE_DIGEST}"
             cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE_REF}@${IMAGE_DIGEST}"
           done
-
-      - name: Sign container manifest
-        env:
-          REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
-          DIGEST: ${{ steps.push.outputs.digest }}
-          COSIGN_EXPERIMENTAL: false
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-        run: |
-          echo "Signing ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}"
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
-
-      - name: Install ORAS
-        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
-
-      - name: Login to GitHub Container Registry with ORAS
-        run: |
-          printf '%s' "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Upload SBOMs
         id: upload-sbom
@@ -820,7 +808,6 @@ jobs:
               echo "::error::Missing IMAGE_REF or IMAGE_DIGEST in ${SBOM_DIR}/image.env"
               exit 1
             fi
-
             sbom_ref="$(oras attach \
               --artifact-type application/vnd.spdx+json \
               --annotation filename=sbom.json \
@@ -828,24 +815,23 @@ jobs:
               "${SBOM_FILE}" \
               --format go-template \
               --template '{{ .reference }}')"
-
             if [[ -z "${sbom_ref}" ]]; then
               echo "::error::ORAS did not return an SBOM artifact reference for ${IMAGE_REF}@${IMAGE_DIGEST}"
               exit 1
             fi
             SBOM_REFS+=("${sbom_ref}")
           done < <(find images -type f -name "sbom.json" -print0)
-
           if [[ "${#SBOM_REFS[@]}" -eq 0 ]]; then
             echo "::error::No SBOM files found under images/"
             exit 1
           fi
+          {
+            echo "sbom_refs<<EOF"
+            printf '%s\n' "${SBOM_REFS[@]}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
 
-          echo "sbom_refs<<EOF" >> "$GITHUB_OUTPUT"
-          printf '%s\n' "${SBOM_REFS[@]}" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-      - name: Sign SBOM OCI Artifacts
+      - name: Sign SBOM OCI artifacts
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
@@ -853,9 +839,75 @@ jobs:
           set -xeuo pipefail
           mapfile -t SBOM_REFS <<< "${{ steps.upload-sbom.outputs.sbom_refs }}"
           for sbom_ref in "${SBOM_REFS[@]}"; do
-            echo "Signing SBOM artifact: ${sbom_ref}"
             cosign sign -y --key env://COSIGN_PRIVATE_KEY "${sbom_ref}"
           done
+
+      - name: Verify member SBOMs
+        run: |
+          set -xeuo pipefail
+          shopt -s nullglob
+          ENVFILES=(images/*/image.env)
+          for file in "${ENVFILES[@]}"; do
+            # shellcheck disable=SC1090
+            source "${file}"
+            referrers="$(oras discover \
+              --format json \
+              --depth 1 \
+              --artifact-type application/vnd.spdx+json \
+              "${IMAGE_REF:?}@${IMAGE_DIGEST:?}")"
+            jq -e '((.referrers // .manifests // []) | length) > 0' <<< "${referrers}"
+          done
+
+      - name: Push immutable manifests to GHCR
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        id: push
+        env:
+          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          MANIFEST_TAGS: ${{ steps.publication-tags.outputs.immutable }}
+        with:
+          max_attempts: 3
+          retry_wait_seconds: 15
+          timeout_minutes: 15
+          command: |
+            set -ex
+            for tag in $MANIFEST_TAGS; do
+              podman manifest push --digestfile /tmp/digest.txt --all "$IMAGE_NAME:$tag" "docker://$IMAGE_REGISTRY/$IMAGE_NAME:$tag"
+            done
+            # Set outputs for subsequent steps
+            first_tag=$(echo "$MANIFEST_TAGS" | cut -d ' ' -f 1 | xargs)
+            echo "digest=$(cat /tmp/digest.txt)" >> $GITHUB_OUTPUT
+            echo "registry-path=$IMAGE_REGISTRY/$IMAGE_NAME:$first_tag" >> $GITHUB_OUTPUT
+
+      - name: Sign container manifest
+        env:
+          REGISTRY_PATH: ${{ steps.push.outputs.registry-path }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+        run: |
+          echo "Signing ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
+
+      - name: Promote floating tags
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          FLOATING_TAGS: ${{ steps.publication-tags.outputs.floating }}
+          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        with:
+          max_attempts: 3
+          retry_wait_seconds: 15
+          timeout_minutes: 15
+          command: |
+            set -xeuo pipefail
+            source_ref="docker://${IMAGE_REGISTRY}/${IMAGE_NAME}@${DIGEST:?}"
+            for tag in ${FLOATING_TAGS}; do
+              skopeo copy --all --preserve-digests "${source_ref}" "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${tag}"
+              promoted_digest="$(skopeo inspect --no-tags --format '{{.Digest}}' "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${tag}")"
+              [[ "${promoted_digest}" == "${DIGEST}" ]]
+            done
 
   publish_release:
     name: Publish release notes
