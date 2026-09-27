@@ -23,13 +23,6 @@
       "packageNameTemplate": "https://github.com/{{{depName}}}"
     }
   ],
-  "packageRules": [
-    {
-      "description": "Buildah >=1.44.0 requires a newer ubuntu-24.04 Podman stack",
-      "matchPackageNames": ["bsherman/buildah-static"],
-      "allowedVersions": "<1.44.0"
-    }
-  ],
   "postUpgradeTasks": {
     "commands": [
       "bash ucore/ci/renovate-refresh-github-pkgs.sh"
