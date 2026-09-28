@@ -49,7 +49,7 @@ jobs:
 
   stream_info:
     name: "Stream Info: ${{ matrix.arch }}"
-    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' }}
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
       actions: write
       contents: read
@@ -105,44 +105,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Configure OCI runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
-          podman --version
-          if [[ -x /usr/bin/crun ]]; then
-              /usr/bin/crun --version
-          fi
-          if [[ -x /usr/local/bin/crun ]]; then
-              /usr/local/bin/crun --version
-          fi
-
-          runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
-          echo "Selected OCI runtime: ${runtime_path}"
-
-          # ubuntu-24.04 static-bundle Podman paired 5.x with stale crun; keep for rollback.
-          # shellcheck disable=SC1091
-          . /etc/os-release
-          if [[ "${VERSION_ID}" != "24.04" ]]; then
-              echo "Skipping crun runtime workaround on Ubuntu ${VERSION_ID}"
-              exit 0
-          fi
-
-          if [[ "${runtime_path}" == "/usr/bin/crun" && -x /usr/local/bin/crun ]]; then
-              sudo install -d -m 755 /etc/containers/containers.conf.d
-              printf '[engine.runtimes]\ncrun = ["/usr/local/bin/crun"]\n' \
-                  | sudo tee /etc/containers/containers.conf.d/00-fix-runtime.conf >/dev/null
-
-              runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
-              echo "Selected OCI runtime after workaround: ${runtime_path}"
-              if [[ "${runtime_path}" != "/usr/local/bin/crun" ]]; then
-                  echo "Failed to select /usr/local/bin/crun" >&2
-                  exit 1
-              fi
-          fi
 
       - name: Setup Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
@@ -320,44 +282,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Configure OCI runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
-          podman --version
-          if [[ -x /usr/bin/crun ]]; then
-              /usr/bin/crun --version
-          fi
-          if [[ -x /usr/local/bin/crun ]]; then
-              /usr/local/bin/crun --version
-          fi
-
-          runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
-          echo "Selected OCI runtime: ${runtime_path}"
-
-          # ubuntu-24.04 static-bundle Podman paired 5.x with stale crun; keep for rollback.
-          # shellcheck disable=SC1091
-          . /etc/os-release
-          if [[ "${VERSION_ID}" != "24.04" ]]; then
-              echo "Skipping crun runtime workaround on Ubuntu ${VERSION_ID}"
-              exit 0
-          fi
-
-          if [[ "${runtime_path}" == "/usr/bin/crun" && -x /usr/local/bin/crun ]]; then
-              sudo install -d -m 755 /etc/containers/containers.conf.d
-              printf '[engine.runtimes]\ncrun = ["/usr/local/bin/crun"]\n' \
-                  | sudo tee /etc/containers/containers.conf.d/00-fix-runtime.conf >/dev/null
-
-              runtime_path="$(podman info --format '{{.Host.OCIRuntime.Path}}')"
-              echo "Selected OCI runtime after workaround: ${runtime_path}"
-              if [[ "${runtime_path}" != "/usr/local/bin/crun" ]]; then
-                  echo "Failed to select /usr/local/bin/crun" >&2
-                  exit 1
-              fi
-          fi
 
       - name: Setup Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
@@ -703,34 +627,6 @@ jobs:
           echo "immutable=${immutable_tags[*]}" >> "${GITHUB_OUTPUT}"
           echo "floating=${floating_tags[*]}" >> "${GITHUB_OUTPUT}"
 
-      - name: Update Buildah
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          # ubuntu-24.04 apt buildah is 1.33; keep the pin so jobs can roll back.
-          # shellcheck disable=SC1091
-          . /etc/os-release
-          if [[ "${VERSION_ID}" != "24.04" ]]; then
-              echo "Using distro Buildah on Ubuntu ${VERSION_ID}: $(buildah --version)"
-              exit 0
-          fi
-
-          case "$(uname -m)" in
-            x86_64) IMAGE_ARCH='amd64' ;;
-            aarch64) IMAGE_ARCH='arm64' ;;
-            *) printf "Invalid architecture" >&2; exit 1 ;;
-          esac
-
-          echo "Installing verified Buildah for $IMAGE_ARCH"
-          tgz=$(just --justfile ucore/Justfile --working-directory ucore \
-              ci-dep "buildah-${IMAGE_ARCH:?}")
-          tar -xzf "${tgz}" -C /usr/local/bin/
-
-          # Workaround issues between custom buildah installation and apparmor
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-
       - name: Create multi-arch manifest
         shell: bash
         run: |
@@ -911,7 +807,7 @@ jobs:
 
   publish_release:
     name: Publish release notes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: needs.push_and_sign.result == 'success' && needs.workflow_info.outputs.publish == 'true' && !cancelled() && startsWith(github.ref, 'refs/heads/main')
     needs: [workflow_info, push_and_sign]
     permissions:
