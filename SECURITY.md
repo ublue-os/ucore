@@ -3,8 +3,8 @@
 uCore is a volunteer-run project. The images are built on Fedora CoreOS and add
 packages from Fedora, a few other repositories, and a small number of upstream
 GitHub releases. uCore does not patch or version-bump those packages itself.
-Images build daily, so an update published upstream reaches uCore in the next
-build after it lands.
+Images build freqently, so an update published upstream reaches uCore in the
+next build after it lands.
 
 The kernel and the ZFS and NVIDIA kernel modules are the exception. They come
 from [ublue-os/akmods](https://github.com/ublue-os/akmods), which caches the
