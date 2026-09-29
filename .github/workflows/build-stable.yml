@@ -16,8 +16,15 @@ on:
         required: false
         type: boolean
 
+permissions:
+  contents: read
+
 jobs:
   build-stable:
+    permissions:
+      actions: write
+      contents: write
+      packages: write
     uses: ./.github/workflows/reusable-build.yml
     secrets: inherit
     with:
