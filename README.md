@@ -3,6 +3,7 @@
 [![lts](https://github.com/ublue-os/ucore/actions/workflows/build-lts.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-lts.yml)
 [![stable](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-stable.yml)
 [![testing](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml/badge.svg)](https://github.com/ublue-os/ucore/actions/workflows/build-testing.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ublue-os/ucore/badge)](https://scorecard.dev/viewer/?uri=github.com/ublue-os/ucore)
 
 uCore is a set of Fedora CoreOS-based server images for container hosting, storage, and virtualization.
 
