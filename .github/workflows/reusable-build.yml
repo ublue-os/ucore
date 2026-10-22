@@ -79,7 +79,7 @@ jobs:
             just --justfile ucore/Justfile --working-directory ucore \
                 stream-info ../stream-info.env
       - name: Upload stream info as artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: stream-info-${{ matrix.arch }}
           path: |
@@ -190,7 +190,7 @@ jobs:
               | tee sentinel-result.env
 
       - name: Upload sentinel result
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sentinel${{ matrix.nvidia_tag }}-${{ matrix.arch }}
           path: |
@@ -422,7 +422,7 @@ jobs:
 
       - name: Upload failed SBOM and RPM database
         if: failure() && steps.validate-sbom.outcome == 'failure'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failed-sbom-and-rpmdb-${{ env.IMAGE_NAME }}${{ matrix.nvidia_tag }}-${{ matrix.arch }}
           path: |
@@ -494,7 +494,7 @@ jobs:
 
       - name: Upload image metadata as artifact
         if: needs.workflow_info.outputs.publish == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image-ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag != '' && matrix.nvidia_tag || '-default' }}-${{ matrix.arch }}
           path: |
@@ -855,7 +855,7 @@ jobs:
           echo "release_title=${RELEASE_TITLE}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload changelog artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: changelog-${{ steps.changelog.outputs.release_tag }}
           path: |
