@@ -4,6 +4,8 @@ set -ouex pipefail
 
 # install packages
 dnf -y install nfs-utils nfs-client-utils --allowerasing
+# Explicitly retain filesystem tools now that FCOS provides udisks2 without
+# weak dependencies: https://github.com/ublue-os/ucore/issues/453
 dnf -y install \
     NetworkManager-wifi \
     atheros-firmware \
@@ -11,6 +13,8 @@ dnf -y install \
     cockpit-storaged \
     distrobox \
     duperemove \
+    exfatprogs \
+    f2fs-tools \
     hdparm \
     iwlegacy-firmware \
     iwlwifi-dvm-firmware \
@@ -18,6 +22,11 @@ dnf -y install \
     lm_sensors \
     man-db \
     mt7xxx-firmware \
+    nilfs-utils \
+    ntfs-3g \
+    ntfs-3g-libs \
+    ntfs-3g-system-compression \
+    ntfsprogs \
     nxpwireless-firmware \
     pciutils \
     pcp-zeroconf \
@@ -28,6 +37,7 @@ dnf -y install \
     smartctl \
     snapraid \
     tiwilink-firmware \
+    udftools \
     usbutils \
     xdg-dbus-proxy \
     xdg-user-dirs
