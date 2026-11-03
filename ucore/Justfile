@@ -3,7 +3,7 @@ set dotenv-load
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
 export AKMODS_REGISTRY := env("AKMODS_REGISTRY", "ghcr.io/ublue-os")
 export UCORE_STREAM := env("UCORE_STREAM", "stable")
-export FEDORA_VERSION := env("FEDORA_VERSION", "44")
+export FEDORA_VERSION := env("FEDORA_VERSION", "45")
 export IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
@@ -60,9 +60,9 @@ upstream-image:
 # If a stream release is known-bad, pin `image` in this recipe after
 # upstream-version and before the fedora/akmods inspect. Do not edit
 # upstream-version. Example (F42 pattern from pre-#415):
-#   if [[ "${image}" == "44.YYYYMMDD.N.N" ]]; then
-#     echo "WARNING: overriding known-bad CoreOS ${image} -> 44.GOOD.N.N (#NNNN)" >&2
-#     image="44.GOOD.N.N"
+#   if [[ "${image}" == "45.YYYYMMDD.N.N" ]]; then
+#     echo "WARNING: overriding known-bad CoreOS ${image} -> 45.GOOD.N.N (#NNNN)" >&2
+#     image="45.GOOD.N.N"
 #   fi
 # The pin holds nightlies and PRs. Remove it once a good upstream exists.
 # Emergency CoreOS pin: https://github.com/ublue-os/ucore/issues/413
