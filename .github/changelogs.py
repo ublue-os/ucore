@@ -129,6 +129,7 @@ KEY_PACKAGE_NAMES = [
     "containerd",
     "ignition",
     "kernel",
+    "kernel-longterm",
     "podman",
     "rpm-ostree",
     "systemd",
