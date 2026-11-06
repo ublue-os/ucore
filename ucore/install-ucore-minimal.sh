@@ -44,6 +44,8 @@ dnf -y copr enable ublue-os/packages && dnf -y copr disable ublue-os/packages
 dnf -y copr enable ublue-os/staging && dnf -y copr disable ublue-os/staging
 
 #### INSTALL
+/ctx/fix-coreos-selinux-policy.sh
+
 # inspect to see what RPMS we copied in
 find /tmp/rpms/
 
