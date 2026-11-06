@@ -19,23 +19,29 @@ KERNEL_VERSION=$(find "$KERNEL_NAME"-*.rpm | grep -P "$KERNEL_NAME-(\d+\.\d+\.\d
 popd
 
 #### PREPARE
-# enable testing repos if not enabled on testing stream
-if [[ "testing" == "${UCORE_STREAM}" ]]; then
-for REPO in $(ls /etc/yum.repos.d/fedora-updates-testing.repo); do
-  if [[ "$(grep enabled=1 ${REPO} > /dev/null; echo $?)" == "1" ]]; then
-    echo "enabling $REPO" &&
-    sed -i '0,/enabled=0/{s/enabled=0/enabled=1/}' ${REPO}
-  fi
+dnf -y install dnf5-plugins
+
+# F45 stores vendor repos under /usr/share/dnf5/repos.d. Discover IDs through
+# DNF and write overrides instead of editing files in either repo directory.
+REPO_IDS="$(dnf5 repo list --all --json | jq -er 'map(.id) | join("\n")')"
+for REPO in updates-testing fedora-cisco-openh264 fedora-cisco-openh264-debuginfo fedora-cisco-openh264-source; do
+    if [[ "${REPO}" == updates-testing && "${UCORE_STREAM}" != testing ]]; then
+        continue
+    fi
+    if ! grep -Fxq -- "${REPO}" <<< "${REPO_IDS}"; then
+        echo "Skipping absent optional repository: ${REPO}"
+        continue
+    fi
+    if [[ "${REPO}" == updates-testing ]]; then
+        dnf5 config-manager setopt "${REPO}.enabled=1"
+    else
+        dnf5 config-manager setopt "${REPO}.enabled=0"
+    fi
 done
-fi
 
 # keep ublue-os COPR repos scoped to the packages that explicitly need them
-dnf -y install dnf5-plugins
 dnf -y copr enable ublue-os/packages && dnf -y copr disable ublue-os/packages
 dnf -y copr enable ublue-os/staging && dnf -y copr disable ublue-os/staging
-
-# always disable cisco-open264 repo
-sed -i 's@enabled=1@enabled=0@g' /etc/yum.repos.d/fedora-cisco-openh264.repo
 
 #### INSTALL
 # inspect to see what RPMS we copied in
