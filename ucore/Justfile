@@ -61,7 +61,7 @@ upstream-image:
 # upstream-version and before the fedora/akmods inspect. Do not edit
 # upstream-version. Example (F42 pattern from pre-#415):
 #   if [[ "${image}" == "44.YYYYMMDD.N.N" ]]; then
-#     echo "WARNING: overriding known-bad CoreOS ${image} -> 45.GOOD.N.N (#NNNN)" >&2
+#     echo "WARNING: overriding known-bad CoreOS ${image} -> 44.GOOD.N.N (#NNNN)" >&2
 #     image="44.GOOD.N.N"
 #   fi
 # The pin holds nightlies and PRs. Remove it once a good upstream exists.
