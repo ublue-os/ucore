@@ -323,7 +323,19 @@ gen-sbom image='' output='':
     WORK_DIR="$(mktemp -d)"
     ROOTFS="${WORK_DIR}/rootfs"
     CONTAINER="gen-sbom-${RANDOM}-${RANDOM}"
-    trap 'podman container rm -f "${CONTAINER}" >/dev/null 2>&1 || true; rm -rf "${WORK_DIR}"' EXIT
+    cleanup() {
+        status=$?
+        podman container rm -f "$CONTAINER" >/dev/null 2>&1 || true
+        # Exported directories may be read-only. Change permissions only after scanning.
+        if ! { find "$WORK_DIR" -type d -exec chmod u+rwx {} \; && rm -rf "$WORK_DIR"; }; then
+            printf 'Failed to clean up SBOM temporary directory: %s\n' "$WORK_DIR" >&2
+            if [ "$status" -eq 0 ]; then
+                status=1
+            fi
+        fi
+        exit "$status"
+    }
+    trap cleanup EXIT
 
     mkdir -p "$ROOTFS" "$(dirname "$OUTPUT")"
     podman container create --name "$CONTAINER" "$IMAGE" >/dev/null

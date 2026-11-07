@@ -16,8 +16,22 @@ install -Dpm 0644 "$policy_source" /etc/containers/policy.json
 jq -e '.transports.docker["ghcr.io/ublue-os"] | any(.type == "sigstoreSigned")' \
     /etc/containers/policy.json >/dev/null
 
-# this currently fails on /usr/etc and /var/cache
-#bootc container lint
-ostree container commit
+# Remove build-time runtime files without following symlinks or entering mounts.
+clean_runtime_dir() {
+    local entry
+    for entry in "$1"/* "$1"/.[!.]* "$1"/..?*; do
+        [[ -e "${entry}" || -L "${entry}" ]] || continue
+        mountpoint -q -- "${entry}" && continue
+        if [[ -d "${entry}" && ! -L "${entry}" ]]; then
+            clean_runtime_dir "${entry}"
+            rmdir --ignore-fail-on-non-empty -- "${entry}"
+        else
+            rm -f -- "${entry}"
+        fi
+    done
+}
+clean_runtime_dir /run
+
+# Containerfile.in runs bootc container lint after cleanup for each image stage.
 mkdir -p /var/tmp \
 && chmod -R 1777 /var/tmp

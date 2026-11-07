@@ -6,5 +6,13 @@
     "release": "44",
     "url": "https://github.com/trapexit/mergerfs/releases/download/2.42.0/mergerfs-2.42.0-1.fc44.x86_64.rpm",
     "sha256": "5b01fba27b22f4a0b16fe4ebef335e73f47593d8c77e3813cc1cafb65d807c62"
+  },
+  {
+    "name": "mergerfs",
+    "repo": "trapexit/mergerfs",
+    "version": "2.42.0",
+    "release": "45",
+    "url": "https://github.com/trapexit/mergerfs/releases/download/2.42.0/mergerfs-2.42.0-1.fc44.x86_64.rpm",
+    "sha256": "5b01fba27b22f4a0b16fe4ebef335e73f47593d8c77e3813cc1cafb65d807c62"
   }
 ]

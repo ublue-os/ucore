@@ -224,6 +224,26 @@ class TieredDiffTests(unittest.TestCase):
         self.assertNotIn("uCore HCI NVIDIA LTS — Additional Changes", text)
 
 
+class MajorPackagesTests(unittest.TestCase):
+    def test_shows_installed_kernel_package(self) -> None:
+        for package_name in ("kernel", "kernel-longterm"):
+            with self.subTest(package_name=package_name):
+                packages_by_variant = {variant: {} for variant in CHANGELOGS.VARIANTS}
+                packages_by_variant[CHANGELOGS.Variant("ucore", "uCore", "")] = {
+                    "amd64": {
+                        f"{package_name}|x86_64": CHANGELOGS.PackageEntry(
+                            name=package_name, version="6.18.57-200.fc44"
+                        ),
+                    },
+                }
+
+                text = "\n".join(CHANGELOGS.render_major_packages(packages_by_variant))
+
+                self.assertIn(f"| {package_name} | `6.18.57-200.fc44` |", text)
+                absent_package = "kernel-longterm" if package_name == "kernel" else "kernel"
+                self.assertNotIn(f"| {absent_package} |", text)
+
+
 class DatedTagsTests(unittest.TestCase):
     def test_uses_existing_tags_across_long_calendar_gaps(self) -> None:
         tags = [
