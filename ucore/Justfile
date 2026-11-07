@@ -3,7 +3,7 @@ set dotenv-load
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
 export AKMODS_REGISTRY := env("AKMODS_REGISTRY", "ghcr.io/ublue-os")
 export UCORE_STREAM := env("UCORE_STREAM", "stable")
-export FEDORA_VERSION := env("FEDORA_VERSION", "44")
+export FEDORA_VERSION := env("FEDORA_VERSION", "45")
 export IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
