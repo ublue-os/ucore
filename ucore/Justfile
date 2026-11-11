@@ -12,6 +12,7 @@ export KERNEL_VERSION := env("KERNEL_VERSION", "")
 export NVIDIA_TAG := env("NVIDIA_TAG", "")
 SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
+GIT_ROOT := env("GIT_ROOT", "$(git rev-parse --show-toplevel)")
 
 _default:
     @just --list --unsorted
@@ -389,19 +390,29 @@ changelog stream='{{ UCORE_STREAM }}' output='' env_output='' notes_file='' max_
     printf 'Wrote changelog markdown to %s\n' "$OUTPUT"
     printf 'Wrote changelog env to %s\n' "$ENV_OUTPUT"
 
-gen-disk-images stream='{{ UCORE_STREAM }}' image_suffix='' nvidia='':
+gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    STREAM='{{ stream }}'
-    IMAGE_SUFFIX='{{ image_suffix }}'
-    NVIDIA='{{ nvidia }}'
+    if [ ! -f "{{ "ucore" +  image_suffix + "-" + stream + nvidia }}.ociarchive" ]; then
+        echo "Creating OCI archive: {{ "ucore" +  image_suffix + "-" + stream + nvidia }}.ociarchive"
+        skopeo copy "docker://{{ IMAGE_REGISTRY }}/{{ "ucore" +  image_suffix + ":" + stream + nvidia }}" "oci-archive:{{ "ucore" +  image_suffix + "-" + stream + nvidia }}.ociarchive"
+    fi
 
-    echo "Creating OCI archive: ucore$IMAGE_SUFFIX-$STREAM$NVIDIA.ociarchive"
-    skopeo copy "docker://{{ IMAGE_REGISTRY }}/ucore$IMAGE_SUFFIX:$STREAM$NVIDIA" "oci-archive:ucore$IMAGE_SUFFIX-$STREAM$NVIDIA.ociarchive"
-
-    ../{{ justfile_dir() }}/custom-coreos-disk-images.sh \
+    {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
         --osname "fedora-coreos" \
         --platforms "qemu,metal,live" \
-        --ociarchive "ucore$IMAGE_SUFFIX-$STREAM$NVIDIA.ociarchive" \
-        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY }}/ucore$IMAGE_SUFFIX:$STREAM$NVIDIA"
+        --ociarchive "{{ "ucore" +  image_suffix + "-" + stream + nvidia }}.ociarchive" \
+        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY }}/{{ "ucore" +  image_suffix + ":" + stream + nvidia }}"
+
+    echo "Disk images created for {{ "ucore" +  image_suffix + "-" + stream + nvidia }}"
+
+    echo "Compressing Disk images..."
+    xz -T0 -9 -v -t {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-qemu.{{ arch }}.qcow2
+    sha256sum {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-qemu.{{ arch }}.qcow2.xz > {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-qemu.{{ arch }}.qcow2.xz.sha256
+    xz -T0 -9 -v -t {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-metal.{{ arch }}.raw
+    sha256sum {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-metal.{{ arch }}.raw.xz > {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-metal.{{ arch }}.raw.xz.sha256
+    xz -T0 -9 -v -t {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-live.{{ arch }}.iso
+    sha256sum {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-live.{{ arch }}.iso.xz > {{ "ucore" +  image_suffix + "-" + stream + nvidia }}-live.{{ arch }}.iso.xz.sha256
+
+    echo "Compression and checksum generation completed for {{ "ucore" +  image_suffix + "-" + stream + nvidia }}"

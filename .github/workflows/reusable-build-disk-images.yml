@@ -1,0 +1,91 @@
+name: build-ucore-disk-images
+on:
+  workflow_dispatch:
+    inputs:
+      ucore_stream:
+        description: "The uCore stream: stable, testing, or lts"
+        required: true
+        type: string
+      arch:
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ucore_stream:
+        description: "The uCore stream: stable, testing, or lts"
+        required: true
+        type: string
+      arch:
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
+        required: false
+        type: string
+
+env:
+  AKMODS_REGISTRY: ghcr.io/ublue-os
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
+  cancel-in-progress: true
+
+jobs:
+  # TODO: Add conditional guards
+  build_image:
+    name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
+    container:
+        image: ghcr.io/ublue-os/devcontainer:titanoboa
+        options: --privileged -v /dev:/dev -v /lib/modules:/lib/modules -v /var --tmpfs /run --tmpfs /tmp
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
+    permissions:
+      actions: write
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJson(inputs.arch) }}
+        image_suffix:
+          - "-minimal"
+          - ""
+          - "-hci"
+        nvidia_tag:
+          - ""
+          - "-nvidia-lts"
+          - "-nvidia-open"
+        include:
+          - image_suffix: "-minimal"
+            description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
+          - image_suffix: ""
+            description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
+          - image_suffix: "-hci"
+            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
+    steps:
+        - name: Prep Container
+          run: |
+            dnf -y update
+            dnf -y install git podman buildah gh \
+                           curl jq koji zstd util-linux-core \
+                           osbuild osbuild-tools osbuild-ostree \
+                           xfsprogs e2fsprogs dosfstools e2fsprogs
+            dnf -y clean all
+
+
+        - name: Checkout Repository
+          uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+          with:
+            submodules: recursive
+
+        - name: Mark Directory as Safe for Git
+          run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+        - name: Build Disk Images
+          run: |
+            just --justfile ucore/Justfile gen-disk-images \
+                ${{ inputs.ucore_stream }} \
+                ${{ matrix.image_suffix}} \
+                ${{ matrix.nvidia_tag}}
+
+        # TODO: Add support for uploading with ORAS
