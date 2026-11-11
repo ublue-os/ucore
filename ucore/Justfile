@@ -388,3 +388,20 @@ changelog stream='{{ UCORE_STREAM }}' output='' env_output='' notes_file='' max_
     "${CMD[@]}"
     printf 'Wrote changelog markdown to %s\n' "$OUTPUT"
     printf 'Wrote changelog env to %s\n' "$ENV_OUTPUT"
+
+gen-disk-images stream='{{ UCORE_STREAM }}' image_suffix='' nvidia='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    STREAM='{{ stream }}'
+    IMAGE_SUFFIX='{{ image_suffix }}'
+    NVIDIA='{{ nvidia }}'
+
+    echo "Creating OCI archive: ucore$IMAGE_SUFFIX-$STREAM$NVIDIA.ociarchive"
+    skopeo copy "docker://{{ IMAGE_REGISTRY }}/ucore$IMAGE_SUFFIX:$STREAM$NVIDIA" "oci-archive:ucore$IMAGE_SUFFIX-$STREAM$NVIDIA.ociarchive"
+
+    ../{{ justfile_dir() }}/custom-coreos-disk-images.sh \
+        --osname "fedora-coreos" \
+        --platforms "qemu,metal,live" \
+        --ociarchive "ucore$IMAGE_SUFFIX-$STREAM$NVIDIA.ociarchive" \
+        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY }}/ucore$IMAGE_SUFFIX:$STREAM$NVIDIA"
