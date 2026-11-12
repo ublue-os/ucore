@@ -63,6 +63,9 @@ jobs:
         - name: Setup Incus and Build VM
           run: |
             set -x
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
             ls -la /dev
             # Get Incus Installed and initialize it
             curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
