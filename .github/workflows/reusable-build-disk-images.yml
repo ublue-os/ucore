@@ -71,6 +71,7 @@ jobs:
                            osbuild osbuild-tools osbuild-ostree \
                            xfsprogs e2fsprogs dosfstools e2fsprogs
             dnf -y clean all
+            rm -f /etc/subuid /etc/subgid
 
 
         - name: Checkout Repository
