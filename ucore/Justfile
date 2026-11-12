@@ -395,7 +395,7 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     set -euox pipefail
     if [[ ! -f "{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" ]]; then
         echo "Creating OCI archive: {{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
-        skopeo copy "docker://{{ IMAGE_REGISTRY }}/{{ "ucore" + image_suffix + ":" + stream + nvidia }}" "oci-archive:{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
+        skopeo copy --remove-signatures "docker://{{ IMAGE_REGISTRY }}/{{ "ucore" + image_suffix + ":" + stream + nvidia }}" "oci-archive:{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
     fi
 
     {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \

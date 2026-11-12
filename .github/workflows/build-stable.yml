@@ -20,20 +20,20 @@ permissions:
   contents: read
 
 jobs:
-  build-stable:
-    permissions:
-      actions: write
-      contents: write
-      packages: write
-    uses: ./.github/workflows/reusable-build.yml
-    secrets: inherit
-    with:
-      ucore_stream: stable
-      arch: '["aarch64","x86_64"]'
-      force_build: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
+  # build-stable:
+  #   permissions:
+  #     actions: write
+  #     contents: write
+  #     packages: write
+  #   uses: ./.github/workflows/reusable-build.yml
+  #   secrets: inherit
+  #   with:
+  #     ucore_stream: stable
+  #     arch: '["aarch64","x86_64"]'
+  #     force_build: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
   
   build-stable-disk-images:
-    needs: build-stable
+    # needs: build-stable
     permissions:
       actions: write
       contents: write
