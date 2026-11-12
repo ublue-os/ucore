@@ -36,7 +36,7 @@ jobs:
   build_image:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     container:
-        image: ghcr.io/podman-container-tools/podman-machine-os-ci:latest
+        image: ghcr.io/podman-container-tools/podman-machine-os-ci:20261022t094745z
         options: --privileged -v /dev:/dev -v /lib/modules:/lib/modules -v /var --tmpfs /run:exec --tmpfs /tmp:exec
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
