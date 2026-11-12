@@ -32,14 +32,15 @@ jobs:
       arch: '["aarch64","x86_64"]'
       force_build: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
 
-  build-lts-disk-images:
-    needs: build-lts
-    permissions:
-      actions: write
-      contents: write
-      packages: write
-    uses: ./.github/workflows/reusable-build-disk-images.yml
-    secrets: inherit
-    with:
-      ucore_stream: lts
-      arch: '["aarch64","x86_64"]'
+  # TODO: DISABLE while testing
+  # build-lts-disk-images:
+  #   needs: build-lts
+  #   permissions:
+  #     actions: write
+  #     contents: write
+  #     packages: write
+  #   uses: ./.github/workflows/reusable-build-disk-images.yml
+  #   secrets: inherit
+  #   with:
+  #     ucore_stream: lts
+  #     arch: '["aarch64","x86_64"]'
