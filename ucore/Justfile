@@ -393,17 +393,18 @@ changelog stream='{{ UCORE_STREAM }}' output='' env_output='' notes_file='' max_
 gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     #!/usr/bin/env bash
     set -euox pipefail
-    if [[ ! -f "{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" ]]; then
-        echo "Creating OCI archive: {{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
-        skopeo copy --remove-signatures "docker://{{ IMAGE_REGISTRY }}/{{ "ucore" + image_suffix + ":" + stream + nvidia }}" "oci-archive:{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
+
+    if [[ ! -f "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" ]]; then
+        echo "Creating OCI archive: {{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
+        skopeo copy --remove-signatures "docker://{{ IMAGE_REGISTRY }}/{{ "ucore" + image_suffix + ":" + stream + nvidia }}" "oci-archive:{{ GIT_ROOT }}/{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
     fi
 
     mkdir -p {{ GIT_ROOT }}/output
     pushd {{ GIT_ROOT }}/output && sh {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
         --osname "fedora-coreos" \
         --platforms "qemu,metal,live" \
-        --ociarchive "{{ GIT_ROOT }}/{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
-        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY }}/{{ "ucore" + image_suffix + ":" + stream + nvidia }}"
+        --ociarchive "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
+        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}"
 
     echo "Disk images created for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"
 
