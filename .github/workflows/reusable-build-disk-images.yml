@@ -76,7 +76,10 @@ jobs:
             sudo incus info
             sudo incus launch images:fedora/45 builder --vm
             while ! sudo incus exec builder -- true; do sleep 5; done
-            sudo incus exec builder -- su -l -- dnf update -y
+            sudo incus exec builder -- dnf update -y
+            sudo incus exec builder -- dnf install -y \
+                 osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
+                 e2fsprogs dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
 
         # - name: Checkout Repository
         #   uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
