@@ -36,8 +36,8 @@ jobs:
   build_image:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     container:
-        image: ghcr.io/ublue-os/devcontainer:titanoboa
-        options: --user 0:0 --privileged --cap-add=ALL --security-opt seccomp=unconfined -v /dev:/dev -v /lib/modules:/lib/modules -v /var --tmpfs /run:exec --tmpfs /tmp:exec
+        image: ghcr.io/podman-container-tools/podman-machine-os-ci:latest
+        options: --privileged -v /dev:/dev -v /lib/modules:/lib/modules -v /var --tmpfs /run:exec --tmpfs /tmp:exec
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
       actions: write
@@ -66,10 +66,7 @@ jobs:
         - name: Prep Container
           run: |
             dnf -y update
-            dnf -y install git podman buildah gh \
-                           curl jq koji zstd util-linux-core \
-                           osbuild osbuild-tools osbuild-ostree \
-                           xfsprogs e2fsprogs dosfstools e2fsprogs
+            dnf -y install just golang-oras
             dnf -y clean all
             rm -f /etc/subuid /etc/subgid
 
