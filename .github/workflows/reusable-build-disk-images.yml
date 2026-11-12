@@ -68,16 +68,12 @@ jobs:
             sudo nft flush ruleset
             sudo incus admin init --auto
 
-            # Add user to incus-admin group
-            sudo usermod -aG incus-admin $USER
-            newgrp incus-admin
-
-            incus ls
-            incus info
-            incus launch images:fedora/45 --name builder --vm
+            sudo incus ls
+            sudo incus info
+            sudo incus launch images:fedora/45 --name builder --vm
             sleep 20
-            incus ls
-            incus exec builder -- su -l -- dnf update -y
+            sudo incus ls
+            sudo incus exec builder -- su -l -- dnf update -y
 
         # - name: Checkout Repository
         #   uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
