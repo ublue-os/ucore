@@ -75,8 +75,7 @@ jobs:
             sudo incus ls
             sudo incus info
             sudo incus launch images:fedora/45 builder --vm
-            sleep 20
-            sudo incus ls
+            while ! sudo incus exec builder -- true; do sleep 5; done
             sudo incus exec builder -- su -l -- dnf update -y
 
         # - name: Checkout Repository
