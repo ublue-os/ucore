@@ -6,3 +6,4 @@ ucore/audit
 cache
 *.ociarchive
 tmp-osbuild-*
+output

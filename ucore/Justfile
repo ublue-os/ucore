@@ -398,7 +398,8 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
         skopeo copy --remove-signatures "docker://{{ IMAGE_REGISTRY }}/{{ "ucore" + image_suffix + ":" + stream + nvidia }}" "oci-archive:{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
     fi
 
-    {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
+    mkdir -p {{ GIT_ROOT}}/output
+    pushd {{ GIT_ROOT }}/output && sh {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
         --osname "fedora-coreos" \
         --platforms "qemu,metal,live" \
         --ociarchive "{{ "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
@@ -407,11 +408,18 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     echo "Disk images created for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"
 
     echo "Compressing Disk images..."
-    xz -T0 -9 -v -t {{ "ucore" + image_suffix + "-" + stream + nvidia }}-qemu.{{ arch() }}.qcow2
+    xz_command="xz -T0 -9 -v -t"
+
+    #Qemu QCOW2
+    $xz_command {{ "ucore" + image_suffix + "-" + stream + nvidia }}-qemu.{{ arch() }}.qcow2
     sha256sum {{ "ucore" + image_suffix + "-" + stream + nvidia }}-qemu.{{ arch() }}.qcow2.xz > {{ "ucore" + image_suffix + "-" + stream + nvidia }}-qemu.{{ arch() }}.qcow2.xz.sha256
-    xz -T0 -9 -v -t {{ "ucore" + image_suffix + "-" + stream + nvidia }}-metal.{{ arch() }}.raw
+
+    #Metal raw
+    $xz_command {{ "ucore" + image_suffix + "-" + stream + nvidia }}-metal.{{ arch() }}.raw
     sha256sum {{ "ucore" + image_suffix + "-" + stream + nvidia }}-metal.{{ arch() }}.raw.xz > {{ "ucore" + image_suffix + "-" + stream + nvidia }}-metal.{{ arch() }}.raw.xz.sha256
-    xz -T0 -9 -v -t {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso
+
+    #Live iso
+    $xz_command {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso
     sha256sum {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso.xz > {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso.xz.sha256
 
     echo "Compression and checksum generation completed for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"
