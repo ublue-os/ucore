@@ -62,6 +62,7 @@ jobs:
     steps:
         - name: Setup Incus and Build VM
           run: |
+            set -x
             # Get Incus Installed and initialize it
             curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
             sudo nft flush ruleset
