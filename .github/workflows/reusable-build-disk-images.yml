@@ -68,14 +68,13 @@ jobs:
             set -x
             df -h
             echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | tee /host-sys/etc/udev/rules.d/99-kvm4all.rules
-            udevadm control --reload-rules
-            udevadm trigger --name-match=kvm
+            chroot /host-sys udevadm control --reload-rules
+            chroot /host-sys udevadm trigger --name-match=kvm
             ls -l /dev/kvm
 
             dnf -y update
             dnf -y install just golang-oras
             dnf -y clean all
-            rm -f /etc/subuid /etc/subgid
 
 
         - name: Checkout Repository
