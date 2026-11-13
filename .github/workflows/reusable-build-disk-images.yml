@@ -84,6 +84,7 @@ jobs:
             chroot /host-sys udevadm control --reload-rules
             chroot /host-sys udevadm trigger --name-match=kvm
             ls -l /dev/kvm
+            rm -f /.dockerenv /run/.containerenv
 
             echo "root:100000:65536" > /etc/subuid
             echo "root:100000:65536" > /etc/subgid
