@@ -112,7 +112,7 @@ jobs:
         - name: Build Disk Images
           run: |
             sudo incus exec builder -- \
-              just --justfile ucore/Justfile gen-disk-images \
+              just --justfile /ucore/ucore/Justfile gen-disk-images \
                 "${{ inputs.ucore_stream }}" \
                 "${{ matrix.image_suffix}}" \
                 "${{ matrix.nvidia_tag}}"
