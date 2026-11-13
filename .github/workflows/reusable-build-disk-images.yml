@@ -103,7 +103,7 @@ jobs:
             submodules: recursive
 
         - name: Push Repository to Build VM
-          run: sudo incus file push -r builder/ucore $GITHUB_WORKSPACE
+          run: sudo incus file push -r $GITHUB_WORKSPACE builder/ucore
 
         - name: Mark Directory as Safe for Git
           # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
