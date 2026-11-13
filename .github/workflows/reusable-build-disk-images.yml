@@ -61,26 +61,8 @@ jobs:
           - image_suffix: "-hci"
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
-        - name: Maximize Disk Space
-          run: |
-            shopt -s nullglob
-            printf '%s\0' /opt/PyPy \
-                                  /opt/az \
-                                  /opt/node/ \
-                                  /opt/pipx \
-                                  /opt/go \
-                                  /opt/Ruby \
-                                  /usr/lib/llvm-* \
-                                  /usr/local/julia* \
-                                  /usr/local/lib/android \
-                                  /usr/share/dotnet \
-                                  /usr/share/swift \
-                                  /usr/local/.ghcup \
-                                  /usr/lib/firefox \
-                                  /opt/google/chrome \
-                                  /opt/microsoft/msedge \
-                | xargs -0 -n1 -P4 rm -rf
-            df -h
+        - name: Maximize build space
+          uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
 
         - name: Setup Incus and Build VM
           run: |
