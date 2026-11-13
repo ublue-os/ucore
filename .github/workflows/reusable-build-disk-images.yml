@@ -26,6 +26,7 @@ on:
 env:
   AKMODS_REGISTRY: ghcr.io/ublue-os
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  _CONTAINERS_USERNS_CONFIGURED: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
@@ -37,7 +38,18 @@ jobs:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     container:
         image: ghcr.io/podman-container-tools/podman-machine-os-ci:20261022t094745z
-        options: --user 0:0 --privileged --security-opt seccomp=unconfined --security-opt apparmor=unconfined -v /:/host-sys -v /dev:/dev -v /lib/modules:/lib/modules -v /var --tmpfs /run:exec --tmpfs /tmp:exec
+        options: >-
+            --user 0:0
+            --privileged
+            --cap-add=ALL
+            --security-opt seccomp=unconfined
+            --security-opt apparmor=unconfined
+            -v /:/host-sys
+            -v /dev:/dev
+            -v /lib/modules:/lib/modules
+            -v /var
+            --tmpfs /run:exec
+            --tmpfs /tmp:exec
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
       actions: write
@@ -72,15 +84,8 @@ jobs:
             chroot /host-sys udevadm trigger --name-match=kvm
             ls -l /dev/kvm
 
-            echo "Checking host subuid and subgid files"
-            ls -la /host-sys/etc/{subuid,subgid}
-            cat /host-sys/etc/subuid || true
-            cat /host-sys/etc/subgid || true
-
-            echo "Checking Container subuid and subgid files"
-            ls -la /etc/{subuid,subgid}
-            cat /etc/subuid || true
-            cat /etc/subgid || true
+            echo "root:100000:65536" > /etc/subuid
+            echo "root:100000:65536" > /etc/subgid
 
             dnf -y update
             dnf -y install just golang-oras
@@ -105,6 +110,7 @@ jobs:
         - name: Upload Metal Raw
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
             path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
             archive: false
             if-no-files-found: error
@@ -113,6 +119,7 @@ jobs:
         - name: Upload Metal Raw sha256
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
             path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
             archive: false
             if-no-files-found: error
@@ -121,6 +128,7 @@ jobs:
         - name: Upload QEMU QCOW2
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
             path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
             archive: false
             if-no-files-found: error
@@ -129,6 +137,7 @@ jobs:
         - name: Upload QEMU QCOW2 sha256
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
             path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
             archive: false
             if-no-files-found: error
@@ -137,6 +146,7 @@ jobs:
         - name: Upload Live ISO
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
             path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
             archive: false
             if-no-files-found: error
@@ -145,6 +155,7 @@ jobs:
         - name: Upload Live ISO sha256
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
           with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
             path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
             archive: false
             if-no-files-found: error
