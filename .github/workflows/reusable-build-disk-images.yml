@@ -72,6 +72,11 @@ jobs:
             chroot /host-sys udevadm trigger --name-match=kvm
             ls -l /dev/kvm
 
+            echo "Checking host subuid and subgid files"
+            ls -la /host-sys/etc/{subuid,subgid}
+
+            echo "Checking subuid and subgid files"
+            ls -la /etc/{subuid,subgid}
             dnf -y update
             dnf -y install just golang-oras
             dnf -y clean all
