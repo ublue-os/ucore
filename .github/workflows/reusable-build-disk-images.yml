@@ -35,6 +35,9 @@ jobs:
   # TODO: Add conditional guards
   build_image:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
+    container:
+        image: ghcr.io/podman-container-tools/podman-machine-os-ci:20261022t094745z
+        options: --privileged -v /dev:/dev -v /lib/modules:/lib/modules -v /var --tmpfs /run:exec --tmpfs /tmp:exec
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
       actions: write
@@ -60,89 +63,82 @@ jobs:
           - image_suffix: "-hci"
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
-        - name: Setup Incus and Build VM
+        - name: Prep Container
           run: |
             set -x
-            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-            sudo udevadm control --reload-rules
-            sudo udevadm trigger --name-match=kvm
-            ls -la /dev
-            # Get Incus Installed and initialize it
-            curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
-            sudo nft flush ruleset
-            sudo incus admin init --auto
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | tee /etc/udev/rules.d/99-kvm4all.rules
+            udevadm control --reload-rules
+            udevadm trigger --name-match=kvm
+            ls -l /dev/kvm
 
-            sudo incus ls
-            sudo incus info
-            sudo incus launch images:fedora/45 builder --vm
-            while ! sudo incus exec builder -- true; do sleep 5; done
-            sudo incus exec builder -- dnf update -y
-            sudo incus exec builder -- dnf install -y \
-                 osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
-                 e2fsprogs dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
+            dnf -y update
+            dnf -y install just golang-oras
+            dnf -y clean all
+            rm -f /etc/subuid /etc/subgid
 
-        # - name: Checkout Repository
-        #   uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        #   with:
-        #     submodules: recursive
 
-        # - name: Mark Directory as Safe for Git
-        #   run: git config --global --add safe.directory $GITHUB_WORKSPACE
+        - name: Checkout Repository
+          uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+          with:
+            submodules: recursive
 
-        # - name: Build Disk Images
-        #   run: |
-        #     just --justfile ucore/Justfile gen-disk-images \
-        #         "${{ inputs.ucore_stream }}" \
-        #         "${{ matrix.image_suffix}}" \
-        #         "${{ matrix.nvidia_tag}}"
+        - name: Mark Directory as Safe for Git
+          run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+        - name: Build Disk Images
+          run: |
+            just --justfile ucore/Justfile gen-disk-images \
+                "${{ inputs.ucore_stream }}" \
+                "${{ matrix.image_suffix}}" \
+                "${{ matrix.nvidia_tag}}"
             
-        # - name: Upload Metal Raw
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+        - name: Upload Metal Raw
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
 
-        # - name: Upload Metal Raw sha256
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+        - name: Upload Metal Raw sha256
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
         
-        # - name: Upload QEMU QCOW2
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+        - name: Upload QEMU QCOW2
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
 
-        # - name: Upload QEMU QCOW2 sha256
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+        - name: Upload QEMU QCOW2 sha256
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
 
-        # - name: Upload Live ISO
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+        - name: Upload Live ISO
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
 
-        # - name: Upload Live ISO sha256
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+        - name: Upload Live ISO sha256
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
 
 
-        # # TODO: Add support for uploading with ORAS
+        # TODO: Add support for uploading with ORAS
