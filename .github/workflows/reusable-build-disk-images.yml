@@ -64,6 +64,11 @@ jobs:
         - name: Maximize build space
           uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
 
+        - name: Install ZFS
+          run: |
+            set -x
+            sudo apt update && sudo apt install -y zfsutils-linux
+
         - name: Setup Incus and Build VM
           run: |
             set -x
@@ -74,12 +79,12 @@ jobs:
             # Get Incus Installed and initialize it
             curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
             sudo nft flush ruleset
-            sudo incus admin init --auto
+            sudo incus admin init --auto --storage-backend=zfs
             sudo incus ls
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
               --config limits.cpu=4 \
-              --device root,size=100GB
+              --device root,size=115GB
 
             # Wait for the builder VM to be ready
             while ! sudo incus exec builder -- true; do sleep 5; done
