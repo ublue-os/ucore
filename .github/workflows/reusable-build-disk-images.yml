@@ -61,6 +61,27 @@ jobs:
           - image_suffix: "-hci"
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
+        - name: Maximize Disk Space
+          run: |
+            shopt -s nullglob
+            printf '%s\0' /opt/PyPy \
+                                  /opt/az \
+                                  /opt/node/ \
+                                  /opt/pipx \
+                                  /opt/go \
+                                  /opt/Ruby \
+                                  /usr/lib/llvm-* \
+                                  /usr/local/julia* \
+                                  /usr/local/lib/android \
+                                  /usr/share/dotnet \
+                                  /usr/share/swift \
+                                  /usr/local/.ghcup \
+                                  /usr/lib/firefox \
+                                  /opt/google/chrome \
+                                  /opt/microsoft/msedge \
+                | xargs -0 -n1 -P4 rm -rf
+            df -h
+
         - name: Setup Incus and Build VM
           run: |
             set -x
@@ -76,7 +97,7 @@ jobs:
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
               --config limits.cpu=4 \
-              --device root,size=50GB
+              --device root,size=100GB
 
             # Wait for the builder VM to be ready
             while ! sudo incus exec builder -- true; do sleep 5; done
