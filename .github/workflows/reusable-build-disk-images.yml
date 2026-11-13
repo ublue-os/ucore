@@ -66,6 +66,7 @@ jobs:
         - name: Prep Container
           run: |
             set -x
+            ls -la /host-sys
             echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | tee /host-sys/etc/udev/rules.d/99-kvm4all.rules
             udevadm control --reload-rules
             udevadm trigger --name-match=kvm
