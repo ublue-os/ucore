@@ -84,8 +84,8 @@ jobs:
             free -h
             df -h
             sudo incus launch images:fedora/45 builder --vm \
-              --config limits.memory=90% \
-              --config limits.cpu=4 \
+              --config limits.memory=8GB \
+              --config limits.cpu=3 \
               --device root,size=115GB
             free -h
             df -h
