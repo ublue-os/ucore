@@ -72,26 +72,26 @@ jobs:
             curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
             sudo nft flush ruleset
             sudo incus admin init --auto
-
             sudo incus ls
-            sudo incus info
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
               --config limits.cpu=4 \
               --device root,size=50GB
 
+            # Wait for the builder VM to be ready
             while ! sudo incus exec builder -- true; do sleep 5; done
-            sudo incus exec builder -- dnf update -y
 
+            # Grow the root partition to utilize the full disk size
+            sudo incus exec builder -- dnf update -y
             sudo incus exec builder -- dnf install -y \
                  cloud-utils-growpart \
                  e2fsprogs
-
             sudo incus exec builder -- \
                  growpart /dev/sda 2
+            sudo incus exec builder -- \
+                 resize2fs /dev/sda2
 
-            sudo incus exec builder -- lsblk
-
+            # Install necessary build tools and dependencies
             sudo incus exec builder -- dnf install -y \
                  just git-core \
                  osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
@@ -106,6 +106,7 @@ jobs:
           run: sudo incus file push -r builder/ucore $GITHUB_WORKSPACE
 
         - name: Mark Directory as Safe for Git
+          # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
           run: sudo incus exec builder -- git config --global --add safe.directory /ucore
 
         - name: Build Disk Images
