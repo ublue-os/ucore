@@ -40,6 +40,7 @@ jobs:
         image: ghcr.io/podman-container-tools/podman-machine-os-ci:20261022t094745z
         options: >-
             --user 0:0
+            --pid=host
             --privileged
             --cap-add=ALL
             --security-opt seccomp=unconfined
@@ -90,6 +91,29 @@ jobs:
             dnf -y update
             dnf -y install just golang-oras
             dnf -y clean all
+
+            # Configure container storage and wrap skopeo/podman to preserve userns config
+            cat << 'EOF' > /etc/containers/storage.conf
+            [storage]
+            driver = "vfs"
+            runroot = "/run/containers/storage"
+            graphroot = "/var/lib/containers/storage"
+
+            [storage.options]
+            ignore_chown_errors = "true"
+            EOF
+
+            for bin in skopeo podman; do
+                REAL_BIN=$(command -v $bin)
+                mv "$REAL_BIN" "${REAL_BIN}.real"
+                cat << EOF > "$REAL_BIN"
+            #!/bin/sh
+            export _CONTAINERS_USERNS_CONFIGURED=1
+            exec "${REAL_BIN}.real" "\$@"
+            EOF
+                chmod +x "$REAL_BIN"
+                head -n 5 "$REAL_BIN"
+            done
 
 
         - name: Checkout Repository
