@@ -74,9 +74,14 @@ jobs:
 
             echo "Checking host subuid and subgid files"
             ls -la /host-sys/etc/{subuid,subgid}
+            cat /host-sys/etc/subuid || true
+            cat /host-sys/etc/subgid || true
 
-            echo "Checking subuid and subgid files"
+            echo "Checking Container subuid and subgid files"
             ls -la /etc/{subuid,subgid}
+            cat /etc/subuid || true
+            cat /etc/subgid || true
+
             dnf -y update
             dnf -y install just golang-oras
             dnf -y clean all
