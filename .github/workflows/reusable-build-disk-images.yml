@@ -88,8 +88,9 @@ jobs:
                  e2fsprogs
 
             sudo incus exec builder -- \
-                 growpart /dev/sda 2 && \
-                 resize2fs /dev/sda2
+                 growpart /dev/sda 2
+
+            sudo incus exec builder -- lsblk
 
             sudo incus exec builder -- dnf install -y \
                  just git-core \
