@@ -81,10 +81,14 @@ jobs:
             sudo nft flush ruleset
             sudo incus admin init --auto --storage-backend=zfs
             sudo incus ls
+            free -h
+            df -h
             sudo incus launch images:fedora/45 builder --vm \
-              --config limits.memory=80% \
+              --config limits.memory=90% \
               --config limits.cpu=4 \
               --device root,size=115GB
+            free -h
+            df -h
 
             # Wait for the builder VM to be ready
             while ! sudo incus exec builder -- true; do sleep 5; done
@@ -128,23 +132,23 @@ jobs:
         - name: Copy Out Disk Images
           run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
             
-        - name: Upload Metal Raw
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
+        # - name: Upload Metal Raw
+        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        #   with:
+        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
+        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
+        #     archive: false
+        #     if-no-files-found: error
+        #     retention-days: 1
 
-        - name: Upload Metal Raw sha256
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
+        # - name: Upload Metal Raw sha256
+        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        #   with:
+        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
+        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
+        #     archive: false
+        #     if-no-files-found: error
+        #     retention-days: 1
         
         - name: Upload QEMU QCOW2
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
