@@ -36,21 +36,6 @@ jobs:
   # TODO: Add conditional guards
   build_image:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
-    container:
-        image: ghcr.io/podman-container-tools/podman-machine-os-ci:20261022t094745z
-        options: >-
-            --user 0:0
-            --pid=host
-            --privileged
-            --cap-add=ALL
-            --security-opt seccomp=unconfined
-            --security-opt apparmor=unconfined
-            -v /:/host-sys
-            -v /dev:/dev
-            -v /lib/modules:/lib/modules
-            -v /var
-            --tmpfs /run:exec
-            --tmpfs /tmp:exec
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     permissions:
       actions: write
@@ -76,61 +61,62 @@ jobs:
           - image_suffix: "-hci"
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
-        - name: Prep Container
+        - name: Setup Incus and Build VM
           run: |
             set -x
-            df -h
-            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | tee /host-sys/etc/udev/rules.d/99-kvm4all.rules
-            chroot /host-sys udevadm control --reload-rules
-            chroot /host-sys udevadm trigger --name-match=kvm
-            ls -l /dev/kvm
-            rm -f /.dockerenv /run/.containerenv
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+            ls -la /dev
+            # Get Incus Installed and initialize it
+            curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
+            sudo nft flush ruleset
+            sudo incus admin init --auto
 
-            echo "root:100000:65536" > /etc/subuid
-            echo "root:100000:65536" > /etc/subgid
+            sudo incus ls
+            sudo incus info
+            sudo incus launch images:fedora/45 builder --vm \
+              --config limits.memory=80% \
+              --config limits.cpu=4 \
+              --device root,size=50GB
 
-            dnf -y update
-            dnf -y install just golang-oras
-            dnf -y clean all
+            while ! sudo incus exec builder -- true; do sleep 5; done
+            sudo incus exec builder -- dnf update -y
 
-            # Configure container storage and wrap skopeo/podman to preserve userns config
-            cat << 'EOF' > /etc/containers/storage.conf
-            [storage]
-            driver = "vfs"
-            runroot = "/run/containers/storage"
-            graphroot = "/var/lib/containers/storage"
+            sudo incus exec builder -- dnf install -y \
+                 cloud-utils-growpart \
+                 e2fsprogs
 
-            [storage.options]
-            ignore_chown_errors = "true"
-            EOF
+            sudo incus exec builder -- \
+                 growpart /dev/sda 2 && \
+                 resize2fs /dev/sda2
 
-            for bin in skopeo podman; do
-                REAL_BIN=$(command -v $bin)
-                mv "$REAL_BIN" "${REAL_BIN}.real"
-                cat << EOF > "$REAL_BIN"
-            #!/bin/sh
-            export _CONTAINERS_USERNS_CONFIGURED=1
-            exec "${REAL_BIN}.real" "\$@"
-            EOF
-                chmod +x "$REAL_BIN"
-                head -n 5 "$REAL_BIN"
-            done
-
+            sudo incus exec builder -- dnf install -y \
+                 just git-core \
+                 osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
+                 dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
 
         - name: Checkout Repository
           uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
           with:
             submodules: recursive
 
+        - name: Push Repository to Build VM
+          run: sudo incus file push -r builder/ucore $GITHUB_WORKSPACE
+
         - name: Mark Directory as Safe for Git
-          run: git config --global --add safe.directory $GITHUB_WORKSPACE
+          run: sudo incus exec builder -- git config --global --add safe.directory /ucore
 
         - name: Build Disk Images
           run: |
-            just --justfile ucore/Justfile gen-disk-images \
+            sudo incus exec builder -- \
+              just --justfile ucore/Justfile gen-disk-images \
                 "${{ inputs.ucore_stream }}" \
                 "${{ matrix.image_suffix}}" \
                 "${{ matrix.nvidia_tag}}"
+            
+        - name: Copy Out Disk Images
+          run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
             
         - name: Upload Metal Raw
           uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
