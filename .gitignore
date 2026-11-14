@@ -3,3 +3,7 @@ __pycache__/
 *.py[cod]
 Containerfile
 ucore/audit
+cache
+*.ociarchive
+tmp-osbuild-*
+output

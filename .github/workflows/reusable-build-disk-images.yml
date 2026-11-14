@@ -1,0 +1,197 @@
+name: build-ucore-disk-images
+on:
+  workflow_dispatch:
+    inputs:
+      ucore_stream:
+        description: "The uCore stream: stable, testing, or lts"
+        required: true
+        type: string
+      arch:
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ucore_stream:
+        description: "The uCore stream: stable, testing, or lts"
+        required: true
+        type: string
+      arch:
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
+        required: false
+        type: string
+
+env:
+  AKMODS_REGISTRY: ghcr.io/ublue-os
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  _CONTAINERS_USERNS_CONFIGURED: "1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
+  cancel-in-progress: true
+
+jobs:
+  # TODO: Add conditional guards
+  build_image:
+    name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
+    permissions:
+      actions: write
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJson(inputs.arch) }}
+        image_suffix:
+          - "-minimal"
+          - ""
+          - "-hci"
+        nvidia_tag:
+          - ""
+          - "-nvidia-lts"
+          - "-nvidia"
+        include:
+          - image_suffix: "-minimal"
+            description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
+          - image_suffix: ""
+            description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
+          - image_suffix: "-hci"
+            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
+    steps:
+        - name: Maximize build space
+          uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
+
+        - name: Install ZFS
+          run: |
+            set -x
+            sudo apt update && sudo apt install -y zfsutils-linux
+
+        - name: Setup Incus and Build VM
+          run: |
+            set -x
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+            ls -la /dev
+            # Get Incus Installed and initialize it
+            curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
+            sudo nft flush ruleset
+            sudo incus admin init --auto --storage-backend=zfs
+            sudo incus ls
+            free -h
+            df -h
+            sudo incus launch images:fedora/45 builder --vm \
+              --config limits.memory=80% \
+              --config limits.cpu.allowance=300% \
+              --device root,size=115GB
+            free -h
+            df -h
+
+            # Wait for the builder VM to be ready
+            while ! sudo incus exec builder -- true; do sleep 5; done
+
+            # Grow the root partition to utilize the full disk size
+            sudo incus exec builder -- dnf update -y
+            sudo incus exec builder -- dnf install -y \
+                 cloud-utils-growpart \
+                 e2fsprogs
+            sudo incus exec builder -- \
+                 growpart /dev/sda 2
+            sudo incus exec builder -- \
+                 resize2fs /dev/sda2
+
+            # Install necessary build tools and dependencies
+            sudo incus exec builder -- dnf install -y \
+                 just git-core \
+                 osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
+                 dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
+
+        - name: Checkout Repository
+          uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+          with:
+            submodules: recursive
+
+        - name: Push Repository to Build VM
+          run: sudo incus file push -r $GITHUB_WORKSPACE builder/ucore
+
+        - name: Mark Directory as Safe for Git
+          # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
+          run: sudo incus exec builder -- git config --global --add safe.directory /ucore
+
+        - name: Build Disk Images
+          run: |
+            sudo incus exec builder -- \
+              systemd-run --unit=image-build \
+              -p CPUQuota=85% \
+              -p MemoryMax=10G \
+              -p IOWeight=50 \
+              --pty \
+              --pipe \
+              ionice -c 3 nice -n 19 \
+              just --justfile /ucore/ucore/Justfile gen-disk-images \
+                "${{ inputs.ucore_stream }}" \
+                "${{ matrix.image_suffix}}" \
+                "${{ matrix.nvidia_tag}}"
+            
+        - name: Copy Out Disk Images
+          run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
+            
+        # - name: Upload Metal Raw
+        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        #   with:
+        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
+        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
+        #     archive: false
+        #     if-no-files-found: error
+        #     retention-days: 1
+
+        # - name: Upload Metal Raw sha256
+        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        #   with:
+        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
+        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
+        #     archive: false
+        #     if-no-files-found: error
+        #     retention-days: 1
+        
+        - name: Upload QEMU QCOW2
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
+
+        - name: Upload QEMU QCOW2 sha256
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
+
+        - name: Upload Live ISO
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
+
+        - name: Upload Live ISO sha256
+          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          with:
+            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
+            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
+            archive: false
+            if-no-files-found: error
+            retention-days: 1
+
+
+        # TODO: Add support for uploading with ORAS
