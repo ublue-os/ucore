@@ -86,7 +86,7 @@ jobs:
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
               --config limits.cpu.allowance=300% \
-              --device root,size=115GB
+              --device root,size=120GB
             free -h
             df -h
 
@@ -134,7 +134,7 @@ jobs:
               just --justfile /ucore/ucore/Justfile gen-disk-images \
                 "${{ inputs.ucore_stream }}" \
                 "${{ matrix.image_suffix}}" \
-                "${{ matrix.nvidia_tag}}"
+                "${{ matrix.nvidia_tag}}" | 2>&1
             
         - name: Copy Out Disk Images
           run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
