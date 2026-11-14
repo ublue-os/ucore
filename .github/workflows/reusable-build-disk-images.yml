@@ -84,8 +84,8 @@ jobs:
             free -h
             df -h
             sudo incus launch images:fedora/45 builder --vm \
-              --config limits.memory=8GB \
-              --config limits.cpu=3 \
+              --config limits.memory=80% \
+              --config limits.cpu.allowance=300% \
               --device root,size=115GB
             free -h
             df -h
@@ -124,6 +124,12 @@ jobs:
         - name: Build Disk Images
           run: |
             sudo incus exec builder -- \
+              systemd-run --unit=image-build \
+              -p CPUQuota=85% \
+              -p MemoryMax=10G \
+              -p IOWeight=50 \
+              --remain-after-exit \
+              ionice -c 3 nice -n 19 \
               just --justfile /ucore/ucore/Justfile gen-disk-images \
                 "${{ inputs.ucore_stream }}" \
                 "${{ matrix.image_suffix}}" \
