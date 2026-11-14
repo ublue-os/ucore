@@ -129,6 +129,8 @@ jobs:
               -p MemoryMax=10G \
               -p IOWeight=50 \
               --remain-after-exit \
+              --pty \
+              --pipe \
               ionice -c 3 nice -n 19 \
               just --justfile /ucore/ucore/Justfile gen-disk-images \
                 "${{ inputs.ucore_stream }}" \
