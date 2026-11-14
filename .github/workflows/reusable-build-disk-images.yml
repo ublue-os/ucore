@@ -75,20 +75,14 @@ jobs:
             echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
             sudo udevadm control --reload-rules
             sudo udevadm trigger --name-match=kvm
-            ls -la /dev
             # Get Incus Installed and initialize it
             curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
             sudo nft flush ruleset
             sudo incus admin init --auto --storage-backend=zfs
-            sudo incus ls
-            free -h
-            df -h
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
               --config limits.cpu.allowance=300% \
               --device root,size=120GB
-            free -h
-            df -h
 
             # Wait for the builder VM to be ready
             while ! sudo incus exec builder -- true; do sleep 5; done
@@ -108,6 +102,10 @@ jobs:
                  just git-core \
                  osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                  dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
+
+            free -h
+            df -h
+
 
         - name: Checkout Repository
           uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -134,7 +132,7 @@ jobs:
               just --justfile /ucore/ucore/Justfile gen-disk-images \
                 "${{ inputs.ucore_stream }}" \
                 "${{ matrix.image_suffix}}" \
-                "${{ matrix.nvidia_tag}}" | 2>&1
+                "${{ matrix.nvidia_tag}}"
             
         - name: Copy Out Disk Images
           run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
