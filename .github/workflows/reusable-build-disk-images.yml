@@ -130,9 +130,9 @@ jobs:
           run: |
             sudo incus exec builder -- \
               systemd-run --unit=image-build \
-              -p CPUQuota=85% \
+              -p CPUQuota=275% \
               -p MemoryMax=10G \
-              -p IOWeight=50 \
+              -p IOWeight=75 \
               --pty \
               --pipe \
               ionice -c 3 nice -n 19 \
