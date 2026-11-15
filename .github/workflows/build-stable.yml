@@ -42,4 +42,4 @@ jobs:
     secrets: inherit
     with:
       ucore_stream: stable
-      arch: '["x86_64"]'
+      arch: '["aarch64","x86_64"]'
