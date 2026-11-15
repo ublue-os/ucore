@@ -86,8 +86,12 @@ jobs:
           sudo nft flush ruleset
 
           # Ubuntu 26.04 restricts user namespaces, which breaks podman/skopeo run by osbuild in the builder
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-          sudo sysctl -w kernel.unprivileged_userns_clone=1 || true
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo sysctl -w kernel.unprivileged_userns_clone=1
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_io_uring=0
+          sudo aa-teardown
+          sudo systemctl stop apparmor
+
           sudo incus admin init --auto --storage-backend=zfs
 
           # Configure Builder
@@ -99,14 +103,13 @@ jobs:
           lxc.mount.auto=proc:rw sys:rw cgroup:rw
           lxc.cgroup2.devices.allow = b 7:* rwm
           lxc.cgroup2.devices.allow = c 10:229 rwm
-          lxc.cgroup2.devices.allow = c 10:237 rwm
           lxc.cgroup2.devices.allow = c 10:236 rwm
+          lxc.cgroup2.devices.allow = c 10:237 rwm
           lxc.cgroup2.devices.allow = b 252:* rwm
           lxc.cgroup2.devices.allow = b 253:* rwm
           lxc.cgroup2.devices.allow = b 259:* rwm
           EOF
 
-          sudo incus config device add builder fuse unix-char path=/dev/fuse
           sudo incus config device add builder loop-control unix-char path=/dev/loop-control
           sudo incus config device add builder mapper-control unix-char path=/dev/mapper/control
 
@@ -120,9 +123,8 @@ jobs:
           sudo incus start builder
 
           # Wait for the Builder VM to be ready
-          sleep 15
+          sleep 5
           sudo incus ls
-          while ! sudo incus exec builder -- true; do sleep 5; done
 
           # Grow the root partition to utilize the full disk size
           sudo incus exec builder -- dnf update -y
@@ -140,24 +142,7 @@ jobs:
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
 
-          sudo incus exec builder -- bash -c '
-          dnf install -y fuse-overlayfs
-
-          mkdir -p /etc/containers
-          cat << EOF > /etc/containers/storage.conf
-          [storage]
-          driver = "overlay"
-          runroot = "/run/containers/storage"
-          graphroot = "/var/lib/containers/storage"
-
-          [storage.options]
-          mount_program = "/usr/bin/fuse-overlayfs"
-          EOF'
-
-          echo "root:100000:65536" | sudo incus file push - builder/etc/subuid
-          echo "root:100000:65536" | sudo incus file push - builder/etc/subgid
-          free -h
-          df -h
+          sudo incus exec builder -- cat /proc/self/uid_map
 
       - name: Mark Directory as Safe for Git
         # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
