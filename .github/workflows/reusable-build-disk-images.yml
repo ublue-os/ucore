@@ -60,45 +60,37 @@ jobs:
           - image_suffix: "-hci"
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
-      - name: Maximize build space
-        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
+      # - name: Maximize build space
+      #   uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
 
-      - name: Install ZFS
-        run: |
-          set -x
-          sudo apt update && sudo apt install -y zfsutils-linux
+      - name: Install ZFS/XFS
+        run: sudo apt update && sudo apt install -y zfsutils-linux xfsprogs
         
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
 
-      - name: Setup Incus and Build Container
+      - name: Install Incus
+        run: curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh; sudo nft flush ruleset
+
+      - name: Disable AppArmor and Allow Unprivileged User Namespaces
         run: |
-          set -x
-          # Setup KVM
-          # echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          # sudo udevadm control --reload-rules
-          # sudo udevadm trigger --name-match=kvm
-
-          # Get Incus Installed and initialize it
-          curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
-          sudo nft flush ruleset
-
-          # Ubuntu 26.04 restricts user namespaces, which breaks podman/skopeo run by osbuild in the builder
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo sysctl -w kernel.unprivileged_userns_clone=1
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_io_uring=0
           sudo aa-teardown
           sudo systemctl stop apparmor
 
-          sudo incus admin init --auto --storage-backend=zfs
+      - name: Initialize Incus
+        run: sudo incus admin init --auto --storage-backend=zfs
 
-          # Configure Builder
+      - name: Initialize and Configure Builder
+        run: |
           sudo incus init images:fedora/45 builder
           sudo incus config set builder security.privileged=true
           sudo incus config set builder security.nesting=true
-          sudo incus config set builder raw.lxc - << 'EOF'
+          sudo incus config set builder raw.lxc=- << 'EOF'
           lxc.apparmor.profile=unconfined
           lxc.mount.auto=proc:rw sys:rw cgroup:rw
           lxc.cgroup2.devices.allow = b 7:* rwm
@@ -122,19 +114,8 @@ jobs:
 
           sudo incus start builder
 
-          # Wait for the Builder VM to be ready
           sleep 5
           sudo incus ls
-
-          # Grow the root partition to utilize the full disk size
-          sudo incus exec builder -- dnf update -y
-          # sudo incus exec builder -- dnf install -y \
-          #      cloud-utils-growpart \
-          #      e2fsprogs
-          # sudo incus exec builder -- \
-          #      growpart /dev/sda 2
-          # sudo incus exec builder -- \
-          #      resize2fs /dev/sda2
 
           # Install necessary build tools and dependencies
           sudo incus exec builder -- dnf install -y \
@@ -151,10 +132,8 @@ jobs:
             done
           done
           EOF
-          sudo incus exec builder -- cat /proc/self/uid_map
 
       - name: Mark Directory as Safe for Git
-        # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
         run: sudo incus exec builder -- git config --system --add safe.directory /ucore
 
       - name: Build Disk Images
