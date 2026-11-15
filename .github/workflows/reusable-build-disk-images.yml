@@ -134,10 +134,12 @@ jobs:
           sudo incus exec builder -- bash << 'EOF'
           set -x
           dnf install -y \
-               just git-core \
+               just git-core patch \
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
-          ls -la /dev/loop*
+          patch_target=$(rpm -ql osbuild | grep "/devices/org.osbuild.loopback$")
+          target=$patch_target
+          patch --forward "$target" -i /ucore/.github/patches/osbuild-loopback-sysfs.patch
           EOF
 
       - name: Mark Directory as Safe for Git
