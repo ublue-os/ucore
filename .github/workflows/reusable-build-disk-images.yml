@@ -78,6 +78,7 @@ jobs:
 
       - name: Initialize and Configure Builder
         run: |
+          set -x
           docker run \
                  --detach \
                  --name builder \
@@ -92,7 +93,7 @@ jobs:
                  --volume /var \
                  --workdir /ucore \
                  fedora:latest \
-                 sleep infinity
+                 while true; do sleep 15; done
 
           docker exec builder bash << 'EOF'
           set -x
