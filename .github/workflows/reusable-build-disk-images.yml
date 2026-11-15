@@ -98,6 +98,7 @@ jobs:
           lxc.apparmor.profile=unconfined
           lxc.mount.auto=proc:rw sys:rw cgroup:rw
           lxc.cgroup2.devices.allow = b 7:* rwm
+          lxc.cgroup2.devices.allow = c 10:229 rwm
           lxc.cgroup2.devices.allow = c 10:237 rwm
           lxc.cgroup2.devices.allow = c 10:236 rwm
           lxc.cgroup2.devices.allow = b 252:* rwm
@@ -105,6 +106,7 @@ jobs:
           lxc.cgroup2.devices.allow = b 259:* rwm
           EOF
 
+          sudo incus config device add builder fuse unix-char path=/dev/fuse
           sudo incus config device add builder loop-control unix-char path=/dev/loop-control
           sudo incus config device add builder mapper-control unix-char path=/dev/mapper/control
 
@@ -138,6 +140,22 @@ jobs:
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
 
+          sudo incus exec builder -- bash -c '
+          dnf install -y fuse-overlayfs
+
+          mkdir -p /etc/containers
+          cat << EOF > /etc/containers/storage.conf
+          [storage]
+          driver = "overlay"
+          runroot = "/run/containers/storage"
+          graphroot = "/var/lib/containers/storage"
+
+          [storage.options]
+          mount_program = "/usr/bin/fuse-overlayfs"
+          EOF'
+
+          echo "root:100000:65536" | sudo incus file push - builder/etc/subuid
+          echo "root:100000:65536" | sudo incus file push - builder/etc/subgid
           free -h
           df -h
 
