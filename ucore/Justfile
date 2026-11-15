@@ -402,9 +402,10 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     mkdir -p {{ GIT_ROOT }}/output
     pushd {{ GIT_ROOT }}/output && sh {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
         --osname "fedora-coreos" \
-        --platforms "qemu,live" \
+        --platforms "qemu" \
         --ociarchive "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
-        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}"
+        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
+        2>&1
 
     echo "Disk images created for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"
 
@@ -419,8 +420,8 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     # $xz_command {{ "ucore" + image_suffix + "-" + stream + nvidia }}-metal.{{ arch() }}.raw
     # sha256sum {{ "ucore" + image_suffix + "-" + stream + nvidia }}-metal.{{ arch() }}.raw.xz > {{ "ucore" + image_suffix + "-" + stream + nvidia }}-metal.{{ arch() }}.raw.xz.sha256
 
-    #Live iso
-    $xz_command {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso
-    sha256sum {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso.xz > {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso.xz.sha256
+    # #Live iso
+    # $xz_command {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso
+    # sha256sum {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso.xz > {{ "ucore" + image_suffix + "-" + stream + nvidia }}-live.{{ arch() }}.iso.xz.sha256
 
     echo "Compression and checksum generation completed for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"

@@ -82,12 +82,14 @@ jobs:
             sudo nft flush ruleset
             sudo incus admin init --auto --storage-backend=zfs
             sudo incus storage set default size=120GB
+            sudo incus storage info default
+            sudo incus storage show default
 
             # Launch Builder VM
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
               --config limits.cpu.allowance=300% \
-              --device root,size=135GB
+              --device root,size=150GB
 
             # Wait for the Builder VM to be ready
             while ! sudo incus exec builder -- true; do sleep 5; done
@@ -139,8 +141,15 @@ jobs:
                 "${{ matrix.image_suffix}}" \
                 "${{ matrix.nvidia_tag}}"
             
+            # Troubleshooting
+            df -h
+            sudo incus exec builder -- df -h
+            
         - name: Copy Out Disk Images
           run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
+
+        - name: Remove Builder VM
+          run: sudo incus rm -f builder
             
         # - name: Upload Metal Raw
         #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -178,23 +187,23 @@ jobs:
             if-no-files-found: error
             retention-days: 1
 
-        - name: Upload Live ISO
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
+        # - name: Upload Live ISO
+        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        #   with:
+        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
+        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
+        #     archive: false
+        #     if-no-files-found: error
+        #     retention-days: 1
 
-        - name: Upload Live ISO sha256
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
+        # - name: Upload Live ISO sha256
+        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        #   with:
+        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
+        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
+        #     archive: false
+        #     if-no-files-found: error
+        #     retention-days: 1
 
 
         # TODO: Add support for uploading with ORAS
