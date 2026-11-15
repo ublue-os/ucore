@@ -150,6 +150,12 @@ jobs:
               "${{ inputs.ucore_stream }}" \
               "${{ matrix.image_suffix}}" \
               "${{ matrix.nvidia_tag}}"
+        
+      - name: Debug
+        if: always()
+        run: |
+          sudo dmesg
+          sudo incus exec builder -- dmesg
 
       - name: Delete OSBuild Cache
         run: sudo incus exec builder -- rm -rf /ucore/output/cache
