@@ -94,7 +94,7 @@ jobs:
                  fedora:latest \
                  sleep infinity
 
-          docker exec builder -- bash << 'EOF'
+          docker exec builder bash << 'EOF'
           set -x
           dnf install -y \
                just git-core patch \
@@ -103,11 +103,11 @@ jobs:
           EOF
 
       - name: Mark Directory as Safe for Git
-        run: docker exec builder -- git config --system --add safe.directory /ucore
+        run: docker exec builder git config --system --add safe.directory /ucore
 
       - name: Build Disk Images
         run: |
-          docker exec builder -- \
+          docker exec builder \
             systemd-run --unit=image-build \
             -p IOWeight=75 \
             --pty \
