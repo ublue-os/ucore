@@ -1,6 +1,6 @@
 --- org.osbuild.loopback
 +++ org.osbuild.loopback
-@@ -89,9 +89,11 @@
+@@ -89,9 +89,10 @@
 -            # If partscan was enabled let's find any partition
 -            # based devices that were added (i.e. loop0p1) and
 -            # copy them into our custom /dev/ directory:

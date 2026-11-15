@@ -138,8 +138,7 @@ jobs:
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
           patch_target=$(rpm -ql osbuild | grep "/devices/org.osbuild.loopback$")
-          target=$patch_target
-          patch --forward "$target" -i /ucore/.github/patches/osbuild-loopback-sysfs.patch
+          patch --forward "$patch_target" -i /ucore/.github/patches/osbuild-loopback-sysfs.patch
           EOF
 
       - name: Mark Directory as Safe for Git
