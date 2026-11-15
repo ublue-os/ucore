@@ -65,7 +65,7 @@ jobs:
 
       - name: Install ZFS/XFS
         run: sudo apt update && sudo apt install -y zfsutils-linux xfsprogs
-        
+
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -81,6 +81,15 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_io_uring=0
           sudo aa-teardown
           sudo systemctl stop apparmor
+
+      - name: Configure loop partitions
+        run: |
+          if [ -e /sys/module/loop/parameters/max_part ] &&
+             [ "$(cat /sys/module/loop/parameters/max_part)" != 7 ]; then
+            sudo modprobe -r loop
+          fi
+          sudo modprobe loop max_part=7
+          test "$(cat /sys/module/loop/parameters/max_part)" = 7
 
       - name: Initialize Incus
         run: sudo incus admin init --auto --storage-backend=zfs
@@ -106,8 +115,16 @@ jobs:
           sudo incus config device add builder mapper-control unix-char path=/dev/mapper/control
 
           for i in $(seq 0 7); do
-            sudo mknod -m 0660 /dev/loop$i b 7 $i 2>/dev/null || true
-            sudo incus config device add builder loop$i unix-block path=/dev/loop$i || true
+            node="/dev/loop$i"
+            expected="$(printf '7:%x' $((i * 8)))"
+            if [ ! -e "$node" ]; then
+              sudo mknod -m 0660 "$node" b 7 $((i * 8))
+            fi
+            if [ ! -b "$node" ] || [ "$(stat -Lc '%t:%T' "$node")" != "$expected" ]; then
+              echo "$node has the wrong device number" >&2
+              exit 1
+            fi
+            sudo incus config device add builder "loop$i" unix-block path="$node"
           done
 
           sudo incus config device add builder workspace disk source="$GITHUB_WORKSPACE" path=/ucore
@@ -118,19 +135,21 @@ jobs:
           sudo incus ls
 
           # Install necessary build tools and dependencies
-          sudo incus exec builder -- dnf install -y \
+          sudo incus exec builder -- bash << 'EOF'
+          set -x
+          dnf install -y \
                just git-core \
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
 
-          sudo incus exec builder -- bash << 'EOF'
-          set -x
+          # Create loop device partitions inside the container
           for loop_idx in $(seq 0 7); do
             base_minor=$((loop_idx * 8))
             for part in $(seq 1 7); do
               mknod -m 0660 /dev/loop${loop_idx}p${part} b 7 $((base_minor + part)) 2>/dev/null || true
             done
           done
+          ls -la /dev/loop*
           EOF
 
       - name: Mark Directory as Safe for Git
@@ -150,15 +169,11 @@ jobs:
               "${{ inputs.ucore_stream }}" \
               "${{ matrix.image_suffix}}" \
               "${{ matrix.nvidia_tag}}"
-        
+
       - name: Debug
         if: always()
         run: |
           sudo dmesg
-          sudo incus exec builder -- dmesg
-
-      - name: Delete OSBuild Cache
-        run: sudo incus exec builder -- rm -rf /ucore/output/cache
 
       - name: Chown Output Directory
         run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE/output
@@ -170,8 +185,10 @@ jobs:
         run: |
           set -x
           for file in output/*; do
-            xz -z -T0 -9 -v "$file"
-            sha256sum "$file.xz" > "$file.xz.sha256"
+            if [ -f "$file" ]; then
+              xz -z -T0 -9 -v "$file"
+              sha256sum "$file.xz" > "$file.xz.sha256"
+            fi
           done
 
       - name: Upload Metal Raw
