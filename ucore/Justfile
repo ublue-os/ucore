@@ -1,4 +1,4 @@
-set dotenv-load := true
+set dotenv-load
 
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
 export AKMODS_REGISTRY := env("AKMODS_REGISTRY", "ghcr.io/ublue-os")
@@ -407,7 +407,7 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     mkdir -p {{ GIT_ROOT }}/output
     pushd {{ GIT_ROOT }}/output && sh {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
         --osname "fedora-coreos" \
-        --platforms "qemu" \
+        --platforms "qemu,metal" \
         --ociarchive "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
         --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
         {{ if image_suffix =~ "hci" { "--metal-image-size 8192" } else if nvidia =~ "nvidia" { "--metal-image-size 8192" } else { "" } }}
