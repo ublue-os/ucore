@@ -84,6 +84,10 @@ jobs:
           # Get Incus Installed and initialize it
           curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
           sudo nft flush ruleset
+
+          # Ubuntu 26.04 restricts user namespaces, which breaks podman/skopeo run by osbuild in the builder
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo sysctl -w kernel.unprivileged_userns_clone=1 || true
           sudo incus admin init --auto --storage-backend=zfs
 
           # Configure Builder
