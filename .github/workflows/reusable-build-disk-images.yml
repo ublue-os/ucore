@@ -88,7 +88,7 @@ jobs:
             # Launch Builder VM
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
-              --config limits.cpu.allowance=300% \
+              --config limits.cpu=3 \
               --device root,size=150GB
 
             # Wait for the Builder VM to be ready
