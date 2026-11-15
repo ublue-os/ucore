@@ -26,7 +26,6 @@ on:
 env:
   AKMODS_REGISTRY: ghcr.io/ublue-os
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  _CONTAINERS_USERNS_CONFIGURED: "1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
@@ -141,15 +140,17 @@ jobs:
                 "${{ matrix.image_suffix}}" \
                 "${{ matrix.nvidia_tag}}"
             
-        - name: Troubleshooting Disk Usage
-          if: always()
-          run: |
-            # Troubleshooting
-            df -h
-            sudo incus exec builder -- df -h
+        - name: Delete OSBuild Cache
+          run: sudo incus exec builder -- rm -rf /ucore/output/cache
             
         - name: Copy Out Disk Images
           run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
+
+        - name: Chown Output Directory
+          run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE/output
+
+        - name: List Output Directory
+          run: ls -lah $GITHUB_WORKSPACE/output
 
         - name: Remove Builder VM
           run: sudo incus rm -f builder
