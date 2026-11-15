@@ -88,32 +88,34 @@ jobs:
 
           # Preallocate loop devices
           for i in $(seq 0 7); 
-            do sudo mknod -m 0660 /dev/loop$i b 7 $i 2>/dev/null || true
           done
 
-          # Launch and Configure Builder
-          sudo incus launch images:fedora/45 builder \
-               --config security.privileged=true \
-               --config security.nesting=true \
-               --config raw.lxc="lxc.apparmor.profile=unconfined
-                                 lxc.mount.auto=proc:rw sys:rw cgroup:rw
-                                 lxc.cgroup2.devices.allow = b 7:* rwm
-                                 lxc.cgroup2.devices.allow = c 10:237 rwm
-                                 lxc.cgroup2.devices.allow = c 10:236 rwm
-                                 lxc.cgroup2.devices.allow = b 252:* rwm
-                                 lxc.cgroup2.devices.allow = b 253:* rwm
-                                 lxc.cgroup2.devices.allow = b 259:* rwm" \
-               --device loop-control,type=unix-char,path=/dev/loop-control \
-               --device mapper-control,type=unix-char,path=/dev/mapper/control \
-               --device loop0,type=unix-block,path=/dev/loop0 \
-               --device loop1,type=unix-block,path=/dev/loop1 \
-               --device loop2,type=unix-block,path=/dev/loop2 \
-               --device loop3,type=unix-block,path=/dev/loop3 \
-               --device loop4,type=unix-block,path=/dev/loop4 \
-               --device loop5,type=unix-block,path=/dev/loop5 \
-               --device loop6,type=unix-block,path=/dev/loop6 \
-               --device loop7,type=unix-block,path=/dev/loop7 \
-               --device workspace,type=disk,source="$GITHUB_WORKSPACE",path=/ucore
+          # Configure Builder
+          sudo incus init images:fedora/45 builder
+          sudo incus config set builder security.privileged=true
+          sudo incus config set builder security.nesting=true
+          sudo incus config set builder raw.lxc - << 'EOF'
+          lxc.apparmor.profile=unconfined
+          lxc.mount.auto=proc:rw sys:rw cgroup:rw
+          lxc.cgroup2.devices.allow = b 7:* rwm
+          lxc.cgroup2.devices.allow = c 10:237 rwm
+          lxc.cgroup2.devices.allow = c 10:236 rwm
+          lxc.cgroup2.devices.allow = b 252:* rwm
+          lxc.cgroup2.devices.allow = b 253:* rwm
+          lxc.cgroup2.devices.allow = b 259:* rwm
+          EOF
+
+          sudo incus config device add builder loop-control unix-char path=/dev/loop-control
+          sudo incus config device add builder mapper-control unix-char path=/dev/mapper/control
+
+          for i in $(seq 0 7); do
+            sudo mknod -m 0660 /dev/loop$i b 7 $i 2>/dev/null || true
+            sudo incus config device add builder loop$i unix-block path=/dev/loop$i || true
+          done
+
+          sudo incus config device add builder workspace disk source="$GITHUB_WORKSPACE" path=/ucore
+
+          sudo incus start builder
 
           # Wait for the Builder VM to be ready
           while ! sudo incus exec builder -- true; do sleep 5; done
