@@ -60,162 +60,169 @@ jobs:
           - image_suffix: "-hci"
             description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
-        - name: Maximize build space
-          uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
 
-        - name: Install ZFS
-          run: |
-            set -x
-            sudo apt update && sudo apt install -y zfsutils-linux
-
-        - name: Setup Incus and Build VM
-          run: |
-            set -x
-            # Setup KVM
-            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-            sudo udevadm control --reload-rules
-            sudo udevadm trigger --name-match=kvm
-
-            # Get Incus Installed and initialize it
-            curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
-            sudo nft flush ruleset
-            sudo incus admin init --auto --storage-backend=zfs
-            sudo incus storage set default size=120GB
-            sudo incus storage info default
-            sudo incus storage show default
-
-            # Launch Builder VM
-            sudo incus launch images:fedora/45 builder --vm \
-              --config limits.memory=80% \
-              --config limits.cpu=3 \
-              --device root,size=150GB
-
-            # Wait for the Builder VM to be ready
-            while ! sudo incus exec builder -- true; do sleep 5; done
-
-            # Grow the root partition to utilize the full disk size
-            sudo incus exec builder -- dnf update -y
-            sudo incus exec builder -- dnf install -y \
-                 cloud-utils-growpart \
-                 e2fsprogs
-            sudo incus exec builder -- \
-                 growpart /dev/sda 2
-            sudo incus exec builder -- \
-                 resize2fs /dev/sda2
-
-            # Install necessary build tools and dependencies
-            sudo incus exec builder -- dnf install -y \
-                 just git-core \
-                 osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
-                 dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
-
-            free -h
-            df -h
-
-
-        - name: Checkout Repository
-          uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-          with:
-            submodules: recursive
-
-        - name: Push Repository to Build VM
-          run: sudo incus file push -r $GITHUB_WORKSPACE builder/ucore
-
-        - name: Mark Directory as Safe for Git
-          # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
-          run: sudo incus exec builder -- git config --global --add safe.directory /ucore
-
-        - name: Build Disk Images
-          run: |
-            sudo incus exec builder -- \
-              systemd-run --unit=image-build \
-              -p CPUQuota=275% \
-              -p MemoryMax=10G \
-              -p IOWeight=75 \
-              --pty \
-              --pipe \
-              ionice -c 3 nice -n 19 \
-              just --justfile /ucore/ucore/Justfile gen-disk-images \
-                "${{ inputs.ucore_stream }}" \
-                "${{ matrix.image_suffix}}" \
-                "${{ matrix.nvidia_tag}}"
-            
-        - name: Delete OSBuild Cache
-          run: sudo incus exec builder -- rm -rf /ucore/output/cache
-            
-        - name: Copy Out Disk Images
-          run: sudo incus file pull -rp builder/ucore/output $GITHUB_WORKSPACE/output
-
-        - name: Chown Output Directory
-          run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE/output
-
-        - name: List Output Directory
-          run: ls -lah $GITHUB_WORKSPACE/output
-
-        - name: Remove Builder VM
-          run: sudo incus rm -f builder
-
-        - name: Compress Disk Images
-          run: |
-            set -x
-            for file in output/*; do
-              xz -z -T0 -9 -v "$file"
-              sha256sum "$file.xz" > "$file.xz.sha256"
-            done
-
-        - name: Upload Metal Raw
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
-
-        - name: Upload Metal Raw sha256
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
+      - name: Install ZFS
+        run: |
+          set -x
+          sudo apt update && sudo apt install -y zfsutils-linux
         
-        - name: Upload QEMU QCOW2
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
 
-        - name: Upload QEMU QCOW2 sha256
-          uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-          with:
-            name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
-            path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
-            archive: false
-            if-no-files-found: error
-            retention-days: 1
+      - name: Setup Incus and Build Container
+        run: |
+          set -x
+          # Setup KVM
+          # echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          # sudo udevadm control --reload-rules
+          # sudo udevadm trigger --name-match=kvm
 
-        # - name: Upload Live ISO
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+          # Get Incus Installed and initialize it
+          curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
+          sudo nft flush ruleset
+          sudo incus admin init --auto --storage-backend=zfs
 
-        # - name: Upload Live ISO sha256
-        #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        #   with:
-        #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
-        #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
-        #     archive: false
-        #     if-no-files-found: error
-        #     retention-days: 1
+          # Preallocate loop devices
+          for i in $(seq 0 7); 
+            do sudo mknod -m 0660 /dev/loop$i b 7 $i 2>/dev/null || true
+          done
 
+          # Launch and Configure Builder
+          sudo incus launch images:fedora/45 builder \
+               --config security.privileged=true \
+               --config security.nesting=true \
+               --config raw.lxc="lxc.apparmor.profile=unconfined
+                                 lxc.mount.auto=proc:rw sys:rw cgroup:rw
+                                 lxc.cgroup2.devices.allow = b 7:* rwm
+                                 lxc.cgroup2.devices.allow = c 10:237 rwm
+                                 lxc.cgroup2.devices.allow = c 10:236 rwm
+                                 lxc.cgroup2.devices.allow = b 252:* rwm
+                                 lxc.cgroup2.devices.allow = b 253:* rwm
+                                 lxc.cgroup2.devices.allow = b 259:* rwm" \
+               --device loop-control,type=unix-char,path=/dev/loop-control \
+               --device mapper-control,type=unix-char,path=/dev/mapper/control \
+               --device loop0,type=unix-block,path=/dev/loop0 \
+               --device loop1,type=unix-block,path=/dev/loop1 \
+               --device loop2,type=unix-block,path=/dev/loop2 \
+               --device loop3,type=unix-block,path=/dev/loop3 \
+               --device loop4,type=unix-block,path=/dev/loop4 \
+               --device loop5,type=unix-block,path=/dev/loop5 \
+               --device loop6,type=unix-block,path=/dev/loop6 \
+               --device loop7,type=unix-block,path=/dev/loop7 \
+               --device workspace,type=disk,source="$GITHUB_WORKSPACE",path=/ucore
 
-        # TODO: Add support for uploading with ORAS
+          # Wait for the Builder VM to be ready
+          while ! sudo incus exec builder -- true; do sleep 5; done
+
+          # Grow the root partition to utilize the full disk size
+          sudo incus exec builder -- dnf update -y
+          # sudo incus exec builder -- dnf install -y \
+          #      cloud-utils-growpart \
+          #      e2fsprogs
+          # sudo incus exec builder -- \
+          #      growpart /dev/sda 2
+          # sudo incus exec builder -- \
+          #      resize2fs /dev/sda2
+
+          # Install necessary build tools and dependencies
+          sudo incus exec builder -- dnf install -y \
+               just git-core \
+               osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
+               dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
+
+          free -h
+          df -h
+
+      - name: Mark Directory as Safe for Git
+        # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
+        run: sudo incus exec builder -- git config --global --add safe.directory /ucore
+
+      - name: Build Disk Images
+        run: |
+          sudo incus exec builder -- \
+            systemd-run --unit=image-build \
+            -p IOWeight=75 \
+            --pty \
+            --pipe \
+            ionice -c 3 nice -n 19 \
+            just --justfile /ucore/ucore/Justfile gen-disk-images \
+              "${{ inputs.ucore_stream }}" \
+              "${{ matrix.image_suffix}}" \
+              "${{ matrix.nvidia_tag}}"
+
+      - name: Delete OSBuild Cache
+        run: sudo incus exec builder -- rm -rf /ucore/output/cache
+
+      - name: Chown Output Directory
+        run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE/output
+
+      - name: List Output Directory
+        run: ls -lah $GITHUB_WORKSPACE/output
+
+      - name: Compress Disk Images
+        run: |
+          set -x
+          for file in output/*; do
+            xz -z -T0 -9 -v "$file"
+            sha256sum "$file.xz" > "$file.xz.sha256"
+          done
+
+      - name: Upload Metal Raw
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Metal Raw sha256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.xz.sha256
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload QEMU QCOW2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload QEMU QCOW2 sha256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.xz.sha256
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      # - name: Upload Live ISO
+      #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      #   with:
+      #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
+      #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz
+      #     archive: false
+      #     if-no-files-found: error
+      #     retention-days: 1
+
+      # - name: Upload Live ISO sha256
+      #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      #   with:
+      #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
+      #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.xz.sha256
+      #     archive: false
+      #     if-no-files-found: error
+      #     retention-days: 1
+
+      # TODO: Add support for uploading with ORAS
