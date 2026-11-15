@@ -86,10 +86,6 @@ jobs:
           sudo nft flush ruleset
           sudo incus admin init --auto --storage-backend=zfs
 
-          # Preallocate loop devices
-          for i in $(seq 0 7); 
-          done
-
           # Configure Builder
           sudo incus init images:fedora/45 builder
           sudo incus config set builder security.privileged=true
