@@ -137,7 +137,7 @@ jobs:
         run: |
           set -x
           for file in output/*; do
-            if [ -f "$file" ]; then
+            if [[ "$(basename "$file")" =~ \.(raw|qcow2|iso)$ ]]; then
               zstd --rm -T0 -14 -v "$file" -o "$file.zst"
               sha256sum "$file.zst" > "$file.zst.sha256"
             fi
