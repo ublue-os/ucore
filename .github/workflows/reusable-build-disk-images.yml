@@ -104,7 +104,11 @@ jobs:
           docker exec builder dnf install -y \
                just git-core patch \
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
-               dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
+               dosfstools genisoimage squashfs-tools erofs-utils
+          
+          if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
+            docker exec builder dnf install -y syslinux-nonlinux
+          fi
 
       - name: Mark Directory as Safe for Git
         run: docker exec builder git config --system --add safe.directory /ucore
