@@ -149,7 +149,9 @@ jobs:
             --pty \
             --pipe \
             ionice -c 3 nice -n 19 \
-            just --justfile /ucore/ucore/Justfile gen-disk-images \
+            just --justfile /ucore/ucore/Justfile \
+            --working-directory /ucore \
+            gen-disk-images \
               "${{ inputs.ucore_stream }}" \
               "${{ matrix.image_suffix}}" \
               "${{ matrix.nvidia_tag}}"
