@@ -63,16 +63,10 @@ jobs:
       # - name: Maximize build space
       #   uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
 
-      - name: Install ZFS/XFS
-        run: sudo apt update && sudo apt install -y zfsutils-linux xfsprogs
-
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
-
-      - name: Install Incus
-        run: curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh; sudo nft flush ruleset
 
       - name: Disable AppArmor and Allow Unprivileged User Namespaces
         run: |
@@ -82,71 +76,38 @@ jobs:
           sudo aa-teardown
           sudo systemctl stop apparmor
 
-      - name: Initialize Incus
-        run: sudo incus admin init --auto --storage-backend=zfs
-
       - name: Initialize and Configure Builder
         run: |
-          sudo incus init images:fedora/45 builder
-          sudo incus config set builder security.privileged=true
-          sudo incus config set builder security.nesting=true
-          sudo incus config set builder raw.lxc=- << 'EOF'
-          lxc.apparmor.profile=unconfined
-          lxc.mount.auto=proc:rw sys:rw cgroup:rw
-          lxc.cgroup2.devices.allow = b 7:* rwm
-          lxc.cgroup2.devices.allow = c 10:229 rwm
-          lxc.cgroup2.devices.allow = c 10:236 rwm
-          lxc.cgroup2.devices.allow = c 10:237 rwm
-          lxc.cgroup2.devices.allow = b 252:* rwm
-          lxc.cgroup2.devices.allow = b 253:* rwm
-          lxc.cgroup2.devices.allow = b 259:* rwm
-          EOF
+          docker run \
+                 --detach \
+                 --name builder \
+                 --pid=host \
+                 --privileged \
+                 --tmpfs /run:exec \
+                 --tmpfs /tmp:exec \
+                 --tty \
+                 --volume "$GITHUB_WORKSPACE:/ucore" \
+                 --volume /dev:/dev \
+                 --volume /lib/modules:/lib/modules \
+                 --volume /var \
+                 --workdir /ucore \
+                 fedora:latest \
+                 sleep infinity
 
-          sudo incus config device add builder loop-control unix-char path=/dev/loop-control
-          sudo incus config device add builder mapper-control unix-char path=/dev/mapper/control
-
-          for i in $(seq 0 7); do
-            sysdev="/sys/class/block/loop$i/dev"
-            node="/dev/loop$i"
-
-            IFS=: read -r major minor < "$sysdev"
-            if [ ! -e "$node" ]; then
-              sudo mknod -m 0660 "$node" b "$major" "$minor"
-            fi
-
-            expected="$(printf '%x:%x' "$major" "$minor")"
-            if [ ! -b "$node" ] || [ "$(stat -Lc '%t:%T' "$node")" != "$expected" ]; then
-              echo "$node does not match $sysdev" >&2
-              exit 1
-            fi
-
-            sudo incus config device add builder "loop$i" unix-block path="$node"
-          done
-
-          sudo incus config device add builder workspace disk source="$GITHUB_WORKSPACE" path=/ucore
-
-          sudo incus start builder
-
-          sleep 5
-          sudo incus ls
-
-          # Install necessary build tools and dependencies
-          sudo incus exec builder -- bash << 'EOF'
+          docker exec builder -- bash << 'EOF'
           set -x
           dnf install -y \
                just git-core patch \
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
-          patch_target=$(rpm -ql osbuild | grep "/devices/org.osbuild.loopback$")
-          patch --forward "$patch_target" -i /ucore/.github/patches/osbuild-loopback-sysfs.patch
           EOF
 
       - name: Mark Directory as Safe for Git
-        run: sudo incus exec builder -- git config --system --add safe.directory /ucore
+        run: docker exec builder -- git config --system --add safe.directory /ucore
 
       - name: Build Disk Images
         run: |
-          sudo incus exec builder -- \
+          docker exec builder -- \
             systemd-run --unit=image-build \
             -p IOWeight=75 \
             --pty \
@@ -163,6 +124,7 @@ jobs:
         if: always()
         run: |
           sudo dmesg
+          docker rm -f builder
 
       - name: Chown Output Directory
         run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE/output
