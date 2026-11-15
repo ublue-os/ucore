@@ -407,7 +407,7 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     mkdir -p {{ GIT_ROOT }}/output
     pushd {{ GIT_ROOT }}/output && sh {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
         --osname "fedora-coreos" \
-        --platforms "qemu,metal" \
+        --platforms "qemu,metal,live" \
         --ociarchive "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
         --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
         {{ if image_suffix =~ "hci" { "--metal-image-size 6144" } else if nvidia =~ "nvidia" { "--metal-image-size 6144" } else { "" } }}

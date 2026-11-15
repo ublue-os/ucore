@@ -123,11 +123,9 @@ jobs:
               "${{ matrix.image_suffix}}" \
               "${{ matrix.nvidia_tag}}"
 
-      - name: Debug
+      - name: Remove Builder Container
         if: always()
-        run: |
-          sudo dmesg
-          docker rm -f builder
+        run: docker rm -f builder
 
       - name: Chown Output Directory
         run: sudo chown -R $USER:$USER $GITHUB_WORKSPACE/output
@@ -181,22 +179,22 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # - name: Upload Live ISO
-      #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-      #   with:
-      #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst
-      #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst
-      #     archive: false
-      #     if-no-files-found: error
-      #     retention-days: 1
+      - name: Upload Live ISO
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
 
-      # - name: Upload Live ISO sha256
-      #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-      #   with:
-      #     name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst.sha256
-      #     path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst.sha256
-      #     archive: false
-      #     if-no-files-found: error
-      #     retention-days: 1
+      - name: Upload Live ISO sha256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst.sha256
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live.${{ matrix.arch }}.iso.zst.sha256
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
 
       # TODO: Add support for uploading with ORAS
