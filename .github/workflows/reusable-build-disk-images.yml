@@ -112,11 +112,6 @@ jobs:
       - name: Build Disk Images
         run: |
           docker exec builder \
-            systemd-run --unit=image-build \
-            -p IOWeight=75 \
-            --pty \
-            --pipe \
-            ionice -c 3 nice -n 19 \
             just --justfile /ucore/ucore/Justfile \
             --working-directory /ucore \
             gen-disk-images \
