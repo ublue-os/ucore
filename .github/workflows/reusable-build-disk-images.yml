@@ -81,13 +81,13 @@ jobs:
             curl -fsSL https://pkgs.zabbly.com/get/incus-stable | sudo sh
             sudo nft flush ruleset
             sudo incus admin init --auto --storage-backend=zfs
-            sudo incus storage set default size=110GB
+            sudo incus storage set default size=120GB
 
             # Launch Builder VM
             sudo incus launch images:fedora/45 builder --vm \
               --config limits.memory=80% \
               --config limits.cpu.allowance=300% \
-              --device root,size=120GB
+              --device root,size=135GB
 
             # Wait for the Builder VM to be ready
             while ! sudo incus exec builder -- true; do sleep 5; done
