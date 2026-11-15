@@ -139,7 +139,7 @@ jobs:
 
       - name: Mark Directory as Safe for Git
         # This ensures that Git operations within the builder VM recognize the /ucore directory as safe
-        run: sudo incus exec builder -- git config --global --add safe.directory /ucore
+        run: sudo incus exec builder -- git config --system --add safe.directory /ucore
 
       - name: Build Disk Images
         run: |
