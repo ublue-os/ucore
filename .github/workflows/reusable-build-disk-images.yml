@@ -83,6 +83,7 @@ jobs:
                  --detach \
                  --entrypoint "tail" \
                  --name builder \
+                 --network=host \
                  --pid=host \
                  --privileged \
                  --security-opt apparmor=unconfined \
@@ -100,13 +101,10 @@ jobs:
             
           sleep 5
 
-          docker exec builder bash << 'EOF'
-          set -x
-          dnf install -y \
+          docker exec builder dnf install -y \
                just git-core patch \
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
-          EOF
 
       - name: Mark Directory as Safe for Git
         run: docker exec builder git config --system --add safe.directory /ucore
