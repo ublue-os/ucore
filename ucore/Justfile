@@ -409,6 +409,8 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
 
     echo "Disk images created for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"
 
+    ls -lah {{ GIT_ROOT }}/output
+
     echo "Compressing Disk images..."
     xz_command="xz -z -T0 -9 -v -k"
 

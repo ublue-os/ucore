@@ -141,6 +141,9 @@ jobs:
                 "${{ matrix.image_suffix}}" \
                 "${{ matrix.nvidia_tag}}"
             
+        - name: Troubleshooting Disk Usage
+          if: always()
+          run: |
             # Troubleshooting
             df -h
             sudo incus exec builder -- df -h
