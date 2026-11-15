@@ -81,9 +81,12 @@ jobs:
           set -x
           docker run \
                  --detach \
+                 --entrypoint "tail" \
                  --name builder \
                  --pid=host \
                  --privileged \
+                 --security-opt apparmor=unconfined \
+                 --security-opt seccomp=unconfined \
                  --tmpfs /run:exec \
                  --tmpfs /tmp:exec \
                  --tty \
@@ -93,7 +96,9 @@ jobs:
                  --volume /var \
                  --workdir /ucore \
                  fedora:latest \
-                 while true; do sleep 15; done
+                 "-f" "/dev/null"
+            
+          sleep 5
 
           docker exec builder bash << 'EOF'
           set -x
