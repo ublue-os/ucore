@@ -142,6 +142,15 @@ jobs:
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils syslinux-nonlinux
 
+          sudo incus exec builder -- bash << 'EOF'
+          set -x
+          for loop_idx in $(seq 0 7); do
+            base_minor=$((loop_idx * 8))
+            for part in $(seq 1 7); do
+              mknod -m 0660 /dev/loop${loop_idx}p${part} b 7 $((base_minor + part)) 2>/dev/null || true
+            done
+          done
+          EOF
           sudo incus exec builder -- cat /proc/self/uid_map
 
       - name: Mark Directory as Safe for Git
