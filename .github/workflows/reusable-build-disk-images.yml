@@ -153,7 +153,15 @@ jobs:
 
         - name: Remove Builder VM
           run: sudo incus rm -f builder
-            
+
+        - name: Compress Disk Images
+          run: |
+            set -x
+            for file in output/*; do
+              xz -z -T0 -9 -v "$file"
+              sha256sum "$file.xz" > "$file.xz.sha256"
+            done
+
         # - name: Upload Metal Raw
         #   uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         #   with:
