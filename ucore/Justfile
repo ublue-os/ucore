@@ -400,9 +400,12 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     set -euox pipefail
 
     mkdir -p {{ GIT_ROOT }}/output
+    if [[ ! -f "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest" ]]; then
+        echo "Creating digest file: {{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest"
+        skopeo inspect --format {{ "'{{.Digest}}'" }} "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" > "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest"
+    fi
     if [[ ! -f "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" ]]; then
         echo "Creating OCI archive: {{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
-        skopeo inspect --format {{ "'{{.Digest}}'" }} "docker://{{ IMAGE_REGISTRY }}/{{ "ucore" + image_suffix + ":" + stream + nvidia }}" > "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest"
         skopeo copy --remove-signatures "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix }}@$(< "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest")" "oci-archive:{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
     fi
 
