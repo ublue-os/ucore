@@ -414,6 +414,6 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
         --platforms "qemu,metal,live" \
         --ociarchive "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
         --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
-        {{ if image_suffix =~ "hci" { "--metal-image-size 6144" } else if nvidia =~ "nvidia" { "--metal-image-size 6144" } else { "" } }}
+        {{ if image_suffix =~ "hci" { "--metal-image-size 6144" } else if nvidia =~ "nvidia" { "--metal-image-size 6144" } else if stream =~ "lts" { "--metal-image-size 6144" } else { "" } }}
 
     echo "Disk images created for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"
