@@ -38,7 +38,6 @@ jobs:
       contents: read
     outputs:
       date: ${{ steps.date.outputs.date }}
-      publish: ${{ steps.publish.outputs.publish }}
     steps:
       - name: Get current date
         id: date
@@ -436,19 +435,19 @@ jobs:
           retention-days: 14
       
       - name: Generate OCI-Archive
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && (matrix.image_suffix != '-hci' && matrix.nvidia_tag == '')
         env:
           IMAGE: ${{ env.IMAGE_NAME }}:${{ env.TAG_VERSION_ARCH }}
         run: |
-          podman push "$IMAGE" oci-archive:ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}.ociarchive
+          podman push "$IMAGE" oci-archive:ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}.${{ matrix.arch }}.ociarchive
 
           
       - name: Upload OCI-Archive
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && (matrix.image_suffix != '-hci' && matrix.nvidia_tag == '')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}.ociarchive
-          path: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}.ociarchive
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}.${{ matrix.arch }}.ociarchive
+          path: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}.${{ matrix.arch }}.ociarchive
           if-no-files-found: warn
           retention-days: 1
 
