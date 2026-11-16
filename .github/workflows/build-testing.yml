@@ -32,15 +32,14 @@ jobs:
       arch: '["aarch64","x86_64"]'
       force_build: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
 
-  # TODO: DISABLE while testing
-  # build-testing-disk-images:
-  #   needs: build-testing
-  #   permissions:
-  #     actions: write
-  #     contents: write
-  #     packages: write
-  #   uses: ./.github/workflows/reusable-build-disk-images.yml
-  #   secrets: inherit
-  #   with:
-  #     ucore_stream: testing
-  #     arch: '["aarch64","x86_64"]'
+  build-testing-disk-images:
+    needs: build-testing
+    permissions:
+      actions: write
+      contents: write
+      packages: write
+    uses: ./.github/workflows/build-disk-images.yml
+    secrets: inherit
+    with:
+      ucore_stream: testing
+      arch: '["aarch64","x86_64"]'

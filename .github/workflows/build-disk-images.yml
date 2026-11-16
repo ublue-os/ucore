@@ -1,4 +1,4 @@
-name: build-ucore-disk-images
+name: Build UCore Disk Images
 on:
   workflow_dispatch:
     inputs:
@@ -32,7 +32,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # TODO: Add conditional guards
   build_image:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
@@ -91,10 +90,11 @@ jobs:
                  fedora:latest \
                  "-f" "/dev/null"
             
-          sleep 5
+          # Give the container a moment to initialize
+          sleep 1
 
           docker exec builder dnf install -y \
-               just git-core patch \
+               just git-core \
                osbuild osbuild-tools osbuild-ostree podman jq xfsprogs \
                dosfstools genisoimage squashfs-tools erofs-utils
           
@@ -188,53 +188,57 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 1
-
-      - name: Install ORAS
-        uses: oras-project/setup-oras@v2.0.3
       
-      - name: Install COSIGN
+      - name: Install cosign
         uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
         with:
           cosign-release: "v2.6.5"
 
-      - name: Login to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry for cosign
+        run: |
+          printf '%s' "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Upload Disk Images with ORAS and Sign with COSIGN
+      - name: Install ORAS
+        uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
+
+      - name: Login to GitHub Container Registry with ORAS
+        run: |
+          printf '%s' "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+      
+      - name: Upload Disk Images with ORAS and Sign with COSIGN to GHCR
         if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
           pushd output
+          IMAGE_DIGEST=$(<ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.digest)
           for file in ./*.zst; do
               without_zst=${file%.*}
               file_type=${without_zst##*.}
               DISK_IMAGE_JSON=$(oras attach \
                 --format json \
                 --artifact-type application/vnd.$file_type.zst \
-                --annotation filename="$(basename "$file")" \
-                "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}:${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}" \
-                "$(basename "$file")")
+                --annotation filename=$(basename $file) \
+                {{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${IMAGE_DIGEST} \
+                $(basename $file))
 
               DISK_IMAGE_DIGEST=$(echo "$DISK_IMAGE_JSON" | jq -r '.digest')
+              # oras tag {{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${IMAGE_DIGEST} $(basename $file)
             
               SHA256_JSON=$(oras attach \
                 --format json \
                 --artifact-type application/vnd.$file_type.zst.sha256 \
-                --annotation filename="$(basename "$file")" \
-                "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${DISK_IMAGE_DIGEST}" \
-                "$(basename "$file").sha256")
+                --annotation filename=$(basename $file) \
+                {{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${DISK_IMAGE_DIGEST} \
+                $(basename $file).sha256)
 
               SHA256_DIGEST=$(echo "$SHA256_JSON" | jq -r '.digest')
+              # oras tag {{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${SHA256_DIGEST} $(basename $file).sha256
 
               cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${DISK_IMAGE_DIGEST}"
               cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${SHA256_DIGEST}"
           done
           popd
           
-          oras discover --format json "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}:${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}"
+          oras discover --format json "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${IMAGE_DIGEST}"
