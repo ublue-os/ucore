@@ -47,22 +47,14 @@ jobs:
         image_suffix:
           - "-minimal"
           - ""
-          - "-hci"
         nvidia_tag:
           - ""
-          - "-nvidia-lts"
-          - "-nvidia"
         include:
           - image_suffix: "-minimal"
             description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
           - image_suffix: ""
             description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
-          - image_suffix: "-hci"
-            description: A hyper-converged infrastructure OCI image of Fedora CoreOS (storage + hypervisor)
     steps:
-      # - name: Maximize build space
-      #   uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6 # v10
-
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -206,14 +198,14 @@ jobs:
           cosign-release: "v2.6.5"
 
       - name: Login to GHCR
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Disk Images with ORAS and Sign with COSIGN
-        if: ! github.event_name == 'pull_request'
+        if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
         env:
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
@@ -222,17 +214,23 @@ jobs:
           for file in ./*.zst; do
               without_zst=${file%.*}
               file_type=${without_zst##*.}
-              DISK_IMAGE_DIGEST=$(oras attach \
+              DISK_IMAGE_JSON=$(oras attach \
+                --format json \
                 --artifact-type application/vnd.$file_type.zst \
                 --annotation filename="$(basename "$file")" \
                 "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}:${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}" \
-                "$(basename "$file")"
+                "$(basename "$file")")
+
+              DISK_IMAGE_DIGEST=$(echo "$DISK_IMAGE_JSON" | jq -r '.digest')
             
-              SHA256_DIGEST=$(oras attach \
+              SHA256_JSON=$(oras attach \
+                --format json \
                 --artifact-type application/vnd.$file_type.zst.sha256 \
                 --annotation filename="$(basename "$file")" \
                 "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${DISK_IMAGE_DIGEST}" \
                 "$(basename "$file").sha256")
+
+              SHA256_DIGEST=$(echo "$SHA256_JSON" | jq -r '.digest')
 
               cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${DISK_IMAGE_DIGEST}"
               cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY }}/ucore${{ matrix.image_suffix }}@${SHA256_DIGEST}"
