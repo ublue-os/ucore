@@ -145,8 +145,8 @@ jobs:
       - name: Upload Metal Raw
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.zst
-          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.zst
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -154,8 +154,8 @@ jobs:
       - name: Upload Metal Raw sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.zst.sha256
-          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -163,8 +163,8 @@ jobs:
       - name: Upload QEMU QCOW2
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.zst
-          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.zst
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -172,8 +172,8 @@ jobs:
       - name: Upload QEMU QCOW2 sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
-          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -181,8 +181,8 @@ jobs:
       - name: Upload Live ISO
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live-iso.${{ matrix.arch }}.iso.zst
-          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live-iso.${{ matrix.arch }}.iso.zst
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch}}-live-iso.${{ matrix.arch }}.iso.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -190,8 +190,8 @@ jobs:
       - name: Upload Live ISO sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
-          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          path: output/ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
