@@ -17,6 +17,10 @@ on:
         default: false
         required: false
         type: boolean
+    outputs:
+      changed:
+        description: "Indicates whether the sentinel build detected changes"
+        value: ${{ jobs.sentinel_decision.outputs.changed }}
 
 env:
   AKMODS_REGISTRY: ghcr.io/ublue-os

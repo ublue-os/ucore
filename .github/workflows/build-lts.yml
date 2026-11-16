@@ -34,6 +34,7 @@ jobs:
 
   build-lts-disk-images:
     needs: build-lts
+    if: needs.build-lts.outputs.changed == 'true'
     permissions:
       actions: write
       contents: write
