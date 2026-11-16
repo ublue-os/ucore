@@ -400,19 +400,23 @@ gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
     set -euox pipefail
 
     mkdir -p {{ GIT_ROOT }}/output
-    if [[ ! -f "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest" ]]; then
-        echo "Creating digest file: {{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest"
-        skopeo inspect --format {{ "'{{.Digest}}'" }} "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" > "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest"
+    if [[ ! -f "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.digest" ]]; then
+        echo "Creating digest file: {{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.digest"
+        skopeo inspect --format {{ "'{{.Digest}}'" }} \
+            "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
+            > "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.digest"
     fi
-    if [[ ! -f "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" ]]; then
-        echo "Creating OCI archive: {{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
-        skopeo copy --remove-signatures "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix }}@$(< "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.digest")" "oci-archive:{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
+    if [[ ! -f "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" ]]; then
+        echo "Creating OCI archive: {{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
+        skopeo copy --remove-signatures \
+            "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix }}@$(< "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.digest")" \
+            "oci-archive:{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive"
     fi
 
     pushd {{ GIT_ROOT }}/output && sh {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
         --osname "fedora-coreos" \
         --platforms "qemu,metal,live" \
-        --ociarchive "{{ GIT_ROOT / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
+        --ociarchive "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.ociarchive" \
         --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
         {{ if image_suffix =~ "hci" { "--metal-image-size 6144" } else if nvidia =~ "nvidia" { "--metal-image-size 6144" } else if stream =~ "lts" { "--metal-image-size 6144" } else { "" } }}
 

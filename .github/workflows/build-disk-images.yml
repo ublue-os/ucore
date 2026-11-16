@@ -91,7 +91,7 @@ jobs:
                  "-f" "/dev/null"
             
           # Give the container a moment to initialize
-          sleep 1
+          sleep 5
 
           docker exec builder dnf install -y \
                just git-core \
@@ -104,6 +104,13 @@ jobs:
 
       - name: Mark Directory as Safe for Git
         run: docker exec builder git config --system --add safe.directory /ucore
+
+      - name: Download OCI-Archive
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}.ociarchive
+          path: output
 
       - name: Build Disk Images
         run: |
