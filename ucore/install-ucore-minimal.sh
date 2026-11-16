@@ -83,6 +83,10 @@ for pkg in kernel kernel-core kernel-modules kernel-modules-core kernel-modules-
         rpm --erase $pkg --nodeps
     fi
 done
+
+# Ensure /usr/lib/modules is empty before installing new kernel
+rm -rf /usr/lib/modules/*
+
 echo "Install $KERNEL_NAME version ${KERNEL_VERSION} from kernel-cache."
 dnf -y install \
     /tmp/rpms/kernel/"$KERNEL_NAME"-[0-9]*.rpm \
