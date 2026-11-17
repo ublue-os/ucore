@@ -421,7 +421,7 @@ gen-disk-images:
 
     # Check if builder container is running
     if [[ "$({{ SUDO_IF }} podman container inspect -f {{ "'{{.State.Running}}'" }} builder 2>/dev/null)" == "true" ]]; then
-        {{ SUDO_IF }} podman exec builder -w /ucore \
+        {{ SUDO_IF }} podman exec -w /ucore builder \
         sh custom-coreos-disk-images/custom-coreos-disk-images.sh \
             --osname "fedora-coreos" \
             --platforms "qemu,metal,live" \
