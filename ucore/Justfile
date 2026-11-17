@@ -16,6 +16,7 @@ SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 GIT_ROOT := env("GIT_ROOT", "$(git rev-parse --show-toplevel)")
 SUDO_IF := shell('if [ $(id -u) -ne 0 ]; then echo sudo; fi')
+DESCRIPTION := env("DESCRIPTION", "")
 
 _default:
     @just --list --unsorted
@@ -507,6 +508,7 @@ attach-and-sign-disk-images:
         --format json \
         --artifact-type application/vnd.$file_type.zst \
         --annotation filename=$(basename $file) \
+        --annotation description="{{ DESCRIPTION }}" \
         {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} \
         $(basename $file))
 
@@ -517,6 +519,7 @@ attach-and-sign-disk-images:
         --format json \
         --artifact-type application/vnd.$file_type.zst.sha256 \
         --annotation filename=$(basename $file) \
+        --annotation description="sha256 of $(basename $file)" \
         {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST} \
         $(basename $file).sha256)
 

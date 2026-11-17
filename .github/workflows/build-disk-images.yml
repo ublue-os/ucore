@@ -35,6 +35,10 @@ jobs:
   build_image:
     name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
+    env:
+      IMAGE_NAME: ucore${{ matrix.image_suffix }}
+      TAG_NAME: ${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}
+      DESCRIPTION: ${{ matrix.description }}
     permissions:
       actions: write
       contents: read
@@ -59,20 +63,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Download stream info artifact
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: stream-info-${{ matrix.arch }}
-          path: .
-
-      - name: Set matrix environment variables
-        shell: bash
-        run: |
-          set -x
-          echo "IMAGE_NAME=ucore${{ matrix.image_suffix }}" >> $GITHUB_ENV
-          echo "TAG_VERSION=${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}" >> $GITHUB_ENV
-          cat stream-info.env >> $GITHUB_ENV
-        
       - name: Setup Just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
@@ -91,7 +81,7 @@ jobs:
         if: github.event_name == 'pull_request' && (matrix.image_suffix != '-hci' && matrix.nvidia_tag == '')
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ucore${{ matrix.image_suffix }}-${{ inputs.ucore_stream }}.${{ matrix.arch }}.ociarchive
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}.ociarchive
           path: output
 
       - name: Build Disk Images
@@ -111,8 +101,8 @@ jobs:
       - name: Upload Metal Raw
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
-          path: output/${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -120,8 +110,8 @@ jobs:
       - name: Upload Metal Raw sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
-          path: output/${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -129,8 +119,8 @@ jobs:
       - name: Upload QEMU QCOW2
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
-          path: output/${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -138,8 +128,8 @@ jobs:
       - name: Upload QEMU QCOW2 sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
-          path: output/${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -147,8 +137,8 @@ jobs:
       - name: Upload Live ISO
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
-          path: output/${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch}}-live-iso.${{ matrix.arch }}.iso.zst
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -156,8 +146,8 @@ jobs:
       - name: Upload Live ISO sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
-          path: output/${{ env.IMAGE_NAME }}-${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
