@@ -38,6 +38,7 @@ jobs:
       contents: read
     outputs:
       date: ${{ steps.date.outputs.date }}
+      publish: ${{ steps.publish.outputs.publish }}
     steps:
       - name: Get current date
         id: date
