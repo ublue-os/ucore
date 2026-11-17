@@ -421,11 +421,11 @@ gen-disk-images:
 
     # Check if builder container is running
     if [[ "$({{ SUDO_IF }} podman container inspect -f {{ "'{{.State.Running}}'" }} builder 2>/dev/null)" == "true" ]]; then
-        {{ SUDO_IF }} podman exec -w /ucore builder \
-        sh custom-coreos-disk-images/custom-coreos-disk-images.sh \
+        {{ SUDO_IF }} podman exec -w /ucore/output builder \
+        sh /ucore/custom-coreos-disk-images/custom-coreos-disk-images.sh \
             --osname "fedora-coreos" \
             --platforms "qemu,metal,live" \
-            --ociarchive "output/$OCI_ARCHIVE" \
+            --ociarchive "$OCI_ARCHIVE" \
             --imgref "ostree-image-signed:docker://$IMAGE_REF" \
             --metal-image-size "$METAL_SIZE"
         {{ SUDO_IF }} chown -R $USER:$USER "$OUTPUT_DIR"
@@ -531,3 +531,9 @@ attach-and-sign-disk-images:
     done
 
     oras discover --format json "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST}"
+
+podman-machine-init:
+    #!/usr/bin/env bash
+    set -euox pipefail
+
+    podman
