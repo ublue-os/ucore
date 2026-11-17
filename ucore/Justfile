@@ -15,6 +15,7 @@ export NVIDIA_TAG := env("NVIDIA_TAG", "")
 SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 GIT_ROOT := env("GIT_ROOT", "$(git rev-parse --show-toplevel)")
+SUDO_IF := shell('if [ $(id -u) -ne 0 ]; then echo sudo; fi')
 
 _default:
     @just --list --unsorted
@@ -395,29 +396,135 @@ changelog stream='{{ UCORE_STREAM }}' output='' env_output='' notes_file='' max_
     printf 'Wrote changelog markdown to %s\n' "$OUTPUT"
     printf 'Wrote changelog env to %s\n' "$ENV_OUTPUT"
 
-gen-disk-images stream=UCORE_STREAM image_suffix='' nvidia='':
+gen-disk-images:
     #!/usr/bin/env bash
     set -euox pipefail
 
-    mkdir -p {{ GIT_ROOT }}/output
-    if [[ ! -f "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia + "." + arch() }}.digest" ]]; then
-        echo "Creating digest file: {{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia + "." + arch() }}.digest"
+    IMAGE_REF="{{ IMAGE_REGISTRY / TARGET_IMAGE + ":" + UCORE_STREAM + NVIDIA_TAG }}"
+    DIGEST_FILE="{{ GIT_ROOT / "output" / TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest"
+    OCI_ARCHIVE="{{ GIT_ROOT / "output" / TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.ociarchive"
+    OUTPUT_DIR="{{ GIT_ROOT / "output" }}"
+    METAL_SIZE="{{ if TARGET_IMAGE =~ "hci" { "6144" } else if NVIDIA_TAG =~ "nvidia" { "6144" } else if TARGET_IMAGE =~ "minimal" { "4096" } else if UCORE_STREAM =~ "lts" { "5120" } else { "4096" } }}"
+    mkdir -p "$OUTPUT_DIR"
+
+    if [[ ! -f "$DIGEST_FILE" ]]; then
+        echo "Creating digest file: $DIGEST_FILE"
         skopeo inspect --format {{ "'{{.Digest}}'" }} \
-            "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
-            > "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia + "." + arch() }}.digest"
+            "docker://$IMAGE_REF" > "$DIGEST_FILE"
     fi
-    if [[ ! -f "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia + "." + arch() }}.ociarchive" ]]; then
-        echo "Creating OCI archive: {{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia + "." + arch() }}.ociarchive"
+    if [[ ! -f "$OCI_ARCHIVE" ]]; then
+        echo "Creating OCI archive: $OCI_ARCHIVE"
         skopeo copy --remove-signatures \
-            "docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix }}@$(< "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia }}.digest")" \
-            "oci-archive:{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia + "." + arch() }}.ociarchive"
+            "docker://$IMAGE_REF@$(<$DIGEST_FILE)" "oci-archive:$OCI_ARCHIVE"
     fi
 
-    pushd {{ GIT_ROOT }}/output && sh {{ GIT_ROOT }}/custom-coreos-disk-images/custom-coreos-disk-images.sh \
-        --osname "fedora-coreos" \
-        --platforms "qemu,metal,live" \
-        --ociarchive "{{ GIT_ROOT / "output" / "ucore" + image_suffix + "-" + stream + nvidia + "." + arch() }}.ociarchive" \
-        --imgref "ostree-image-signed:docker://{{ IMAGE_REGISTRY / "ucore" + image_suffix + ":" + stream + nvidia }}" \
-        {{ if image_suffix =~ "hci" { "--metal-image-size 6144" } else if nvidia =~ "nvidia" { "--metal-image-size 6144" } else if stream =~ "lts" { "--metal-image-size 6144" } else { "--metal-image-size 5120" } }}
+    # Check if builder container is running
+    if [[ "$({{ SUDO_IF }} podman container inspect -f {{ "'{{.State.Running}}'" }} builder 2>/dev/null)" == "true" ]]; then
+        {{ SUDO_IF }} podman exec builder -w /ucore \
+        sh custom-coreos-disk-images/custom-coreos-disk-images.sh \
+            --osname "fedora-coreos" \
+            --platforms "qemu,metal,live" \
+            --ociarchive "$OCI_ARCHIVE" \
+            --imgref "ostree-image-signed:docker://$IMAGE_REF" \
+            --metal-image-size "$METAL_SIZE"
+        {{ SUDO_IF }} chown -R $USER:$USER "$GIT_ROOT/output"
+        echo "Disk images created for {{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG }}"
+    else
+        echo "Builder container is not running. Exiting."
+        exit 1
+    fi
 
-    echo "Disk images created for {{ "ucore" + image_suffix + "-" + stream + nvidia }}"
+setup-disk-image-builder:
+    #!/usr/bin/env bash
+    set -euox pipefail
+    {{ SUDO_IF }} podman run \
+           --detach \
+           --entrypoint "tail" \
+           --name builder \
+           --network=host \
+           --pid=host \
+           --privileged \
+           --security-opt apparmor=unconfined \
+           --security-opt label=disable \
+           --security-opt seccomp=unconfined \
+           --tmpfs /run:exec \
+           --tmpfs /tmp:exec \
+           --tty \
+           --volume "$GIT_ROOT:/ucore" \
+           --volume /dev:/dev \
+           --volume /lib/modules:/lib/modules \
+           --volume /var \
+           --workdir /ucore \
+           fedora:latest \
+           "-f" "/dev/null"
+
+    # Give the container a moment to initialize
+    sleep 5
+
+    # Install Build Dependencies
+    {{ SUDO_IF }} podman exec builder dnf install -y \
+         dosfstools \
+         erofs-utils \
+         genisoimage \
+         git-core \
+         jq \
+         just \
+         osbuild \
+         osbuild-ostree \
+         osbuild-tools \
+         podman \
+         squashfs-tools \
+         xfsprogs
+
+    if [[ {{ arch() }} == "x86_64" ]]; then
+        {{ SUDO_IF }} podman exec builder dnf install -y syslinux-nonlinux
+    fi
+
+    # Mark Git Repo Safe
+    {{ SUDO_IF }} podman exec builder git config --global --add safe.directory /ucore
+
+compress-disk-images:
+    #!/usr/bin/env bash
+    set -euox pipefail
+    cd "$GIT_ROOT/output"
+    for file in "$GIT_ROOT/output"/*; do
+        if [[ "$(basename "$file")" =~ \.(raw|qcow2|iso)$ ]]; then
+            zstd --rm -T0 -14 -v "$file" -o "$file.zst"
+            sha256sum "$file.zst" > "$file.zst.sha256"
+        fi
+    done
+
+attach-and-sign-disk-images:
+    #!/usr/bin/env bash
+    set -euox pipefail
+
+    cd "$GIT_ROOT/output"
+    IMAGE_DIGEST=$(<{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest")
+    for file in ./*.zst; do
+        without_zst=${file%.*}
+        file_type=${without_zst##*.}
+        DISK_IMAGE_JSON=$(oras attach \
+        --format json \
+        --artifact-type application/vnd.$file_type.zst \
+        --annotation filename=$(basename $file) \
+        {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} \
+        $(basename $file))
+
+        DISK_IMAGE_DIGEST=$(echo "$DISK_IMAGE_JSON" | jq -r '.digest')
+        # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} $(basename $file)
+
+        SHA256_JSON=$(oras attach \
+        --format json \
+        --artifact-type application/vnd.$file_type.zst.sha256 \
+        --annotation filename=$(basename $file) \
+        {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST} \
+        $(basename $file).sha256)
+
+        SHA256_DIGEST=$(echo "$SHA256_JSON" | jq -r '.digest')
+        # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST} $(basename $file).sha256
+
+        cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST}"
+        cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST}"
+    done
+
+    oras discover --format json "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST}"
