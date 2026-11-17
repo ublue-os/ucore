@@ -416,7 +416,7 @@ gen-disk-images:
     if [[ ! -f "$OUTPUT_DIR/$OCI_ARCHIVE" ]]; then
         echo "Creating OCI archive: $OCI_ARCHIVE"
         skopeo copy --remove-signatures \
-            "docker://$IMAGE_REF@$(<$OUTPUT_DIR/$DIGEST_FILE)" "oci-archive:"$OUTPUT_DIR/$OCI_ARCHIVE"
+            "docker://$IMAGE_REF@$(<$OUTPUT_DIR/$DIGEST_FILE)" "oci-archive:$OUTPUT_DIR/$OCI_ARCHIVE"
     fi
 
     # Check if builder container is running
