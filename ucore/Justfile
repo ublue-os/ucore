@@ -16,7 +16,7 @@ SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 GIT_ROOT := env("GIT_ROOT", "$(git rev-parse --show-toplevel)")
 SUDO_IF := shell('if [ $(id -u) -ne 0 ]; then echo sudo; fi')
-ROOTFUL_PODMAN := env("ROOTFUL_PODMAN", "sudo podman")
+ROOTFUL_PODMAN := env("ROOTFUL_PODMAN", SUDO_IF + " podman")
 DESCRIPTION := env("DESCRIPTION", "")
 
 _default:
