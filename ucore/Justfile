@@ -432,7 +432,7 @@ gen-disk-images:
 
         {{ ROOTFUL_PODMAN }} exec -w /work builder \
             sh -c 'for f in ./*.iso ./*.raw ./*.qcow2; do if [ -e "$f" ]; then mv "$f" /ucore/output/"$f"; fi; done'
-        
+
         {{ SUDO_IF }} chown -R $USER:$USER "$OUTPUT_DIR"
         echo "Disk images created for {{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG }}"
     else
