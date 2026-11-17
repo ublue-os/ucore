@@ -15,7 +15,7 @@ export NVIDIA_TAG := env("NVIDIA_TAG", "")
 SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 GIT_ROOT := env("GIT_ROOT", "$(git rev-parse --show-toplevel)")
-SUDO_IF := shell('if [ $(id -u) -ne 0 ]; then echo sudo; fi')
+SUDO_IF := shell('if [ $(id -u) -ne 0 ] && [ -z "${CONTAINER_HOST:-}" ] && [ -z "${CONTAINER_SSHKEY:-}" ]; then echo sudo; fi')
 DESCRIPTION := env("DESCRIPTION", "")
 
 _default:
@@ -416,7 +416,7 @@ gen-disk-images:
     if [[ ! -f "$OUTPUT_DIR/$OCI_ARCHIVE" ]]; then
         echo "Creating OCI archive: $OCI_ARCHIVE"
         skopeo copy --remove-signatures \
-            "docker://$IMAGE_REF@$(<$OUTPUT_DIR/$DIGEST_FILE)" "oci-archive:$OUTPUT_DIR/$OCI_ARCHIVE"
+            "docker://${IMAGE_REF%:*}@$(<$OUTPUT_DIR/$DIGEST_FILE)" "oci-archive:$OUTPUT_DIR/$OCI_ARCHIVE"
     fi
 
     # Check if builder container is running
@@ -531,9 +531,3 @@ attach-and-sign-disk-images:
     done
 
     oras discover --format json "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST}"
-
-podman-machine-init:
-    #!/usr/bin/env bash
-    set -euox pipefail
-
-    podman
