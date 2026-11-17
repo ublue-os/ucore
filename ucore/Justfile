@@ -451,7 +451,7 @@ setup-disk-image-builder:
            --tmpfs /run:exec \
            --tmpfs /tmp:exec \
            --tty \
-           --volume "$GIT_ROOT:/ucore" \
+           --volume "{{ GIT_ROOT }}:/ucore" \
            --volume /dev:/dev \
            --volume /lib/modules:/lib/modules \
            --volume /var \
@@ -487,8 +487,8 @@ setup-disk-image-builder:
 compress-disk-images:
     #!/usr/bin/env bash
     set -euox pipefail
-    cd "$GIT_ROOT/output"
-    for file in "$GIT_ROOT/output"/*; do
+    cd "{{ GIT_ROOT }}/output"
+    for file in "{{ GIT_ROOT }}/output"/*; do
         if [[ "$(basename "$file")" =~ \.(raw|qcow2|iso)$ ]]; then
             zstd --rm -T0 -14 -v "$file" -o "$file.zst"
             sha256sum "$file.zst" > "$file.zst.sha256"
@@ -499,7 +499,7 @@ attach-and-sign-disk-images:
     #!/usr/bin/env bash
     set -euox pipefail
 
-    cd "$GIT_ROOT/output"
+    cd "{{ GIT_ROOT }}/output"
     IMAGE_DIGEST=$(<{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest")
     for file in ./*.zst; do
         without_zst=${file%.*}
