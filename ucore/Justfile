@@ -15,7 +15,8 @@ export NVIDIA_TAG := env("NVIDIA_TAG", "")
 SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
 GIT_ROOT := env("GIT_ROOT", "$(git rev-parse --show-toplevel)")
-SUDO_IF := shell('if [ $(id -u) -ne 0 ] && [ -z "${CONTAINER_HOST:-}" ] && [ -z "${CONTAINER_SSHKEY:-}" ]; then echo sudo; fi')
+SUDO_IF := shell('if [ $(id -u) -ne 0 ]; then echo sudo; fi')
+ROOTFUL_PODMAN := env("ROOTFUL_PODMAN", "sudo podman")
 DESCRIPTION := env("DESCRIPTION", "")
 
 _default:
@@ -420,14 +421,18 @@ gen-disk-images:
     fi
 
     # Check if builder container is running
-    if [[ "$({{ SUDO_IF }} podman container inspect -f {{ "'{{.State.Running}}'" }} builder 2>/dev/null)" == "true" ]]; then
-        {{ SUDO_IF }} podman exec -w /ucore/output builder \
+    if [[ "$({{ ROOTFUL_PODMAN }} container inspect -f {{ "'{{.State.Running}}'" }} builder 2>/dev/null)" == "true" ]]; then
+        {{ ROOTFUL_PODMAN }} exec -w /work builder \
         sh /ucore/custom-coreos-disk-images/custom-coreos-disk-images.sh \
             --osname "fedora-coreos" \
             --platforms "qemu,metal,live" \
-            --ociarchive "$OCI_ARCHIVE" \
+            --ociarchive "/ucore/output/$OCI_ARCHIVE" \
             --imgref "ostree-image-signed:docker://$IMAGE_REF" \
             --metal-image-size "$METAL_SIZE"
+
+        {{ ROOTFUL_PODMAN }} exec -w /work builder \
+            sh -c 'for f in ./*.iso ./*.raw ./*.qcow2; do if [ -e "$f" ]; then mv "$f" /ucore/output/"$f"; fi; done'
+        
         {{ SUDO_IF }} chown -R $USER:$USER "$OUTPUT_DIR"
         echo "Disk images created for {{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG }}"
     else
@@ -438,24 +443,26 @@ gen-disk-images:
 setup-disk-image-builder:
     #!/usr/bin/env bash
     set -euox pipefail
-    {{ SUDO_IF }} podman run \
+    {{ ROOTFUL_PODMAN }} rm -f builder || true
+    {{ ROOTFUL_PODMAN }} volume create --ignore ucore-builder-work
+    {{ ROOTFUL_PODMAN }} volume create --ignore ucore-builder-var
+
+    {{ ROOTFUL_PODMAN }} run \
            --detach \
            --entrypoint "tail" \
            --name builder \
-           --network=host \
-           --pid=host \
            --privileged \
            --security-opt apparmor=unconfined \
            --security-opt label=disable \
            --security-opt seccomp=unconfined \
-           --tmpfs /run:exec \
-           --tmpfs /tmp:exec \
+           --tmpfs /run \
+           --tmpfs /tmp \
            --tty \
-           --volume "{{ GIT_ROOT }}:/ucore" \
            --volume /dev:/dev \
-           --volume /lib/modules:/lib/modules \
-           --volume /var \
-           --workdir /ucore \
+           --volume "{{ GIT_ROOT }}:/ucore" \
+           --volume ucore-builder-var:/var \
+           --volume ucore-builder-work:/work \
+           --workdir /work \
            fedora:latest \
            "-f" "/dev/null"
 
@@ -463,7 +470,7 @@ setup-disk-image-builder:
     sleep 5
 
     # Install Build Dependencies
-    {{ SUDO_IF }} podman exec builder dnf install -y \
+    {{ ROOTFUL_PODMAN }} exec builder dnf install -y \
          dosfstools \
          erofs-utils \
          genisoimage \
@@ -478,11 +485,11 @@ setup-disk-image-builder:
          xfsprogs
 
     if [[ {{ arch() }} == "x86_64" ]]; then
-        {{ SUDO_IF }} podman exec builder dnf install -y syslinux-nonlinux
+        {{ ROOTFUL_PODMAN }} exec builder dnf install -y syslinux-nonlinux
     fi
 
     # Mark Git Repo Safe
-    {{ SUDO_IF }} podman exec builder git config --global --add safe.directory /ucore
+    {{ ROOTFUL_PODMAN }} exec builder git config --global --add safe.directory /ucore
 
 compress-disk-images:
     #!/usr/bin/env bash
