@@ -507,7 +507,7 @@ attach-and-sign-disk-images:
     set -euox pipefail
 
     cd "{{ GIT_ROOT }}/output"
-    IMAGE_DIGEST=$(<{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest")
+    IMAGE_DIGEST=$(<{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest)
     for file in ./*.zst; do
         without_zst=${file%.*}
         file_type=${without_zst##*.}
@@ -533,8 +533,8 @@ attach-and-sign-disk-images:
         SHA256_DIGEST=$(echo "$SHA256_JSON" | jq -r '.digest')
         # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST} $(basename $file).sha256
 
-        cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST}"
-        cosign sign -y env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST}"
+        cosign sign -y --key env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST}"
+        cosign sign -y --key env://COSIGN_PRIVATE_KEY "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST}"
     done
 
     oras discover --format json "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST}"
