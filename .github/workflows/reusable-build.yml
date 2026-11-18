@@ -707,7 +707,7 @@ jobs:
               exit 1
             fi
             echo "Signing ${IMAGE_REF}@${IMAGE_DIGEST}"
-            cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false "${IMAGE_REF}@${IMAGE_DIGEST}"
+            cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false --use-signing-config=false "${IMAGE_REF}@${IMAGE_DIGEST}"
           done
 
       - name: Upload SBOMs
