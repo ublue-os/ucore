@@ -406,7 +406,7 @@ gen-disk-images:
     DIGEST_FILE="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest"
     OCI_ARCHIVE="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.ociarchive"
     OUTPUT_DIR="{{ GIT_ROOT / "output" }}"
-    METAL_SIZE="{{ if TARGET_IMAGE =~ "hci" { "6144" } else if NVIDIA_TAG =~ "nvidia" { "6144" } else if TARGET_IMAGE =~ "minimal" { "4096" } else { "5120" } }}"
+    METAL_SIZE="{{ if TARGET_IMAGE =~ "hci" { "6144" } else if NVIDIA_TAG =~ "nvidia" { "6144" } else if UCORE_STREAM =~ "lts" { "5120" } else if TARGET_IMAGE =~ "minimal" { "4096" } else { "5120" } }}"
     mkdir -p "$OUTPUT_DIR"
 
     if [[ ! -f "$OUTPUT_DIR/$DIGEST_FILE" ]]; then
