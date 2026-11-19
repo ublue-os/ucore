@@ -1,0 +1,181 @@
+name: Build UCore Disk Images
+on:
+  workflow_dispatch:
+    inputs:
+      ucore_stream:
+        description: "The uCore stream: stable, testing, or lts"
+        required: true
+        type: string
+      arch:
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ucore_stream:
+        description: "The uCore stream: stable, testing, or lts"
+        required: true
+        type: string
+      arch:
+        description: 'JSON array of architectures to build, for example ["aarch64","x86_64"]'
+        default: '["x86_64"]'
+        required: false
+        type: string
+
+env:
+  AKMODS_REGISTRY: ghcr.io/ublue-os
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.ucore_stream }}
+  cancel-in-progress: true
+
+jobs:
+  build_image:
+    name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
+    runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
+    env:
+      IMAGE_NAME: ucore${{ matrix.image_suffix }}
+      TAG_NAME: ${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}
+      DESCRIPTION: ${{ matrix.description }}
+    permissions:
+      actions: write
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJson(inputs.arch) }}
+        image_suffix:
+          - "-minimal"
+          - ""
+        nvidia_tag:
+          - ""
+        include:
+          - image_suffix: "-minimal"
+            description: An OCI image of Fedora CoreOS with a few extra tools and suitable for running in a VM
+          - image_suffix: ""
+            description: An OCI image of Fedora CoreOS with a few extra tools, hardware support, and storage utilities
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Setup Just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
+      - name: Disable AppArmor and Allow Unprivileged User Namespaces
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo sysctl -w kernel.unprivileged_userns_clone=1
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_io_uring=0
+          sudo aa-teardown
+          sudo systemctl stop apparmor
+
+      - name: Initialize and Configure Builder
+        run: just --justfile ucore/Justfile setup-disk-image-builder
+
+      - name: Download OCI-Archive
+        if: github.event_name == 'pull_request' && (matrix.image_suffix != '-hci' && matrix.nvidia_tag == '')
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}.ociarchive
+          path: output
+
+      - name: Build Disk Images
+        env:
+          UCORE_STREAM: ${{ inputs.ucore_stream }}
+          NVIDIA_TAG: ${{ matrix.nvidia_tag }}
+          TARGET_IMAGE: ${{ env.IMAGE_NAME }}
+        run: just --justfile ucore/Justfile gen-disk-images
+
+      - name: Remove Builder Container
+        if: always()
+        run: sudo podman rm -f builder
+
+      - name: Compress Disk Images
+        run: just --justfile ucore/Justfile compress-disk-images
+
+      - name: Upload Metal Raw
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Metal Raw sha256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload QEMU QCOW2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload QEMU QCOW2 sha256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Live ISO
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Live ISO sha256
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          archive: false
+          if-no-files-found: error
+          retention-days: 1
+      
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: "v3.1.3"
+
+      - name: Login to GitHub Container Registry for cosign
+        if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
+        run: |
+          printf '%s' "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
+
+      - name: Login to GitHub Container Registry with ORAS
+        if: (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
+        run: |
+          printf '%s' "${{ github.token }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+      
+      - name: Upload Disk Images with ORAS and Sign with COSIGN to GHCR
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+        env:
+          UCORE_STREAM: ${{ inputs.ucore_stream }}
+          TARGET_IMAGE: ${{ env.IMAGE_NAME }}
+          NVIDIA_TAG: ${{ matrix.nvidia_tag }}
+          COSIGN_EXPERIMENTAL: false
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+        run: just --justfile ucore/Justfile attach-and-sign-disk-images
