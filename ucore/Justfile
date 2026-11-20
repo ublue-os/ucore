@@ -3,7 +3,7 @@ set dotenv-load
 CI_BUILD_TAG := env("CI_BUILD_TAG", "")
 export AKMODS_REGISTRY := env("AKMODS_REGISTRY", "ghcr.io/ublue-os")
 export UCORE_STREAM := env("UCORE_STREAM", "stable")
-export FEDORA_VERSION := env("FEDORA_VERSION", "44")
+export FEDORA_VERSION := env("FEDORA_VERSION", "")
 export IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
@@ -105,13 +105,28 @@ containerfile upstream_image='':
         UPSTREAM_IMAGE="$(just upstream-image)"
     fi
 
+    # Match the akmods release to the selected CoreOS base.
+    image_version="${UPSTREAM_IMAGE##*:}"
+    if [[ "$image_version" =~ ^([0-9]+)\. ]]; then
+        fedora="${BASH_REMATCH[1]}"
+        if [ -n "{{ FEDORA_VERSION }}" ] && [ "{{ FEDORA_VERSION }}" != "$fedora" ]; then
+            echo "FEDORA_VERSION ({{ FEDORA_VERSION }}) does not match CoreOS image ($UPSTREAM_IMAGE)" >&2
+            exit 1
+        fi
+    elif [ -n "{{ FEDORA_VERSION }}" ]; then
+        fedora="{{ FEDORA_VERSION }}"
+    else
+        echo "Cannot determine Fedora version from CoreOS image: $UPSTREAM_IMAGE" >&2
+        exit 1
+    fi
+
     KERNEL_VERSION=""
     if [ -n "{{ KERNEL_VERSION }}" ]; then
         KERNEL_VERSION="-{{ KERNEL_VERSION }}"
     fi
     declare -a CPP_FLAGS
     CPP_FLAGS+=(
-      "-DAKMODS_TAG={{ KERNEL_FLAVOR }}-{{ FEDORA_VERSION }}${KERNEL_VERSION}"
+      "-DAKMODS_TAG={{ KERNEL_FLAVOR }}-${fedora}${KERNEL_VERSION}"
       "-DAKMODS_REGISTRY={{ AKMODS_REGISTRY }}"
       "-DUCORE={{ UCORE_STREAM }}"
       "-DKERNEL={{ KERNEL_FLAVOR }}"
@@ -211,6 +226,11 @@ verify-checksum package='' release='{{ FEDORA_VERSION }}' arch='':
     release='{{ release }}'
     arch='{{ arch }}'
     failed=0
+
+    if [ -z "$release" ]; then
+        version=$(just upstream-version quay.io/fedora/fedora-coreos)
+        release=${version%%.*}
+    fi
 
     if [ -z "$arch" ]; then
         arch="$(uname -m)"
