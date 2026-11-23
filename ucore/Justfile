@@ -418,6 +418,9 @@ gen-disk-images:
         echo "Creating OCI archive: $OCI_ARCHIVE"
         skopeo copy --remove-signatures \
             "docker://${IMAGE_REF%:*}@$(<$OUTPUT_DIR/$DIGEST_FILE)" "oci-archive:$OUTPUT_DIR/$OCI_ARCHIVE"
+    fi
+
+    if [[ -f "$OUTPUT_DIR/$OCI_ARCHIVE" ]]; then
         mv "$OUTPUT_DIR/$OCI_ARCHIVE" "$OUTPUT_DIR/$OCI_ARCHIVE_NO_ARCH"
     fi
 
