@@ -525,7 +525,7 @@ attach-and-sign-disk-images:
 
         DISK_IMAGE_DIGEST=$(echo "$DISK_IMAGE_JSON" | jq -r '.digest')
 
-        # We can tag the disk image artifact if needed instead of using oras discover
+        # We can tag the disk image artifact if needed/wanted instead of using oras discover
         # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} $(basename $file)
 
         SHA256_JSON=$(oras attach \
@@ -538,7 +538,7 @@ attach-and-sign-disk-images:
 
         SHA256_DIGEST=$(echo "$SHA256_JSON" | jq -r '.digest')
 
-        # We can tag the SHA256 artifact as well if needed instead of using oras discover
+        # We can tag the SHA256 artifact as well if needed/wanted instead of using oras discover
         # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST} $(basename $file).sha256
 
         cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false --use-signing-config=false "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST}"

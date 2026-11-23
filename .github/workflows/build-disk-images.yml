@@ -100,8 +100,8 @@ jobs:
       - name: Upload Metal Raw
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
-          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-metal.${{ matrix.arch }}.raw.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-metal.${{ matrix.arch }}.raw.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -109,8 +109,8 @@ jobs:
       - name: Upload Metal Raw sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
-          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-metal.${{ matrix.arch }}.raw.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-metal.${{ matrix.arch }}.raw.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -118,8 +118,8 @@ jobs:
       - name: Upload QEMU QCOW2
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
-          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-qemu.${{ matrix.arch }}.qcow2.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-qemu.${{ matrix.arch }}.qcow2.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -127,8 +127,8 @@ jobs:
       - name: Upload QEMU QCOW2 sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
-          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-qemu.${{ matrix.arch }}.qcow2.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -136,8 +136,8 @@ jobs:
       - name: Upload Live ISO
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
-          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-live-iso.${{ matrix.arch }}.iso.zst
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-live-iso.${{ matrix.arch }}.iso.zst
           archive: false
           if-no-files-found: error
           retention-days: 1
@@ -145,8 +145,8 @@ jobs:
       - name: Upload Live ISO sha256
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
-          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}.${{ matrix.arch }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          name: ${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
+          path: output/${{ env.IMAGE_NAME }}-${{ env.TAG_NAME }}-live-iso.${{ matrix.arch }}.iso.zst.sha256
           archive: false
           if-no-files-found: error
           retention-days: 1
