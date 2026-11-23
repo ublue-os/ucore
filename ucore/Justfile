@@ -73,7 +73,6 @@ upstream-image:
 #     image="44.GOOD.N.N"
 #   fi
 # The pin holds nightlies and PRs. Remove it once a good upstream exists.
-
 # Emergency CoreOS pin: https://github.com/ublue-os/ucore/issues/413
 stream-info output='stream-info.env':
     #!/usr/bin/env bash
@@ -405,6 +404,7 @@ gen-disk-images:
     IMAGE_REF="{{ IMAGE_REGISTRY / TARGET_IMAGE + ":" + UCORE_STREAM + NVIDIA_TAG }}"
     DIGEST_FILE="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest"
     OCI_ARCHIVE="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.ociarchive"
+    OCI_ARCHIVE_NO_ARCH="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG }}.ociarchive"
     OUTPUT_DIR="{{ GIT_ROOT / "output" }}"
     METAL_SIZE="{{ if TARGET_IMAGE =~ "hci" { "6144" } else if NVIDIA_TAG =~ "nvidia" { "6144" } else if UCORE_STREAM =~ "lts" { "5120" } else if TARGET_IMAGE =~ "minimal" { "4096" } else { "5120" } }}"
     mkdir -p "$OUTPUT_DIR"
@@ -414,10 +414,11 @@ gen-disk-images:
         skopeo inspect --format {{ "'{{.Digest}}'" }} \
             "docker://$IMAGE_REF" > "$OUTPUT_DIR/$DIGEST_FILE"
     fi
-    if [[ ! -f "$OUTPUT_DIR/$OCI_ARCHIVE" ]]; then
+    if [[ ! -f "$OUTPUT_DIR/$OCI_ARCHIVE" && ! -f "$OUTPUT_DIR/$OCI_ARCHIVE_NO_ARCH" ]]; then
         echo "Creating OCI archive: $OCI_ARCHIVE"
         skopeo copy --remove-signatures \
             "docker://${IMAGE_REF%:*}@$(<$OUTPUT_DIR/$DIGEST_FILE)" "oci-archive:$OUTPUT_DIR/$OCI_ARCHIVE"
+        mv "$OUTPUT_DIR/$OCI_ARCHIVE" "$OUTPUT_DIR/$OCI_ARCHIVE_NO_ARCH"
     fi
 
     # Check if builder container is running
@@ -426,7 +427,7 @@ gen-disk-images:
         sh /ucore/custom-coreos-disk-images/custom-coreos-disk-images.sh \
             --osname "fedora-coreos" \
             --platforms "qemu,metal,live" \
-            --ociarchive "/ucore/output/$OCI_ARCHIVE" \
+            --ociarchive "/ucore/output/$OCI_ARCHIVE_NO_ARCH" \
             --imgref "ostree-image-signed:docker://$IMAGE_REF" \
             --metal-image-size "$METAL_SIZE"
 
@@ -513,24 +514,28 @@ attach-and-sign-disk-images:
         file_type=${without_zst##*.}
         DISK_IMAGE_JSON=$(oras attach \
         --format json \
-        --artifact-type application/vnd.$file_type.zst \
+        --artifact-type application/vnd.ublue.ucore.disk.$file_type+zstd \
         --annotation filename=$(basename $file) \
         --annotation description="{{ DESCRIPTION }}" \
         {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} \
         $(basename $file))
 
         DISK_IMAGE_DIGEST=$(echo "$DISK_IMAGE_JSON" | jq -r '.digest')
+
+        # We can tag the disk image artifact if needed instead of using oras discover
         # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} $(basename $file)
 
         SHA256_JSON=$(oras attach \
         --format json \
-        --artifact-type application/vnd.$file_type.zst.sha256 \
+        --artifact-type application/vnd.ublue.ucore.disk.$file_type+zstd.sha256 \
         --annotation filename=$(basename $file) \
         --annotation description="sha256 of $(basename $file)" \
         {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST} \
         $(basename $file).sha256)
 
         SHA256_DIGEST=$(echo "$SHA256_JSON" | jq -r '.digest')
+
+        # We can tag the SHA256 artifact as well if needed instead of using oras discover
         # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST} $(basename $file).sha256
 
         cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false --use-signing-config=false "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST}"
