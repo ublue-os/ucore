@@ -41,6 +41,7 @@ jobs:
       DESCRIPTION: ${{ matrix.description }}
     permissions:
       contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
