@@ -35,8 +35,6 @@ jobs:
   build-stable-disk-images:
     needs: build-stable
     if: needs.build-stable.outputs.changed == 'true'
-    permissions:
-      contents: read
     uses: ./.github/workflows/build-disk-images.yml
     secrets: inherit
     with:

@@ -35,8 +35,6 @@ jobs:
   build-lts-disk-images:
     needs: build-lts
     if: needs.build-lts.outputs.changed == 'true'
-    permissions:
-      contents: read
     uses: ./.github/workflows/build-disk-images.yml
     secrets: inherit
     with:

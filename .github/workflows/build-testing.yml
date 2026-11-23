@@ -35,8 +35,6 @@ jobs:
   build-testing-disk-images:
     needs: build-testing
     if: needs.build-testing.outputs.changed == 'true'
-    permissions:
-      contents: read
     uses: ./.github/workflows/build-disk-images.yml
     secrets: inherit
     with:

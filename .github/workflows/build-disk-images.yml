@@ -32,17 +32,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build_image:
-    name: "Build: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
+  build_disk_image:
+    name: "Build Disk Image: ucore${{ matrix.image_suffix }}${{ matrix.nvidia_tag }}: ${{ matrix.arch }}"
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-26.04' || matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' }}
     env:
       IMAGE_NAME: ucore${{ matrix.image_suffix }}
       TAG_NAME: ${{ inputs.ucore_stream }}${{ matrix.nvidia_tag }}
       DESCRIPTION: ${{ matrix.description }}
     permissions:
-      actions: write
       contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
