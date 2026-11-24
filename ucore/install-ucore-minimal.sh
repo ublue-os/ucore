@@ -152,6 +152,10 @@ dnf -y install --setopt=install_weak_deps=False \
     tuned \
     tuned-profiles-atomic
 
+# Disable Zincati
+sed -i 's/^enable zincati.*$/disable zincati.service/' /usr/lib/systemd/system-preset/40-coreos.preset
+systemctl preset zincati.service
+
 # tweak os-release
 sed -i '/^PRETTY_NAME/s/"$/ (uCore minimal)"/' /usr/lib/os-release
 sed -i 's|^VARIANT_ID=.*|VARIANT_ID=ucore|' /usr/lib/os-release
