@@ -518,7 +518,7 @@ compress-disk-images:
     for file in "{{ GIT_ROOT }}/output"/*; do
         if [[ "$(basename "$file")" =~ \.(raw|qcow2|iso)$ ]]; then
             zstd --rm -T0 -14 -v "$file" -o "$file.zst"
-            sha256sum "$file.zst" > "$file.zst.sha256"
+            sha256sum "$(basename "$file").zst" > "$(basename "$file").zst.sha256"
         fi
     done
 
