@@ -756,7 +756,7 @@ jobs:
           set -xeuo pipefail
           mapfile -t SBOM_REFS <<< "${{ steps.upload-sbom.outputs.sbom_refs }}"
           for sbom_ref in "${SBOM_REFS[@]}"; do
-            cosign sign -y --key env://COSIGN_PRIVATE_KEY "${sbom_ref}"
+            cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false --use-signing-config=false "${sbom_ref}"
           done
 
       - name: Verify member SBOMs
@@ -804,7 +804,7 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
           echo "Signing ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}"
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false --use-signing-config=false ${{ env.REGISTRY_PATH }}@${{ env.DIGEST }}
 
       - name: Promote floating tags
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
