@@ -5,9 +5,7 @@ export AKMODS_REGISTRY := env("AKMODS_REGISTRY", "ghcr.io/ublue-os")
 export UCORE_STREAM := env("UCORE_STREAM", "stable")
 export FEDORA_VERSION := env("FEDORA_VERSION", "")
 export IMAGE_REGISTRY := env("IMAGE_REGISTRY", "ghcr.io/ublue-os")
-
 # lts uses stable CoreOS base with longterm kernel; stable and testing use stock coreos kernel
-
 COREOS_STREAM := if UCORE_STREAM == 'lts' { 'stable' } else { UCORE_STREAM }
 export KERNEL_FLAVOR := env("KERNEL_FLAVOR", if UCORE_STREAM == 'lts' { "longterm-6.18" } else { 'coreos-' + COREOS_STREAM })
 export KERNEL_VERSION := env("KERNEL_VERSION", "")
@@ -24,7 +22,6 @@ _default:
 
 # Local VM test: boot an FCOS QEMU image, switch to non-direct-stream SOURCEs,
 # then TARGET, and reboot twice. Prereqs: KVM, podman, jq, curl, xz, qemu, OVMF.
-
 # Caches the FCOS qemu image under the user's cache directory.
 vm-test source_image target_image:
     #!/usr/bin/env bash
@@ -33,7 +30,6 @@ vm-test source_image target_image:
 
 # Direct local image test: installs IMAGE to a temporary FCOS-compatible disk
 # through bcvk, then validates two boots. This is not the recommended FCOS
-
 # install/switch workflow. Prereqs: vm-test prereqs plus bcvk and virtiofsd.
 vm-test-direct image:
     #!/usr/bin/env bash
