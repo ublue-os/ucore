@@ -30,3 +30,15 @@ jobs:
       ucore_stream: lts
       arch: '["aarch64","x86_64"]'
       force_build: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
+
+  build-lts-disk-images:
+    needs: build-lts
+    permissions:
+      contents: read
+      packages: write
+    if: needs.build-lts.outputs.changed == 'true'
+    uses: ./.github/workflows/build-disk-images.yml
+    secrets: inherit
+    with:
+      ucore_stream: lts
+      arch: '["aarch64","x86_64"]'

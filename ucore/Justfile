@@ -12,6 +12,10 @@ export KERNEL_VERSION := env("KERNEL_VERSION", "")
 export NVIDIA_TAG := env("NVIDIA_TAG", "")
 SYFT_CMD := env("SYFT_CMD", "syft")
 export TARGET_IMAGE := env("TARGET_IMAGE", "ucore-minimal")
+GIT_ROOT := env("GIT_ROOT", "$(git rev-parse --show-toplevel)")
+SUDO_IF := shell('if [ $(id -u) -ne 0 ]; then echo sudo; fi')
+ROOTFUL_PODMAN := env("ROOTFUL_PODMAN", SUDO_IF + " podman")
+DESCRIPTION := env("DESCRIPTION", "")
 
 _default:
     @just --list --unsorted
@@ -408,3 +412,153 @@ changelog stream='{{ UCORE_STREAM }}' output='' env_output='' notes_file='' max_
     "${CMD[@]}"
     printf 'Wrote changelog markdown to %s\n' "$OUTPUT"
     printf 'Wrote changelog env to %s\n' "$ENV_OUTPUT"
+
+gen-disk-images:
+    #!/usr/bin/env bash
+    set -euox pipefail
+
+    IMAGE_REF="{{ IMAGE_REGISTRY / TARGET_IMAGE + ":" + UCORE_STREAM + NVIDIA_TAG }}"
+    DIGEST_FILE="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest"
+    OCI_ARCHIVE="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.ociarchive"
+    OCI_ARCHIVE_NO_ARCH="{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG }}.ociarchive"
+    OUTPUT_DIR="{{ GIT_ROOT / "output" }}"
+    METAL_SIZE="{{ if TARGET_IMAGE =~ "hci" { "6144" } else if NVIDIA_TAG =~ "nvidia" { "6144" } else if UCORE_STREAM =~ "lts" { "5120" } else if TARGET_IMAGE =~ "minimal" { "4096" } else { "5120" } }}"
+    mkdir -p "$OUTPUT_DIR"
+
+    if [[ ! -f "$OUTPUT_DIR/$DIGEST_FILE" ]]; then
+        echo "Creating digest file: $DIGEST_FILE"
+        skopeo inspect --format {{ "'{{.Digest}}'" }} \
+            "docker://$IMAGE_REF" > "$OUTPUT_DIR/$DIGEST_FILE"
+    fi
+    if [[ ! -f "$OUTPUT_DIR/$OCI_ARCHIVE" && ! -f "$OUTPUT_DIR/$OCI_ARCHIVE_NO_ARCH" ]]; then
+        echo "Creating OCI archive: $OCI_ARCHIVE"
+        skopeo copy --remove-signatures \
+            "docker://${IMAGE_REF%:*}@$(<$OUTPUT_DIR/$DIGEST_FILE)" "oci-archive:$OUTPUT_DIR/$OCI_ARCHIVE"
+    fi
+
+    if [[ -f "$OUTPUT_DIR/$OCI_ARCHIVE" ]]; then
+        mv "$OUTPUT_DIR/$OCI_ARCHIVE" "$OUTPUT_DIR/$OCI_ARCHIVE_NO_ARCH"
+    fi
+
+    # Check if builder container is running
+    if [[ "$({{ ROOTFUL_PODMAN }} container inspect -f {{ "'{{.State.Running}}'" }} builder 2>/dev/null)" == "true" ]]; then
+        {{ ROOTFUL_PODMAN }} exec -w /work builder \
+        sh /ucore/custom-coreos-disk-images/custom-coreos-disk-images.sh \
+            --osname "fedora-coreos" \
+            --platforms "qemu,metal,live" \
+            --ociarchive "/ucore/output/$OCI_ARCHIVE_NO_ARCH" \
+            --imgref "ostree-image-signed:docker://$IMAGE_REF" \
+            --metal-image-size "$METAL_SIZE"
+
+        {{ ROOTFUL_PODMAN }} exec -w /work builder \
+            sh -c 'for f in ./*.iso ./*.raw ./*.qcow2; do if [ -e "$f" ]; then mv "$f" /ucore/output/"$f"; fi; done'
+
+        {{ SUDO_IF }} chown -R $USER:$USER "$OUTPUT_DIR"
+        echo "Disk images created for {{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG }}"
+    else
+        echo "Builder container is not running. Exiting."
+        exit 1
+    fi
+
+setup-disk-image-builder:
+    #!/usr/bin/env bash
+    set -euox pipefail
+    {{ ROOTFUL_PODMAN }} rm -f builder || true
+    {{ ROOTFUL_PODMAN }} volume create --ignore ucore-builder-work
+    {{ ROOTFUL_PODMAN }} volume create --ignore ucore-builder-var
+
+    {{ ROOTFUL_PODMAN }} run \
+           --detach \
+           --entrypoint "tail" \
+           --name builder \
+           --privileged \
+           --security-opt apparmor=unconfined \
+           --security-opt label=disable \
+           --security-opt seccomp=unconfined \
+           --tmpfs /run \
+           --tmpfs /tmp \
+           --tty \
+           --volume /dev:/dev \
+           --volume "{{ GIT_ROOT }}:/ucore" \
+           --volume ucore-builder-var:/var \
+           --volume ucore-builder-work:/work \
+           --workdir /work \
+           fedora:latest \
+           "-f" "/dev/null"
+
+    # Give the container a moment to initialize
+    sleep 5
+
+    # Install Build Dependencies
+    {{ ROOTFUL_PODMAN }} exec builder dnf install -y \
+         dosfstools \
+         erofs-utils \
+         genisoimage \
+         git-core \
+         jq \
+         just \
+         osbuild \
+         osbuild-ostree \
+         osbuild-tools \
+         podman \
+         squashfs-tools \
+         xfsprogs
+
+    if [[ {{ arch() }} == "x86_64" ]]; then
+        {{ ROOTFUL_PODMAN }} exec builder dnf install -y syslinux-nonlinux
+    fi
+
+    # Mark Git Repo Safe
+    {{ ROOTFUL_PODMAN }} exec builder git config --global --add safe.directory /ucore
+
+compress-disk-images:
+    #!/usr/bin/env bash
+    set -euox pipefail
+    cd "{{ GIT_ROOT }}/output"
+    for file in "{{ GIT_ROOT }}/output"/*; do
+        if [[ "$(basename "$file")" =~ \.(raw|qcow2|iso)$ ]]; then
+            zstd --rm -T0 -14 -v "$file" -o "$file.zst"
+            sha256sum "$(basename "$file").zst" > "$(basename "$file").zst.sha256"
+        fi
+    done
+
+attach-and-sign-disk-images:
+    #!/usr/bin/env bash
+    set -euox pipefail
+
+    cd "{{ GIT_ROOT }}/output"
+    IMAGE_DIGEST=$(<{{ TARGET_IMAGE + "-" + UCORE_STREAM + NVIDIA_TAG + "." + arch() }}.digest)
+    for file in ./*.zst; do
+        without_zst=${file%.*}
+        file_type=${without_zst##*.}
+        DISK_IMAGE_JSON=$(oras attach \
+        --format json \
+        --artifact-type application/vnd.ublue.ucore.disk.$file_type+zstd \
+        --annotation filename=$(basename $file) \
+        --annotation description="{{ DESCRIPTION }}" \
+        {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} \
+        $(basename $file))
+
+        DISK_IMAGE_DIGEST=$(echo "$DISK_IMAGE_JSON" | jq -r '.digest')
+
+        # We can tag the disk image artifact if needed/wanted instead of using oras discover
+        # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST} $(basename $file)
+
+        SHA256_JSON=$(oras attach \
+        --format json \
+        --artifact-type application/vnd.ublue.ucore.disk.$file_type+zstd.sha256 \
+        --annotation filename=$(basename $file) \
+        --annotation description="sha256 of $(basename $file)" \
+        {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST} \
+        $(basename $file).sha256)
+
+        SHA256_DIGEST=$(echo "$SHA256_JSON" | jq -r '.digest')
+
+        # We can tag the SHA256 artifact as well if needed/wanted instead of using oras discover
+        # oras tag {{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST} $(basename $file).sha256
+
+        cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false --use-signing-config=false "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${DISK_IMAGE_DIGEST}"
+        cosign sign -y --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false --use-signing-config=false "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${SHA256_DIGEST}"
+    done
+
+    oras discover --format json "{{ IMAGE_REGISTRY / TARGET_IMAGE }}@${IMAGE_DIGEST}"
