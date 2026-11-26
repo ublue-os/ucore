@@ -16,6 +16,6 @@ disable tuned.service
 # Automatic Updates via rpm-ostreed
 enable rpm-ostreed-automatic.timer
 
-# Mask CoreOS MOTD
-mask coreos-container-signing-migration-motd.service
-mask coreos-oci-migration-motd.service
+# Disable CoreOS MOTD warnings
+disable coreos-container-signing-migration-motd.service
+disable coreos-oci-migration-motd.service
