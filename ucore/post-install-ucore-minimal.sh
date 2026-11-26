@@ -2,19 +2,10 @@
 
 set -ouex pipefail
 
-## ALWAYS: regular post-install
-systemctl mask coreos-container-signing-migration-motd.service
-systemctl mask coreos-oci-migration-motd.service
-systemctl disable docker.socket
-systemctl disable tuned.service
-systemctl disable zincati.service
+# Apply systemd presets to all units
+systemctl preset-all
 
-systemctl enable gssproxy-workaround.service
-
-
-systemctl enable ucore-paths-provision.service
-systemctl enable rpm-ostreed-automatic.timer
-
+# Enable automatic updates via rpm-ostree
 sed -i 's/#AutomaticUpdatePolicy.*/AutomaticUpdatePolicy=stage/' /etc/rpm-ostreed.conf
 
 # workaround until distrobox patch for this makes it into repos

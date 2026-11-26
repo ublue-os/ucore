@@ -1,0 +1,21 @@
+# Enable Ucore Path Provisioning
+enable ucore-paths-provision.service
+
+# Enable gssproxy workarounds
+enable gssproxy-workaround.service
+
+# Disable Zincati
+disable zincati.service
+
+# Disable docker.socket
+disable docker.socket
+
+# Disable Tuned
+disable tuned.service
+
+# Automatic Updates via rpm-ostreed
+enable rpm-ostreed-automatic.timer
+
+# Mask CoreOS MOTD
+mask coreos-container-signing-migration-motd.service
+mask coreos-oci-migration-motd.service
