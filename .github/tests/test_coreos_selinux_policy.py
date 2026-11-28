@@ -3,11 +3,45 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "ucore" / "fix-coreos-selinux-policy.sh"
+SUBS_DIST = SCRIPT.read_text().split("#### SUBS_DIST\n", 1)[1]
+STOCK_SUBS_DIST = """\
+/etc/systemd/system /usr/lib/systemd/system
+/var/home            /home
+/var/roothome        /root
+/usr/etc             /etc
+"""
+POSTPROCESSED_SUBS_DIST = """\
+/etc/systemd/system /usr/lib/systemd/system
+# /var/home            /home
+/var/roothome        /root
+/usr/etc             /etc
+/home /var/home
+/usr/etc/systemd/system /usr/lib/systemd/system
+/usr/lib/opt /opt
+/var/lib/selinux /etc/selinux
+"""
+# The same file as rpm-ostree's postprocess_subs_dist writes it.
+RPM_OSTREE_SUBS_DIST = """\
+/etc/systemd/system /usr/lib/systemd/system
+# https://github.com/projectatomic/rpm-ostree/pull/1754
+# /var/home            /home
+/var/roothome        /root
+/usr/etc             /etc
+# https://github.com/projectatomic/rpm-ostree/pull/1754
+/home /var/home
+# https://github.com/coreos/rpm-ostree/pull/5485
+/usr/etc/systemd/system /usr/lib/systemd/system
+# https://github.com/coreos/rpm-ostree/pull/1795
+/usr/lib/opt /opt
+# https://github.com/coreos/rpm-ostree/issues/5616
+/var/lib/selinux /etc/selinux
+"""
 MOCKS = r'''
 rpm() {
     case "$1" in
@@ -68,6 +102,40 @@ class CoreosSelinuxPolicyTests(unittest.TestCase):
                 self.assertIn("selinux-policy >= 45.23-1.fc45", result.stdout)
                 self.assertIn("selinux-policy-targeted >= 45.23-1.fc45", result.stdout)
                 self.assertIn("container-selinux >= 4:2.251.0-1.fc45", result.stdout)
+
+
+class SubsDistTests(unittest.TestCase):
+    def postprocess(self, content):
+        with tempfile.TemporaryDirectory() as tmp:
+            subs_dist = Path(tmp) / "file_contexts.subs_dist"
+            subs_dist.write_text(content)
+            result = subprocess.run(
+                ["bash", "-c", "set -euo pipefail\nsubs_dist=\"$1\"\n" + SUBS_DIST,
+                 "bash", str(subs_dist)],
+                text=True, capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return subs_dist.read_text()
+
+    def test_stock_file_gets_rpm_ostree_aliases(self):
+        self.assertEqual(self.postprocess(STOCK_SUBS_DIST), POSTPROCESSED_SUBS_DIST)
+
+    def test_postprocessed_file_is_unchanged(self):
+        for content in (POSTPROCESSED_SUBS_DIST, RPM_OSTREE_SUBS_DIST):
+            with self.subTest(content=content):
+                self.assertEqual(self.postprocess(content), content)
+
+    def test_file_without_usr_etc_gets_it_once(self):
+        stock = STOCK_SUBS_DIST.replace("/usr/etc             /etc\n", "")
+        result = self.postprocess(stock).splitlines()
+        self.assertEqual(result.count("/usr/etc /etc"), 1)
+        self.assertEqual(result[-5:], [
+            "/home /var/home",
+            "/usr/etc /etc",
+            "/usr/etc/systemd/system /usr/lib/systemd/system",
+            "/usr/lib/opt /opt",
+            "/var/lib/selinux /etc/selinux",
+        ])
 
 
 if __name__ == "__main__":
