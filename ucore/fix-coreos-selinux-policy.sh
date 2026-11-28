@@ -40,3 +40,28 @@ rm -rf /etc/selinux/targeted
 mv /etc/selinux/targeted.rebuilt /etc/selinux/targeted
 semodule --noreload --priority 100 --install ./*.pp
 semodule --noreload --priority 200 --install /usr/share/selinux/packages/container.pp.bz2
+
+# The policy RPM replaces the file_contexts.subs_dist that rpm-ostree
+# postprocessed when composing CoreOS. Unprocessed, it aliases /var/home to
+# /home while the home directory rules are generated for HOME=/var/home, so
+# every file in a home directory is labelled default_t and sshd rejects
+# ~/.ssh/authorized_keys.d/ignition (#485). Redo rpm-ostree's postprocessing,
+# postprocess_subs_dist in rust/src/composepost.rs, on the new file. dnf can
+# also leave a file that is already postprocessed, so an alias is added only
+# when no active line substitutes its source yet.
+subs_dist=/etc/selinux/targeted/contexts/files/file_contexts.subs_dist
+#### SUBS_DIST
+sed -i 's|^/var/home[[:space:]]|# &|' "$subs_dist"
+aliases="$(
+    {
+        echo "/home /var/home"
+        echo "/usr/etc /etc"
+        sed -n 's|^/etc/|/usr&|p' "$subs_dist"
+        echo "/usr/lib/opt /opt"
+        echo "/var/lib/selinux /etc/selinux"
+    } | awk 'NR == FNR { if ($1 !~ /^#/) substituted[$1] = 1; next }
+        !($1 in substituted) { print; substituted[$1] = 1 }' "$subs_dist" -
+)"
+if [[ -n "$aliases" ]]; then
+    printf '%s\n' "$aliases" >> "$subs_dist"
+fi

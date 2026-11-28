@@ -16,6 +16,25 @@ install -Dpm 0644 "$policy_source" /etc/containers/policy.json
 jq -e '.transports.docker["ghcr.io/ublue-os"] | any(.type == "sigstoreSigned")' \
     /etc/containers/policy.json >/dev/null
 
+# Fail the build when home directories would not get their SELinux labels;
+# sshd then rejects keys provisioned by Ignition (#485). selabel_lookup takes
+# the file type as a decimal st_mode, as restorecon looks it up: 16384 is
+# S_IFDIR, 32768 is S_IFREG.
+for home in /var/home/core /var/home/admin; do
+    for path_mode_type in \
+        "$home:16384:user_home_dir_t" \
+        "$home/.ssh:16384:ssh_home_t" \
+        "$home/.ssh/authorized_keys.d:16384:ssh_home_t" \
+        "$home/.ssh/authorized_keys.d/ignition:32768:ssh_home_t"; do
+        IFS=: read -r path mode type <<< "$path_mode_type"
+        context="$(selabel_lookup -b file -k "$path" -t "$mode")"
+        if [[ "$context" != *":object_r:${type}:"* ]]; then
+            echo "$path would be labelled ${context#Default context: }, expected $type" >&2
+            exit 1
+        fi
+    done
+done
+
 # Remove build-time runtime files without following symlinks or entering mounts.
 clean_runtime_dir() {
     local entry
